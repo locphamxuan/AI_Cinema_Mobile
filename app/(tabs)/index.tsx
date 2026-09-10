@@ -72,7 +72,7 @@ export default function HomeScreen() {
           >
             <View style={styles.guestBannerContent}>
               <View style={styles.guestIcon}>
-                <Ionicons name="sparkles" size={18} color="#E50914" />
+                <Ionicons name="film" size={18} color="#E50914" />
               </View>
               <View style={styles.guestTextContainer}>
                 <Text style={[styles.guestTitle, { color: colors.text }]}>

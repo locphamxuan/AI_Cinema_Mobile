@@ -60,7 +60,7 @@ export const ChatModal: React.FC = () => {
           <View style={styles.header}>
             <View style={styles.headerInfo}>
               <View style={styles.avatarCircle}>
-                <Ionicons name="sparkles" size={16} color="#FFFFFF" />
+                <Ionicons name="chatbubbles" size={16} color="#FFFFFF" />
               </View>
               <View>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Trợ Lý AI Cinema</Text>

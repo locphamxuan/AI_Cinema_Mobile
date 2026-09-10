@@ -90,7 +90,7 @@ export const SceneCard: React.FC<SceneCardProps> = ({
           onPress={onGenerate}
           disabled={isGenerating}
         >
-          <Ionicons name="sparkles" size={16} color="#FFFFFF" />
+          <Ionicons name="videocam" size={16} color="#FFFFFF" />
           <Text style={styles.generateBtnText}>Sinh Clip AI ({scene.tokenCost} Tokens)</Text>
         </TouchableOpacity>
       )}
