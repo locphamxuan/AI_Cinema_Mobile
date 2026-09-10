@@ -30,21 +30,25 @@ export const TopRankRow: React.FC<TopRankRowProps> = ({ movies, onMoviePress }) 
               onPress={() => onMoviePress(movie)}
               style={styles.item}
             >
-              {/* Rank number */}
-              <Text
-                style={[
-                  styles.rankNumber,
-                  {
-                    color: isDark ? '#334155' : '#CBD5E1',
-                    textShadowColor: isDark ? '#000000' : 'rgba(0,0,0,0.15)',
-                  },
-                ]}
-              >
-                {rank}
-              </Text>
+              {/* Rank number container with fixed width for consistent alignment */}
+              <View style={styles.rankContainer}>
+                <Text
+                  style={[
+                    styles.rankNumber,
+                    {
+                      color: isDark ? '#475569' : '#94A3B8',
+                      textShadowColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.1)',
+                      textShadowOffset: { width: 1, height: 2 },
+                      textShadowRadius: 3,
+                    },
+                  ]}
+                >
+                  {rank}
+                </Text>
+              </View>
 
               {/* Poster */}
-              <View style={styles.posterWrapper}>
+              <View style={[styles.posterWrapper, { backgroundColor: isDark ? '#1E293B' : '#E2E8F0' }]}>
                 <Image
                   source={{ uri: movie.posterUrl }}
                   style={styles.poster}
@@ -67,46 +71,48 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 10,
     letterSpacing: 0.2,
   },
   scrollContent: {
-    paddingLeft: 8,
+    paddingLeft: 12,
     paddingRight: 16,
   },
   item: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    width: 170,
-    marginRight: 6,
-    position: 'relative',
+    width: 160,
+    marginRight: 12,
+  },
+  rankContainer: {
+    width: 48,
+    height: 170,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginRight: -16,
+    zIndex: 1,
   },
   rankNumber: {
-    fontSize: 90,
+    fontSize: 84,
     fontWeight: '900',
-    lineHeight: 95,
-    position: 'absolute',
-    left: 2,
-    bottom: -10,
-    zIndex: 1,
-    letterSpacing: -5,
+    lineHeight: 90,
+    textAlign: 'center',
   },
   posterWrapper: {
-    width: 120,
+    width: 118,
     height: 170,
     borderRadius: 8,
     overflow: 'hidden',
-    marginLeft: 44,
     zIndex: 2,
-    backgroundColor: '#1E293B',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 4,
+    position: 'relative',
   },
   poster: {
     width: '100%',

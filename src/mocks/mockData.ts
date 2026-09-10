@@ -304,7 +304,7 @@ export const allMockMovies: Movie[] = [
     id: 'movie-003',
     title: 'Ký Ức Lập Trình',
     genre: ['Tâm lý', 'AI', 'Khoa học viễn tưởng'],
-    posterUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600&auto=format&fit=crop&q=80',
+    posterUrl: 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=600&auto=format&fit=crop&q=80',
     bannerUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=1200&auto=format&fit=crop&q=80',
     description: 'Một phụ nữ đồng ý sao lưu toàn bộ ký ức của người chồng đã mất vào mạng nơ-ron nhân tạo, nhưng AI bắt đầu tạo ra những ký ức không có thật...',
     year: 2026,

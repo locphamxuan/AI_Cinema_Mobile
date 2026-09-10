@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 
@@ -8,7 +8,7 @@ export const ThemeToggle: React.FC = () => {
 
   return (
     <TouchableOpacity
-      activeOpacity={0.8}
+      activeOpacity={0.85}
       onPress={toggleTheme}
       style={[
         styles.container,
@@ -39,13 +39,13 @@ export const ThemeToggle: React.FC = () => {
           styles.knob,
           {
             backgroundColor: isDark ? '#6366F1' : '#FFFFFF',
-            transform: [{ translateX: isDark ? 28 : 2 }],
+            transform: [{ translateX: isDark ? 30 : 2 }],
           },
         ]}
       >
         <Ionicons
           name={isDark ? 'moon' : 'sunny'}
-          size={12}
+          size={13}
           color={isDark ? '#FFFFFF' : '#F59E0B'}
         />
       </View>
@@ -55,9 +55,9 @@ export const ThemeToggle: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    width: 60,
-    height: 30,
-    borderRadius: 15,
+    width: 62,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 1.5,
     flexDirection: 'row',
     alignItems: 'center',
@@ -66,16 +66,16 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   iconWrapper: {
-    width: 18,
+    width: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   knob: {
     position: 'absolute',
     left: 1,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

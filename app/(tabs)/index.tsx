@@ -210,6 +210,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   bottomSpacer: {
-    height: 20,
+    height: 30,
   },
 });
