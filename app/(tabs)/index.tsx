@@ -112,21 +112,21 @@ export default function HomeScreen() {
 
         {/* Trending Movies Row */}
         <MovieRow
-          title="🔥 Phim AI Mới Nhất & Thịnh Hành"
+          title="Phim Mới Phát Hành & Thịnh Hành"
           movies={allMockMovies}
           onMoviePress={handleMoviePress}
         />
 
         {/* Cyberpunk Collection Row */}
         <MovieRow
-          title="🌆 Tuyển Tập Cyberpunk 2049"
+          title="Tuyển Tập Cyberpunk 2049"
           movies={[allMockMovies[1], allMockMovies[4], allMockMovies[0], allMockMovies[3]]}
           onMoviePress={handleMoviePress}
         />
 
         {/* Sci-Fi Collection Row */}
         <MovieRow
-          title="🚀 Khoa Học Viễn Tưởng Đỉnh Cao"
+          title="Khoa Học Viễn Tưởng Đỉnh Cao"
           movies={[allMockMovies[2], allMockMovies[3], allMockMovies[5], allMockMovies[1]]}
           onMoviePress={handleMoviePress}
         />

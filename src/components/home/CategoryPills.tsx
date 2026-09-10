@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 import { genreCategories } from '../../mocks/mockData';
 
@@ -7,6 +8,16 @@ interface CategoryPillsProps {
   selectedCategory: string;
   onSelectCategory: (category: string) => void;
 }
+
+const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  'Tất cả': 'grid-outline',
+  'Thịnh hành': 'trending-up-outline',
+  'Khoa học Viễn tưởng': 'planet-outline',
+  'Cyberpunk 2049': 'flash-outline',
+  'Hành động Kịch tính': 'film-outline',
+  'Trí tuệ Nhân tạo': 'hardware-chip-outline',
+  'Tâm lý & Bí ẩn': 'eye-outline',
+};
 
 export const CategoryPills: React.FC<CategoryPillsProps> = ({
   selectedCategory,
@@ -23,6 +34,9 @@ export const CategoryPills: React.FC<CategoryPillsProps> = ({
       >
         {genreCategories.map((category) => {
           const isSelected = selectedCategory === category;
+          const iconName = CATEGORY_ICONS[category];
+          const itemColor = isSelected ? '#FFFFFF' : colors.textSecondary;
+
           return (
             <TouchableOpacity
               key={category}
@@ -44,12 +58,20 @@ export const CategoryPills: React.FC<CategoryPillsProps> = ({
                 },
               ]}
             >
+              {iconName && (
+                <Ionicons
+                  name={iconName}
+                  size={14}
+                  color={itemColor}
+                  style={styles.icon}
+                />
+              )}
               <Text
                 style={[
                   styles.pillText,
                   {
-                    color: isSelected ? '#FFFFFF' : colors.textSecondary,
-                    fontWeight: isSelected ? '700' : '500',
+                    color: itemColor,
+                    fontWeight: isSelected ? '700' : '600',
                   },
                 ]}
               >
@@ -65,19 +87,25 @@ export const CategoryPills: React.FC<CategoryPillsProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
   scrollContent: {
     paddingHorizontal: 16,
     gap: 8,
   },
   pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1,
+    gap: 6,
+  },
+  icon: {
+    marginRight: 0,
   },
   pillText: {
-    fontSize: 13,
+    fontSize: 12.5,
   },
 });

@@ -14,7 +14,7 @@ export const TopRankRow: React.FC<TopRankRowProps> = ({ movies, onMoviePress }) 
   return (
     <View style={styles.container}>
       <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        🏆 Top 5 Phim AI Được Xem Nhiều Nhất Hôm Nay
+        Top 5 Thịnh Hành Nhất Hôm Nay
       </Text>
       <ScrollView
         horizontal
