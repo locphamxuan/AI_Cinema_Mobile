@@ -5,10 +5,10 @@ import {
   ImageBackground,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
   ScrollView,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { Movie } from '../../types/movie';
@@ -22,15 +22,15 @@ interface HeroBannerProps {
   onDetailPress?: (movie: Movie) => void;
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const BANNER_WIDTH = SCREEN_WIDTH - 32;
-
 export const HeroBanner: React.FC<HeroBannerProps> = ({
   movie,
   movies,
   onPlayPress,
   onDetailPress,
 }) => {
+  const { width: windowWidth } = useWindowDimensions();
+  const BANNER_WIDTH = Math.min(windowWidth, 600) - 32;
+
   const { colors, isDark } = useTheme();
   const { myList, toggleMyList } = useAppStore();
 

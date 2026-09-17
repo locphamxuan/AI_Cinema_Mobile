@@ -6,20 +6,19 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme';
 import { useAppStore } from '../../store/useAppStore';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH * 0.65;
-
 export const ContinueWatchingSection: React.FC = () => {
   const { colors, isDark } = useTheme();
   const { watchHistory } = useAppStore();
   const router = useRouter();
+  const { width: windowWidth } = useWindowDimensions();
+  const cardWidth = Math.min(windowWidth, 600) * 0.65;
 
   if (!watchHistory || watchHistory.length === 0) return null;
 
@@ -48,6 +47,7 @@ export const ContinueWatchingSection: React.FC = () => {
             style={[
               styles.card,
               {
+                width: cardWidth,
                 backgroundColor: colors.surface,
                 borderColor: colors.border,
               },
@@ -139,7 +139,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   card: {
-    width: CARD_WIDTH,
     borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
