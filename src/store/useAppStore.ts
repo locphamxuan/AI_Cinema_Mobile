@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { WalletState, CheckInStreak } from '../types/wallet';
-import { Movie } from '../types/movie';
+import { Movie, WatchHistoryItem } from '../types/movie';
 import { UserSubscription } from '../types/subscription';
 import { Transaction } from '../types/transaction';
 import { ChatMessage, ChatPhase, SupportTicket } from '../types/chat';
@@ -12,6 +12,7 @@ import {
   mockMovie,
   mockTransactions,
   mockInitialMessages,
+  mockWatchHistory,
   botResponses,
 } from '../mocks/mockData';
 
@@ -76,6 +77,17 @@ interface AppState {
   closeUnlockModal: () => void;
   isTopUpModalOpen: boolean;
   setTopUpModalOpen: (open: boolean) => void;
+
+  // My List
+  myList: string[];
+  toggleMyList: (movieId: string) => void;
+
+  // Watch History
+  watchHistory: WatchHistoryItem[];
+  addToWatchHistory: (item: Omit<WatchHistoryItem, 'id' | 'lastWatchedAt'>) => void;
+
+  // Deposit
+  depositCoins: (amountVnd: number, mainCoin: number, bonusCoin: number, paymentMethod: string) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -452,4 +464,47 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   isTopUpModalOpen: false,
   setTopUpModalOpen: (open) => set({ isTopUpModalOpen: open }),
+
+  // ===== MY LIST =====
+  myList: ['movie-001', 'movie-002'],
+  toggleMyList: (movieId) =>
+    set((s) => ({
+      myList: s.myList.includes(movieId)
+        ? s.myList.filter((id) => id !== movieId)
+        : [...s.myList, movieId],
+    })),
+
+  // ===== WATCH HISTORY =====
+  watchHistory: mockWatchHistory,
+  addToWatchHistory: (item) =>
+    set((s) => {
+      const existing = s.watchHistory.filter((h) => h.movieId !== item.movieId);
+      const newItem: WatchHistoryItem = {
+        ...item,
+        id: `wh-${Date.now()}`,
+        lastWatchedAt: 'Vừa xong',
+      };
+      return { watchHistory: [newItem, ...existing] };
+    }),
+
+  // ===== DEPOSIT COINS =====
+  depositCoins: (amountVnd, mainCoin, bonusCoin, paymentMethod) => {
+    set((s) => ({
+      wallet: {
+        mainCoin: s.wallet.mainCoin + mainCoin,
+        bonusCoin: s.wallet.bonusCoin + bonusCoin,
+      },
+    }));
+
+    get().addTransaction({
+      type: 'deposit',
+      typeLabel: 'Nạp Coin',
+      description: `Nạp gói ${amountVnd.toLocaleString('vi-VN')}đ qua ${paymentMethod}`,
+      mainCoinDelta: mainCoin,
+      bonusCoinDelta: bonusCoin,
+      totalAmount: mainCoin + bonusCoin,
+      status: 'success',
+      statusLabel: 'Thành công',
+    });
+  },
 }));

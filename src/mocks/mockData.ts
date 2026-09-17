@@ -1,5 +1,5 @@
 import { CheckInStreak, WalletState } from '../types/wallet';
-import { Movie } from '../types/movie';
+import { Movie, WatchHistoryItem } from '../types/movie';
 import { UserSubscription, SubscriptionPlan } from '../types/subscription';
 import { Transaction } from '../types/transaction';
 import { ChatMessage } from '../types/chat';
@@ -288,7 +288,7 @@ export const allMockMovies: Movie[] = [
     quality: '4K HDR',
     audioQuality: 'Dolby Vision',
     ageRating: 'T18',
-    badge: 'Độc Quyền AI Cinema',
+    badge: 'TOP 2 THỊNH HÀNH',
     aiCompliance: {
       aiModel: 'Sora Vision Pro v2 + Runway Gen-3',
       generatedDate: '2026-08-01',
@@ -302,10 +302,10 @@ export const allMockMovies: Movie[] = [
   },
   {
     id: 'movie-003',
-    title: 'Ký Ức Lập Trình',
+    title: 'Ký Ức Lập Trình (Neural Echoes)',
     genre: ['Tâm lý', 'AI', 'Khoa học viễn tưởng'],
     posterUrl: 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=600&auto=format&fit=crop&q=80',
-    bannerUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=1200&auto=format&fit=crop&q=80',
+    bannerUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80',
     description: 'Một phụ nữ đồng ý sao lưu toàn bộ ký ức của người chồng đã mất vào mạng nơ-ron nhân tạo, nhưng AI bắt đầu tạo ra những ký ức không có thật...',
     year: 2026,
     totalEpisodes: 5,
@@ -313,7 +313,7 @@ export const allMockMovies: Movie[] = [
     quality: '4K Ultra HD',
     audioQuality: 'Dolby Atmos',
     ageRating: 'T16',
-    badge: 'Mới ra mắt',
+    badge: 'TOP 3 NỔI BẬT',
     aiCompliance: mockMovie.aiCompliance,
     episodes: mockMovie.episodes,
   },
@@ -322,7 +322,7 @@ export const allMockMovies: Movie[] = [
     title: 'Mê Cung Lượng Tử',
     genre: ['Hành động', 'Kỳ ảo AI', 'Bí ẩn'],
     posterUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80',
-    bannerUrl: 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=1200&auto=format&fit=crop&q=80',
+    bannerUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80',
     description: 'Cuộc thám hiểm không gian 4 chiều được mô phỏng bởi siêu máy tính AI tự tiến hóa. Không ai có thể thoát ra nếu không giải được câu đố Turing.',
     year: 2026,
     totalEpisodes: 10,
@@ -330,15 +330,16 @@ export const allMockMovies: Movie[] = [
     quality: '4K UHD',
     audioQuality: 'Dolby Atmos',
     ageRating: 'T16',
+    badge: 'TOP 4 XEM NHIỀU',
     aiCompliance: mockMovie.aiCompliance,
     episodes: mockMovie.episodes,
   },
   {
     id: 'movie-005',
     title: 'Thành Phố Ảo 2099',
-    genre: ['Cyberpunk', 'Hành động'],
+    genre: ['Cyberpunk', 'Hành động', 'Viễn tưởng'],
     posterUrl: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=600&auto=format&fit=crop&q=80',
-    bannerUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1200&auto=format&fit=crop&q=80',
+    bannerUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&auto=format&fit=crop&q=80',
     description: 'Thế giới ngầm của những AI tự do đang âm thầm xây dựng một nền văn minh tách biệt dưới lòng đại dương.',
     year: 2026,
     totalEpisodes: 6,
@@ -346,7 +347,7 @@ export const allMockMovies: Movie[] = [
     quality: '4K HDR10+',
     audioQuality: 'Dolby Atmos 7.1',
     ageRating: 'T16',
-    badge: 'Top Đánh Giá',
+    badge: 'TOP 5 ĐÁNH GIÁ',
     aiCompliance: mockMovie.aiCompliance,
     episodes: mockMovie.episodes,
   },
@@ -355,7 +356,7 @@ export const allMockMovies: Movie[] = [
     title: 'Robot & Tri Kỷ',
     genre: ['Tình cảm', 'Khoa học viễn tưởng', 'AI'],
     posterUrl: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=600&auto=format&fit=crop&q=80',
-    bannerUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&auto=format&fit=crop&q=80',
+    bannerUrl: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=1200&auto=format&fit=crop&q=80',
     description: 'Một robot quản gia thế hệ thứ 7 phát hiện ra mình có khả năng cảm nhận tình yêu thương và sự cô đơn.',
     year: 2026,
     totalEpisodes: 4,
@@ -371,6 +372,46 @@ export const allMockMovies: Movie[] = [
 export const trendingMovies = allMockMovies;
 export const recommendedMovies = [allMockMovies[1], allMockMovies[2], allMockMovies[4], allMockMovies[0]];
 export const top10Movies = allMockMovies.slice(0, 5);
+
+// ====== WATCH HISTORY ======
+export const mockWatchHistory: WatchHistoryItem[] = [
+  {
+    id: 'wh-1',
+    movieId: 'movie-001',
+    movieTitle: 'Bóng Tối Nhân Tạo',
+    episodeId: 'ep-001',
+    episodeTitle: 'Khởi Nguyên Điểm Kỳ Dị',
+    episodeNumber: 1,
+    thumbnailUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600&auto=format&fit=crop&q=80',
+    progressPercent: 72,
+    duration: '45 phút',
+    lastWatchedAt: '2 giờ trước',
+  },
+  {
+    id: 'wh-2',
+    movieId: 'movie-002',
+    movieTitle: 'Kỷ Nguyên Silicon',
+    episodeId: 'ep-002',
+    episodeTitle: 'Tập 2: Mạng Thần Kinh Lượng Tử',
+    episodeNumber: 2,
+    thumbnailUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&auto=format&fit=crop&q=80',
+    progressPercent: 45,
+    duration: '42 phút',
+    lastWatchedAt: 'Hôm qua',
+  },
+  {
+    id: 'wh-3',
+    movieId: 'movie-003',
+    movieTitle: 'Ký Ức Lập Trình',
+    episodeId: 'ep-001',
+    episodeTitle: 'Tập 1: Sao Lưu Nơ-ron',
+    episodeNumber: 1,
+    thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+    progressPercent: 90,
+    duration: '38 phút',
+    lastWatchedAt: '3 ngày trước',
+  },
+];
 
 // ====== TRANSACTIONS ======
 export const mockTransactions: Transaction[] = [

@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../src/components/common/Header';
 import { HeroBanner } from '../../src/components/home/HeroBanner';
+import { ContinueWatchingSection } from '../../src/components/home/ContinueWatchingSection';
 import { CategoryPills } from '../../src/components/home/CategoryPills';
 import { TopRankRow } from '../../src/components/home/TopRankRow';
 import { MovieRow } from '../../src/components/home/MovieRow';
@@ -18,7 +19,7 @@ import { VersionSelectorModal } from '../../src/components/player/VersionSelecto
 import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
-import { allMockMovies, mockMovie } from '../../src/mocks/mockData';
+import { allMockMovies, mockMovie, top10Movies } from '../../src/mocks/mockData';
 import { Movie } from '../../src/types/movie';
 
 export default function HomeScreen() {
@@ -94,12 +95,15 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Featured Hero Banner */}
+        {/* Featured Hero Banner Carousel */}
         <HeroBanner
-          movie={mockMovie}
-          onPlayPress={() => handleMoviePress(mockMovie)}
+          movies={top10Movies}
+          onPlayPress={handleMoviePress}
           onDetailPress={() => setVersionModalVisible(true)}
         />
+
+        {/* Continue Watching Section (Đang Xem Dở) */}
+        <ContinueWatchingSection />
 
         {/* Categories Bar */}
         <CategoryPills
