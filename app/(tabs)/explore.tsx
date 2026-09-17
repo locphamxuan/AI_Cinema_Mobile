@@ -6,7 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,12 +16,16 @@ import { useTheme } from '../../src/theme';
 import { allMockMovies, genreCategories } from '../../src/mocks/mockData';
 import { Movie } from '../../src/types/movie';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = (SCREEN_WIDTH - 44) / 2;
-
 export default function ExploreScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { width: windowWidth } = useWindowDimensions();
+
+  // Responsive 2-column grid calculation
+  // Max width of 600px for clean mobile mockup on desktop browsers
+  const containerWidth = Math.min(windowWidth, 600);
+  // Total padding: 32px (16px left + 16px right), 12px gap between the two cards
+  const cardWidth = Math.max(140, Math.floor((containerWidth - 32 - 12) / 2));
 
   const [query, setQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState('Tất cả');
@@ -128,13 +132,14 @@ export default function ExploreScreen() {
 
         <View style={styles.grid}>
           {filteredMovies.map((movie) => (
-            <View key={movie.id} style={{ width: CARD_WIDTH, marginBottom: 16 }}>
-              <MovieCard
-                movie={movie}
-                cardWidth={CARD_WIDTH}
-                onPress={() => handleMoviePress(movie)}
-              />
-            </View>
+            <MovieCard
+              key={movie.id}
+              movie={movie}
+              cardWidth={cardWidth}
+              noMargin
+              style={{ marginBottom: 16 }}
+              onPress={() => handleMoviePress(movie)}
+            />
           ))}
         </View>
 
@@ -160,6 +165,9 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 8,
     gap: 10,
+    maxWidth: 600,
+    width: '100%',
+    alignSelf: 'center',
   },
   searchBar: {
     flexDirection: 'row',
@@ -191,6 +199,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 24,
+    maxWidth: 600,
+    width: '100%',
+    alignSelf: 'center',
   },
   resultsCount: {
     fontSize: 12,
@@ -200,6 +211,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   emptyState: {
     alignItems: 'center',

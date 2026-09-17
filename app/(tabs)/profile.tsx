@@ -8,20 +8,25 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import { Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { Ionicons, FontAwesome5, Feather } from '@expo/vector-icons';
 import { Header } from '../../src/components/common/Header';
 import { ThemeToggle } from '../../src/components/common/ThemeToggle';
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
-import { TransactionType } from '../../src/types/transaction';
+import { useProductionStore } from '../../src/store/useProductionStore';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { colors, isDark } = useTheme();
   const {
     isAuthenticated,
     user,
     wallet,
     transactions,
+    watchHistory,
+    isVIPMode,
+    toggleVIPMode,
     logout,
     openAuthModal,
     setCheckInModalOpen,
@@ -29,6 +34,13 @@ export default function ProfileScreen() {
     toggleChat,
   } = useAppStore();
 
+  const {
+    devices,
+    revokeDevice,
+    revokeAllOtherDevices,
+  } = useProductionStore();
+
+  const [activeTab, setActiveTab] = useState<'history' | 'transactions'>('history');
   const [filterType, setFilterType] = useState<string>('all');
 
   const filteredTxns = transactions.filter((tx) => {
@@ -106,15 +118,207 @@ export default function ProfileScreen() {
           <View style={styles.profileInfo}>
             <View style={styles.nameRow}>
               <Text style={[styles.name, { color: colors.text }]}>{user?.name}</Text>
-              {user?.isVIP && (
+              {(user?.isVIP || isVIPMode) && (
                 <View style={styles.vipBadge}>
-                  <Text style={styles.vipBadgeText}>VIP</Text>
+                  <Text style={styles.vipBadgeText}>VIP PRO</Text>
                 </View>
               )}
             </View>
             <Text style={[styles.email, { color: colors.textMuted }]}>{user?.email}</Text>
           </View>
         </View>
+
+        {/* VIP Status Banner */}
+        <View
+          style={[
+            styles.vipCard,
+            {
+              backgroundColor: isVIPMode ? (isDark ? '#2E1E0F' : '#FFFBEB') : colors.surface,
+              borderColor: isVIPMode ? '#F59E0B' : colors.border,
+            },
+          ]}
+        >
+          <View style={styles.vipCardHeader}>
+            <View style={styles.vipTitleRow}>
+              <FontAwesome5 name="crown" size={16} color="#F59E0B" />
+              <Text style={[styles.vipCardTitle, { color: isVIPMode ? '#F59E0B' : colors.text }]}>
+                {isVIPMode ? 'Thành Viên VIP Hoàng Gia' : 'Gói Hội Viên Tiêu Chuẩn'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={toggleVIPMode}
+              style={[
+                styles.vipToggleBtn,
+                { backgroundColor: isVIPMode ? '#F59E0B20' : colors.ruby },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.vipToggleBtnText,
+                  { color: isVIPMode ? '#F59E0B' : '#FFFFFF' },
+                ]}
+              >
+                {isVIPMode ? 'Đổi Gói' : 'Nâng VIP'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.vipCardDesc, { color: colors.textSecondary }]}>
+            {isVIPMode
+              ? 'Mở khóa toàn bộ kho phim 4K không quảng cáo, nhận +50 Coin thưởng mỗi tháng.'
+              : 'Nâng cấp lên VIP để xem không giới hạn kho phim AI độc quyền và nhận ưu đãi Coin.'}
+          </Text>
+        </View>
+
+        {/* Device Management Section (Conditioned on Active Subscription: MainFlow4) */}
+        {!isVIPMode && !user?.isVIP ? (
+          <View
+            style={[
+              styles.deviceCard,
+              {
+                backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <View style={styles.deviceHeaderRow}>
+              <View style={styles.deviceLockBadge}>
+                <Ionicons name="lock-closed" size={16} color="#F59E0B" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.deviceCardTitle, { color: colors.text }]}>
+                  Quản Lý Thiết Bị Đăng Nhập
+                </Text>
+                <Text style={[styles.deviceCardSub, { color: colors.textMuted }]}>
+                  Chỉ mở khóa cho tài khoản có Gói Thuê Bao hoạt động.
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[styles.deviceUnlockBtn, { backgroundColor: colors.ruby }]}
+              onPress={toggleVIPMode}
+            >
+              <Ionicons name="sparkles" size={14} color="#FFFFFF" />
+              <Text style={styles.deviceUnlockBtnText}>Nâng Cấp Gói Để Quản Lý Thiết Bị</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.deviceCard,
+              {
+                backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                borderColor: '#10B981',
+              },
+            ]}
+          >
+            <View style={styles.deviceHeaderRow}>
+              <View style={[styles.deviceLockBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                <Ionicons name="shield-checkmark" size={16} color="#10B981" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.deviceTitleRow}>
+                  <Text style={[styles.deviceCardTitle, { color: colors.text }]}>
+                    Quản Lý Thiết Bị Đăng Nhập
+                  </Text>
+                  <View style={styles.deviceLimitPill}>
+                    <Text style={styles.deviceLimitText}>{devices.length}/5 Thiết bị</Text>
+                  </View>
+                </View>
+                <Text style={[styles.deviceCardSub, { color: colors.textMuted }]}>
+                  Gói VIP: Cho phép tối đa 5 thiết bị đăng nhập đồng thời.
+                </Text>
+              </View>
+            </View>
+
+            {/* Devices List */}
+            <View style={styles.deviceList}>
+              {devices.map((dev) => (
+                <View
+                  key={dev.id}
+                  style={[
+                    styles.deviceItem,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: dev.isCurrentDevice ? '#10B981' : colors.border,
+                    },
+                  ]}
+                >
+                  <View style={styles.deviceIconCol}>
+                    <Ionicons
+                      name={
+                        dev.deviceType === 'desktop'
+                          ? 'laptop-outline'
+                          : dev.deviceType === 'mobile'
+                          ? 'phone-portrait-outline'
+                          : dev.deviceType === 'tv'
+                          ? 'tv-outline'
+                          : 'tablet-portrait-outline'
+                      }
+                      size={20}
+                      color={dev.isCurrentDevice ? '#10B981' : colors.textMuted}
+                    />
+                  </View>
+
+                  <View style={styles.deviceDetailCol}>
+                    <View style={styles.deviceNameRow}>
+                      <Text style={[styles.deviceNameText, { color: colors.text }]} numberOfLines={1}>
+                        {dev.deviceName}
+                      </Text>
+                      {dev.isCurrentDevice && (
+                        <View style={styles.currentDeviceBadge}>
+                          <Text style={styles.currentDeviceBadgeText}>Thiết bị này</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.deviceMetaText, { color: colors.textMuted }]}>
+                      {dev.browser} • {dev.location}
+                    </Text>
+                    <Text style={[styles.deviceIpText, { color: colors.textMuted }]}>
+                      IP: {dev.ipAddress} • {dev.lastActive}
+                    </Text>
+                  </View>
+
+                  {!dev.isCurrentDevice && (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={styles.deviceRevokeBtn}
+                      onPress={() => {
+                        Alert.alert('Thu hồi thiết bị', `Bạn có chắc muốn đăng xuất ${dev.deviceName}?`, [
+                          { text: 'Hủy', style: 'cancel' },
+                          { text: 'Đăng xuất', style: 'destructive', onPress: () => revokeDevice(dev.id) },
+                        ]);
+                      }}
+                    >
+                      <Text style={styles.deviceRevokeBtnText}>Thu hồi</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </View>
+
+            {devices.length > 1 && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.revokeAllBtn}
+                onPress={() => {
+                  Alert.alert(
+                    'Đăng xuất tất cả',
+                    'Bạn có chắc muốn đăng xuất khỏi tất cả các thiết bị khác ngoài thiết bị này?',
+                    [
+                      { text: 'Hủy', style: 'cancel' },
+                      { text: 'Đăng xuất hết', style: 'destructive', onPress: () => revokeAllOtherDevices() },
+                    ]
+                  );
+                }}
+              >
+                <Ionicons name="log-out-outline" size={14} color="#EF4444" />
+                <Text style={styles.revokeAllBtnText}>Đăng xuất khỏi tất cả thiết bị khác</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Wallet Overview Card */}
         <View
@@ -176,117 +380,263 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Transaction History Section */}
-        <View style={styles.historySection}>
-          <Text style={[styles.historyHeading, { color: colors.text }]}>
-            Lịch Sử Giao Dịch ({filteredTxns.length})
-          </Text>
+        {/* Navigation Tabs (History vs Transactions) */}
+        <View style={styles.tabBarContainer}>
+          <TouchableOpacity
+            style={[
+              styles.mainTabBtn,
+              activeTab === 'history' && {
+                borderBottomColor: colors.ruby,
+                borderBottomWidth: 3,
+              },
+            ]}
+            onPress={() => setActiveTab('history')}
+          >
+            <View style={styles.tabTitleWithIcon}>
+              <Ionicons
+                name="time-outline"
+                size={18}
+                color={activeTab === 'history' ? colors.ruby : colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.mainTabLabel,
+                  {
+                    color: activeTab === 'history' ? colors.text : colors.textMuted,
+                    fontWeight: activeTab === 'history' ? '800' : '600',
+                  },
+                ]}
+              >
+                Lịch Sử Xem ({watchHistory.length})
+              </Text>
+            </View>
+          </TouchableOpacity>
 
-          {/* Filter Chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-            {[
-              { id: 'all', label: 'Tất cả' },
-              { id: 'deposit', label: 'Nạp tiền' },
-              { id: 'episode_purchase', label: 'Mua tập' },
-              { id: 'checkin', label: 'Điểm danh' },
-            ].map((tab) => {
-              const isSelected = filterType === tab.id;
-              return (
+          <TouchableOpacity
+            style={[
+              styles.mainTabBtn,
+              activeTab === 'transactions' && {
+                borderBottomColor: colors.ruby,
+                borderBottomWidth: 3,
+              },
+            ]}
+            onPress={() => setActiveTab('transactions')}
+          >
+            <View style={styles.tabTitleWithIcon}>
+              <Ionicons
+                name="receipt-outline"
+                size={18}
+                color={activeTab === 'transactions' ? colors.ruby : colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.mainTabLabel,
+                  {
+                    color: activeTab === 'transactions' ? colors.text : colors.textMuted,
+                    fontWeight: activeTab === 'transactions' ? '800' : '600',
+                  },
+                ]}
+              >
+                Giao Dịch ({filteredTxns.length})
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Tab 1: Watch History */}
+        {activeTab === 'history' && (
+          <View style={styles.sectionContainer}>
+            {watchHistory.length === 0 ? (
+              <View style={[styles.emptyBox, { borderColor: colors.border }]}>
+                <Ionicons name="film-outline" size={40} color={colors.textMuted} />
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  Bạn chưa xem bộ phim nào gần đây
+                </Text>
                 <TouchableOpacity
-                  key={tab.id}
-                  activeOpacity={0.8}
-                  onPress={() => setFilterType(tab.id)}
-                  style={[
-                    styles.filterChip,
-                    {
-                      backgroundColor: isSelected
-                        ? colors.ruby
-                        : isDark
-                        ? '#1E293B'
-                        : '#F1F5F9',
-                      borderColor: isSelected ? colors.ruby : colors.border,
-                    },
-                  ]}
+                  style={[styles.exploreBtn, { backgroundColor: colors.ruby }]}
+                  onPress={() => router.push('/')}
                 >
-                  <Text
+                  <Text style={styles.exploreBtnText}>Khám Phá Phim Ngay</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.historyList}>
+                {watchHistory.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    activeOpacity={0.85}
+                    onPress={() => router.push(`/watch/${item.movieId}` as any)}
                     style={[
-                      styles.filterChipText,
+                      styles.historyCard,
                       {
-                        color: isSelected ? '#FFFFFF' : colors.textSecondary,
-                        fontWeight: isSelected ? '700' : '500',
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
                       },
                     ]}
                   >
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+                    {/* Thumbnail */}
+                    <View style={styles.historyThumbBox}>
+                      <Image source={{ uri: item.thumbnailUrl }} style={styles.historyThumb} />
+                      <View style={styles.thumbPlayIconCircle}>
+                        <Ionicons name="play" size={14} color="#FFFFFF" />
+                      </View>
+                    </View>
 
-          {/* List of transactions */}
-          <View style={styles.txnList}>
-            {filteredTxns.map((tx) => {
-              const isPositive = tx.totalAmount > 0;
-              return (
-                <View
-                  key={tx.id}
-                  style={[
-                    styles.txnCard,
-                    {
-                      backgroundColor: colors.surface,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                >
-                  <View style={styles.txnLeft}>
-                    <View
+                    {/* Meta info */}
+                    <View style={styles.historyInfo}>
+                      <Text style={[styles.historyTitle, { color: colors.text }]} numberOfLines={1}>
+                        {item.movieTitle}
+                      </Text>
+                      {item.episodeTitle && (
+                        <Text style={[styles.historyEpisode, { color: colors.ruby }]} numberOfLines={1}>
+                          Tập {item.episodeNumber}: {item.episodeTitle}
+                        </Text>
+                      )}
+
+                      {/* Progress bar */}
+                      <View style={styles.progressContainer}>
+                        <View style={[styles.progressTrack, { backgroundColor: isDark ? '#334155' : '#E2E8F0' }]}>
+                          <View style={[styles.progressBar, { width: `${item.progressPercent}%`, backgroundColor: colors.ruby }]} />
+                        </View>
+                        <Text style={[styles.progressPercent, { color: colors.textMuted }]}>
+                          {item.progressPercent}%
+                        </Text>
+                      </View>
+
+                      <View style={styles.historyTimeRow}>
+                        <Text style={[styles.historyDuration, { color: colors.textMuted }]}>
+                          Thời lượng: {item.duration}
+                        </Text>
+                        <Text style={[styles.historyAgo, { color: colors.textMuted }]}>
+                          {item.lastWatchedAt}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Action button */}
+                    <TouchableOpacity
+                      style={[styles.resumeBtn, { backgroundColor: colors.ruby }]}
+                      onPress={() => router.push(`/watch/${item.movieId}` as any)}
+                    >
+                      <Ionicons name="play" size={14} color="#FFFFFF" />
+                      <Text style={styles.resumeBtnText}>Xem</Text>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Tab 2: Transaction History */}
+        {activeTab === 'transactions' && (
+          <View style={styles.sectionContainer}>
+            {/* Filter Chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+              {[
+                { id: 'all', label: 'Tất cả' },
+                { id: 'deposit', label: 'Nạp tiền' },
+                { id: 'episode_purchase', label: 'Mua tập' },
+                { id: 'checkin', label: 'Điểm danh' },
+              ].map((tab) => {
+                const isSelected = filterType === tab.id;
+                return (
+                  <TouchableOpacity
+                    key={tab.id}
+                    activeOpacity={0.8}
+                    onPress={() => setFilterType(tab.id)}
+                    style={[
+                      styles.filterChip,
+                      {
+                        backgroundColor: isSelected
+                          ? colors.ruby
+                          : isDark
+                          ? '#1E293B'
+                          : '#F1F5F9',
+                        borderColor: isSelected ? colors.ruby : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text
                       style={[
-                        styles.txnIcon,
+                        styles.filterChipText,
                         {
-                          backgroundColor: isPositive
-                            ? 'rgba(16, 185, 129, 0.12)'
-                            : 'rgba(239, 68, 68, 0.12)',
+                          color: isSelected ? '#FFFFFF' : colors.textSecondary,
+                          fontWeight: isSelected ? '700' : '500',
                         },
                       ]}
                     >
-                      <Ionicons
-                        name={isPositive ? 'arrow-down' : 'arrow-up'}
-                        size={16}
-                        color={isPositive ? '#10B981' : '#EF4444'}
-                      />
-                    </View>
-                    <View style={styles.txnInfo}>
-                      <Text style={[styles.txnTitle, { color: colors.text }]} numberOfLines={1}>
-                        {tx.typeLabel}
-                      </Text>
-                      <Text style={[styles.txnDesc, { color: colors.textMuted }]} numberOfLines={1}>
-                        {tx.description}
-                      </Text>
-                      <Text style={[styles.txnDate, { color: colors.textMuted }]}>
-                        {new Date(tx.createdAt).toLocaleDateString('vi-VN')}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.txnRight}>
-                    <Text
-                      style={[
-                        styles.txnAmount,
-                        { color: isPositive ? '#10B981' : '#EF4444' },
-                      ]}
-                    >
-                      {isPositive ? `+${tx.totalAmount}` : tx.totalAmount} Coin
+                      {tab.label}
                     </Text>
-                    <View style={styles.statusBadge}>
-                      <Text style={styles.statusBadgeText}>{tx.statusLabel}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* List of transactions */}
+            <View style={styles.txnList}>
+              {filteredTxns.map((tx) => {
+                const isPositive = tx.totalAmount > 0;
+                return (
+                  <View
+                    key={tx.id}
+                    style={[
+                      styles.txnCard,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                  >
+                    <View style={styles.txnLeft}>
+                      <View
+                        style={[
+                          styles.txnIcon,
+                          {
+                            backgroundColor: isPositive
+                              ? 'rgba(16, 185, 129, 0.12)'
+                              : 'rgba(239, 68, 68, 0.12)',
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name={isPositive ? 'arrow-down' : 'arrow-up'}
+                          size={16}
+                          color={isPositive ? '#10B981' : '#EF4444'}
+                        />
+                      </View>
+                      <View style={styles.txnInfo}>
+                        <Text style={[styles.txnTitle, { color: colors.text }]} numberOfLines={1}>
+                          {tx.typeLabel}
+                        </Text>
+                        <Text style={[styles.txnDesc, { color: colors.textMuted }]} numberOfLines={1}>
+                          {tx.description}
+                        </Text>
+                        <Text style={[styles.txnDate, { color: colors.textMuted }]}>
+                          {new Date(tx.createdAt).toLocaleDateString('vi-VN')}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.txnRight}>
+                      <Text
+                        style={[
+                          styles.txnAmount,
+                          { color: isPositive ? '#10B981' : '#EF4444' },
+                        ]}
+                      >
+                        {isPositive ? `+${tx.totalAmount}` : tx.totalAmount} Coin
+                      </Text>
+                      <View style={styles.statusBadge}>
+                        <Text style={styles.statusBadgeText}>{tx.statusLabel}</Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-              );
-            })}
+                );
+              })}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Quick Settings */}
         <View
@@ -382,7 +732,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     gap: 14,
-    paddingBottom: 24,
+    paddingBottom: 32,
   },
   profileCard: {
     flexDirection: 'row',
@@ -435,6 +785,39 @@ const styles = StyleSheet.create({
   },
   email: {
     fontSize: 12,
+  },
+  vipCard: {
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 8,
+  },
+  vipCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  vipTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  vipCardTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  vipToggleBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  vipToggleBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  vipCardDesc: {
+    fontSize: 12,
+    lineHeight: 17,
   },
   walletCard: {
     borderRadius: 14,
@@ -503,12 +886,145 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  historySection: {
+  tabBarContainer: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
+    marginTop: 4,
+  },
+  mainTabBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+  },
+  tabTitleWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  mainTabLabel: {
+    fontSize: 13,
+  },
+  sectionContainer: {
     gap: 10,
   },
-  historyHeading: {
-    fontSize: 15,
+  emptyBox: {
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    gap: 10,
+  },
+  emptyText: {
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  exploreBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  exploreBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  historyList: {
+    gap: 10,
+  },
+  historyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 10,
+  },
+  historyThumbBox: {
+    width: 90,
+    height: 58,
+    borderRadius: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  historyThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  thumbPlayIconCircle: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginTop: -12,
+    marginLeft: -12,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  historyInfo: {
+    flex: 1,
+    gap: 3,
+  },
+  historyTitle: {
+    fontSize: 13,
     fontWeight: '800',
+  },
+  historyEpisode: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  progressTrack: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  progressPercent: {
+    fontSize: 10,
+    fontWeight: '700',
+    width: 28,
+  },
+  historyTimeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  historyDuration: {
+    fontSize: 10,
+  },
+  historyAgo: {
+    fontSize: 10,
+  },
+  resumeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4,
+  },
+  resumeBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
   filterRow: {
     gap: 8,
@@ -583,6 +1099,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     paddingHorizontal: 16,
+    marginTop: 4,
   },
   settingRow: {
     flexDirection: 'row',
@@ -601,4 +1118,136 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  deviceCard: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    gap: 12,
+  },
+  deviceHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  deviceLockBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deviceTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  deviceCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  deviceCardSub: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  deviceLimitPill: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  deviceLimitText: {
+    color: '#10B981',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  deviceUnlockBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  deviceUnlockBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  deviceList: {
+    gap: 8,
+  },
+  deviceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 10,
+  },
+  deviceIconCol: {
+    width: 32,
+    alignItems: 'center',
+  },
+  deviceDetailCol: {
+    flex: 1,
+    gap: 2,
+  },
+  deviceNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  deviceNameText: {
+    fontSize: 12,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  currentDeviceBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  currentDeviceBadgeText: {
+    color: '#10B981',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  deviceMetaText: {
+    fontSize: 10,
+  },
+  deviceIpText: {
+    fontSize: 10,
+    fontFamily: 'monospace',
+  },
+  deviceRevokeBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  deviceRevokeBtnText: {
+    color: '#EF4444',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  revokeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(150, 150, 150, 0.2)',
+    marginTop: 4,
+  },
+  revokeAllBtnText: {
+    color: '#EF4444',
+    fontSize: 11,
+    fontWeight: '700',
+  },
 });
+

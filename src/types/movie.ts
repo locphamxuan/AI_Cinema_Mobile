@@ -59,3 +59,16 @@ export interface Movie {
   ageRating?: string;
   badge?: string;
 }
+
+export interface WatchHistoryItem {
+  id: string;
+  movieId: string;
+  movieTitle: string;
+  episodeId: string;
+  episodeTitle: string;
+  episodeNumber: number;
+  thumbnailUrl: string;
+  progressPercent: number;
+  duration: string;
+  lastWatchedAt: string;
+}

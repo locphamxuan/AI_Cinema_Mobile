@@ -3,7 +3,7 @@ export interface UserProfile {
   name: string;
   email: string;
   avatarUrl: string;
-  role: 'user' | 'vip' | 'admin';
+  role: 'user' | 'vip' | 'admin' | 'creator' | 'reviewer';
   isVIP: boolean;
   vipExpiresAt?: string;
   createdAt: string;

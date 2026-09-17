@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { WalletState, CheckInStreak } from '../types/wallet';
-import { Movie } from '../types/movie';
+import { Movie, WatchHistoryItem } from '../types/movie';
 import { UserSubscription } from '../types/subscription';
 import { Transaction } from '../types/transaction';
 import { ChatMessage, ChatPhase, SupportTicket } from '../types/chat';
 import { UserProfile } from '../types/auth';
+import { useProductionStore } from './useProductionStore';
 import {
   mockWallet,
   mockCheckInStreak,
@@ -12,6 +13,7 @@ import {
   mockMovie,
   mockTransactions,
   mockInitialMessages,
+  mockWatchHistory,
   botResponses,
 } from '../mocks/mockData';
 
@@ -19,8 +21,8 @@ interface AppState {
   // Auth
   isAuthenticated: boolean;
   user: UserProfile | null;
-  login: (email: string, password: string) => { success: boolean; error?: string };
-  register: (name: string, email: string, password: string) => { success: boolean; error?: string };
+  login: (email: string, password: string) => { success: boolean; error?: string; redirectUrl?: string; role?: string };
+  register: (name: string, email: string, password: string) => { success: boolean; error?: string; redirectUrl?: string; role?: string };
   logout: () => void;
   isAuthModalOpen: boolean;
   authModalMode: 'login' | 'register';
@@ -76,6 +78,17 @@ interface AppState {
   closeUnlockModal: () => void;
   isTopUpModalOpen: boolean;
   setTopUpModalOpen: (open: boolean) => void;
+
+  // My List
+  myList: string[];
+  toggleMyList: (movieId: string) => void;
+
+  // Watch History
+  watchHistory: WatchHistoryItem[];
+  addToWatchHistory: (item: Omit<WatchHistoryItem, 'id' | 'lastWatchedAt'>) => void;
+
+  // Deposit
+  depositCoins: (amountVnd: number, mainCoin: number, bonusCoin: number, paymentMethod: string) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -95,12 +108,35 @@ export const useAppStore = create<AppState>((set, get) => ({
   login: (email, password) => {
     const trimmedEmail = email.trim().toLowerCase();
 
-    // Check demo credentials
+    // 1. Normal User (Khán giả bình thường - KHÔNG có Maker/Checker/Studio)
     if (trimmedEmail === 'userdemo@gmail.com' && password === '1') {
       const demoUser: UserProfile = {
         id: 'user-demo-001',
-        name: 'Phạm Xuân Lộc (Demo User)',
+        name: 'Phạm Xuân Lộc (Khán Giả)',
         email: 'userdemo@gmail.com',
+        avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
+        role: 'user',
+        isVIP: false,
+        createdAt: '2026-01-01',
+      };
+
+      set({
+        isAuthenticated: true,
+        user: demoUser,
+        isVIPMode: false,
+        isAuthModalOpen: false,
+        wallet: { mainCoin: 60, bonusCoin: 20 },
+      });
+
+      return { success: true, redirectUrl: '/', role: 'user' };
+    }
+
+    // 2. VIP User (Khán giả gói VIP - được quản lý thiết bị, nhưng không có Maker/Checker)
+    if (trimmedEmail === 'vipdemo@gmail.com' && password === '1') {
+      const vipUser: UserProfile = {
+        id: 'user-vip-001',
+        name: 'Phạm Xuân Lộc (Khán Giả VIP)',
+        email: 'vipdemo@gmail.com',
         avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
         role: 'vip',
         isVIP: true,
@@ -110,17 +146,69 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       set({
         isAuthenticated: true,
-        user: demoUser,
+        user: vipUser,
         isVIPMode: true,
         isAuthModalOpen: false,
         subscription: mockSubscriptionVIP,
         wallet: mockWallet,
       });
 
-      return { success: true };
+      return { success: true, redirectUrl: '/', role: 'vip' };
     }
 
-    // Allow any other valid email/password
+    // 3. Creator Account (Nhà sáng tạo / Maker - chuyển thẳng vào Studio Maker)
+    if (trimmedEmail === 'creator@gmail.com' && password === '1') {
+      const creatorUser: UserProfile = {
+        id: 'usr-creator-01',
+        name: 'Đạo diễn Trần Minh Huy (Maker)',
+        email: 'creator@gmail.com',
+        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        role: 'creator',
+        isVIP: true,
+        createdAt: '2026-01-01',
+      };
+
+      useProductionStore.getState().setActiveRole('creator');
+
+      set({
+        isAuthenticated: true,
+        user: creatorUser,
+        isVIPMode: true,
+        isAuthModalOpen: false,
+        subscription: mockSubscriptionVIP,
+        wallet: { mainCoin: 1500, bonusCoin: 500 },
+      });
+
+      return { success: true, redirectUrl: '/studio', role: 'creator' };
+    }
+
+    // 4. Reviewer Account (Ban kiểm duyệt / Checker - chuyển thẳng vào Studio Reviewer)
+    if (trimmedEmail === 'reviewer@gmail.com' && password === '1') {
+      const reviewerUser: UserProfile = {
+        id: 'usr-reviewer-01',
+        name: 'Thẩm định viên Lê Quốc Bảo (Checker)',
+        email: 'reviewer@gmail.com',
+        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+        role: 'reviewer',
+        isVIP: true,
+        createdAt: '2026-01-01',
+      };
+
+      useProductionStore.getState().setActiveRole('reviewer');
+
+      set({
+        isAuthenticated: true,
+        user: reviewerUser,
+        isVIPMode: true,
+        isAuthModalOpen: false,
+        subscription: mockSubscriptionVIP,
+        wallet: { mainCoin: 2000, bonusCoin: 1000 },
+      });
+
+      return { success: true, redirectUrl: '/studio', role: 'reviewer' };
+    }
+
+    // 5. Allow any other registered/custom email as regular user
     if (trimmedEmail && password) {
       const customUser: UserProfile = {
         id: `user-${Date.now()}`,
@@ -140,7 +228,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         wallet: { mainCoin: 50, bonusCoin: 20 },
       });
 
-      return { success: true };
+      return { success: true, redirectUrl: '/', role: 'user' };
     }
 
     return { success: false, error: 'Email hoặc mật khẩu không chính xác. Thử lại với userdemo@gmail.com / 1' };
@@ -452,4 +540,47 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   isTopUpModalOpen: false,
   setTopUpModalOpen: (open) => set({ isTopUpModalOpen: open }),
+
+  // ===== MY LIST =====
+  myList: ['movie-001', 'movie-002'],
+  toggleMyList: (movieId) =>
+    set((s) => ({
+      myList: s.myList.includes(movieId)
+        ? s.myList.filter((id) => id !== movieId)
+        : [...s.myList, movieId],
+    })),
+
+  // ===== WATCH HISTORY =====
+  watchHistory: mockWatchHistory,
+  addToWatchHistory: (item) =>
+    set((s) => {
+      const existing = s.watchHistory.filter((h) => h.movieId !== item.movieId);
+      const newItem: WatchHistoryItem = {
+        ...item,
+        id: `wh-${Date.now()}`,
+        lastWatchedAt: 'Vừa xong',
+      };
+      return { watchHistory: [newItem, ...existing] };
+    }),
+
+  // ===== DEPOSIT COINS =====
+  depositCoins: (amountVnd, mainCoin, bonusCoin, paymentMethod) => {
+    set((s) => ({
+      wallet: {
+        mainCoin: s.wallet.mainCoin + mainCoin,
+        bonusCoin: s.wallet.bonusCoin + bonusCoin,
+      },
+    }));
+
+    get().addTransaction({
+      type: 'deposit',
+      typeLabel: 'Nạp Coin',
+      description: `Nạp gói ${amountVnd.toLocaleString('vi-VN')}đ qua ${paymentMethod}`,
+      mainCoinDelta: mainCoin,
+      bonusCoinDelta: bonusCoin,
+      totalAmount: mainCoin + bonusCoin,
+      status: 'success',
+      statusLabel: 'Thành công',
+    });
+  },
 }));

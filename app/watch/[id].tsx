@@ -6,7 +6,6 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -19,8 +18,6 @@ import { Episode, EpisodeVersion } from '../../src/types/movie';
 import { VersionSelectorModal } from '../../src/components/player/VersionSelectorModal';
 import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function WatchScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

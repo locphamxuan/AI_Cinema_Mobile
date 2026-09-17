@@ -1,18 +1,22 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { Movie } from '../../types/movie';
 import { useTheme } from '../../theme';
 
-interface MovieCardProps {
+export interface MovieCardProps {
   movie: Movie;
   onPress: () => void;
   cardWidth?: number;
+  noMargin?: boolean;
+  style?: StyleProp<ViewStyle>;
 }
 
 export const MovieCard: React.FC<MovieCardProps> = ({
   movie,
   onPress,
   cardWidth = 130,
+  noMargin = false,
+  style,
 }) => {
   const { colors, isDark } = useTheme();
 
@@ -20,9 +24,14 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={onPress}
-      style={[styles.container, { width: cardWidth }]}
+      style={[
+        styles.container,
+        { width: cardWidth },
+        noMargin ? { marginRight: 0 } : null,
+        style,
+      ]}
     >
-      <View style={[styles.posterContainer, { height: cardWidth * 1.5 }]}>
+      <View style={[styles.posterContainer, { height: Math.round(cardWidth * 1.5) }]}>
         <Image
           source={{ uri: movie.posterUrl }}
           style={styles.poster}
