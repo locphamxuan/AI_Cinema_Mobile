@@ -14,6 +14,7 @@ import { Header } from '../../src/components/common/Header';
 import { ThemeToggle } from '../../src/components/common/ThemeToggle';
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
+import { useProductionStore } from '../../src/store/useProductionStore';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -32,6 +33,12 @@ export default function ProfileScreen() {
     setTopUpModalOpen,
     toggleChat,
   } = useAppStore();
+
+  const {
+    devices,
+    revokeDevice,
+    revokeAllOtherDevices,
+  } = useProductionStore();
 
   const [activeTab, setActiveTab] = useState<'history' | 'transactions'>('history');
   const [filterType, setFilterType] = useState<string>('all');
@@ -161,6 +168,157 @@ export default function ProfileScreen() {
               : 'Nâng cấp lên VIP để xem không giới hạn kho phim AI độc quyền và nhận ưu đãi Coin.'}
           </Text>
         </View>
+
+        {/* Device Management Section (Conditioned on Active Subscription: MainFlow4) */}
+        {!isVIPMode && !user?.isVIP ? (
+          <View
+            style={[
+              styles.deviceCard,
+              {
+                backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <View style={styles.deviceHeaderRow}>
+              <View style={styles.deviceLockBadge}>
+                <Ionicons name="lock-closed" size={16} color="#F59E0B" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.deviceCardTitle, { color: colors.text }]}>
+                  Quản Lý Thiết Bị Đăng Nhập
+                </Text>
+                <Text style={[styles.deviceCardSub, { color: colors.textMuted }]}>
+                  Chỉ mở khóa cho tài khoản có Gói Thuê Bao hoạt động.
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[styles.deviceUnlockBtn, { backgroundColor: colors.ruby }]}
+              onPress={toggleVIPMode}
+            >
+              <Ionicons name="sparkles" size={14} color="#FFFFFF" />
+              <Text style={styles.deviceUnlockBtnText}>Nâng Cấp Gói Để Quản Lý Thiết Bị</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.deviceCard,
+              {
+                backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                borderColor: '#10B981',
+              },
+            ]}
+          >
+            <View style={styles.deviceHeaderRow}>
+              <View style={[styles.deviceLockBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                <Ionicons name="shield-checkmark" size={16} color="#10B981" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.deviceTitleRow}>
+                  <Text style={[styles.deviceCardTitle, { color: colors.text }]}>
+                    Quản Lý Thiết Bị Đăng Nhập
+                  </Text>
+                  <View style={styles.deviceLimitPill}>
+                    <Text style={styles.deviceLimitText}>{devices.length}/5 Thiết bị</Text>
+                  </View>
+                </View>
+                <Text style={[styles.deviceCardSub, { color: colors.textMuted }]}>
+                  Gói VIP: Cho phép tối đa 5 thiết bị đăng nhập đồng thời.
+                </Text>
+              </View>
+            </View>
+
+            {/* Devices List */}
+            <View style={styles.deviceList}>
+              {devices.map((dev) => (
+                <View
+                  key={dev.id}
+                  style={[
+                    styles.deviceItem,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: dev.isCurrentDevice ? '#10B981' : colors.border,
+                    },
+                  ]}
+                >
+                  <View style={styles.deviceIconCol}>
+                    <Ionicons
+                      name={
+                        dev.deviceType === 'desktop'
+                          ? 'laptop-outline'
+                          : dev.deviceType === 'mobile'
+                          ? 'phone-portrait-outline'
+                          : dev.deviceType === 'tv'
+                          ? 'tv-outline'
+                          : 'tablet-portrait-outline'
+                      }
+                      size={20}
+                      color={dev.isCurrentDevice ? '#10B981' : colors.textMuted}
+                    />
+                  </View>
+
+                  <View style={styles.deviceDetailCol}>
+                    <View style={styles.deviceNameRow}>
+                      <Text style={[styles.deviceNameText, { color: colors.text }]} numberOfLines={1}>
+                        {dev.deviceName}
+                      </Text>
+                      {dev.isCurrentDevice && (
+                        <View style={styles.currentDeviceBadge}>
+                          <Text style={styles.currentDeviceBadgeText}>Thiết bị này</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.deviceMetaText, { color: colors.textMuted }]}>
+                      {dev.browser} • {dev.location}
+                    </Text>
+                    <Text style={[styles.deviceIpText, { color: colors.textMuted }]}>
+                      IP: {dev.ipAddress} • {dev.lastActive}
+                    </Text>
+                  </View>
+
+                  {!dev.isCurrentDevice && (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={styles.deviceRevokeBtn}
+                      onPress={() => {
+                        Alert.alert('Thu hồi thiết bị', `Bạn có chắc muốn đăng xuất ${dev.deviceName}?`, [
+                          { text: 'Hủy', style: 'cancel' },
+                          { text: 'Đăng xuất', style: 'destructive', onPress: () => revokeDevice(dev.id) },
+                        ]);
+                      }}
+                    >
+                      <Text style={styles.deviceRevokeBtnText}>Thu hồi</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </View>
+
+            {devices.length > 1 && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.revokeAllBtn}
+                onPress={() => {
+                  Alert.alert(
+                    'Đăng xuất tất cả',
+                    'Bạn có chắc muốn đăng xuất khỏi tất cả các thiết bị khác ngoài thiết bị này?',
+                    [
+                      { text: 'Hủy', style: 'cancel' },
+                      { text: 'Đăng xuất hết', style: 'destructive', onPress: () => revokeAllOtherDevices() },
+                    ]
+                  );
+                }}
+              >
+                <Ionicons name="log-out-outline" size={14} color="#EF4444" />
+                <Text style={styles.revokeAllBtnText}>Đăng xuất khỏi tất cả thiết bị khác</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Wallet Overview Card */}
         <View
@@ -959,6 +1117,137 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  deviceCard: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    gap: 12,
+  },
+  deviceHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  deviceLockBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deviceTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  deviceCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  deviceCardSub: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  deviceLimitPill: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  deviceLimitText: {
+    color: '#10B981',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  deviceUnlockBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  deviceUnlockBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  deviceList: {
+    gap: 8,
+  },
+  deviceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 10,
+  },
+  deviceIconCol: {
+    width: 32,
+    alignItems: 'center',
+  },
+  deviceDetailCol: {
+    flex: 1,
+    gap: 2,
+  },
+  deviceNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  deviceNameText: {
+    fontSize: 12,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  currentDeviceBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  currentDeviceBadgeText: {
+    color: '#10B981',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  deviceMetaText: {
+    fontSize: 10,
+  },
+  deviceIpText: {
+    fontSize: 10,
+    fontFamily: 'monospace',
+  },
+  deviceRevokeBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  deviceRevokeBtnText: {
+    color: '#EF4444',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  revokeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(150, 150, 150, 0.2)',
+    marginTop: 4,
+  },
+  revokeAllBtnText: {
+    color: '#EF4444',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });
 

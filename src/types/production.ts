@@ -46,6 +46,74 @@ export interface ProductionPlan {
 
 export type SceneRenderStatus = 'idle' | 'rendering' | 'completed' | 'error';
 
+export interface UserDevice {
+  id: string;
+  deviceName: string;
+  deviceType: 'desktop' | 'mobile' | 'tablet' | 'tv';
+  browser: string;
+  os: string;
+  ipAddress: string;
+  location: string;
+  lastActive: string;
+  isCurrentDevice: boolean;
+}
+
+export interface ProjectMilestone {
+  id: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'delayed';
+  assignedTo: string;
+  deliverable: string;
+}
+
+export interface AIPolicy {
+  id: string;
+  code: string;
+  name: string;
+  version: string;
+  description: string;
+  minModerationScore: number;
+  watermarkRequired: boolean;
+  disclaimerText: string;
+  allowedModels: string[];
+}
+
+export interface EpisodeSubmission {
+  id: string;
+  episodeId: string;
+  projectId: string;
+  submittedAt: string;
+  submittedBy: string;
+  versionNumber: string;
+  totalScenes: number;
+  totalDurationSec: number;
+  totalTokensSpent: number;
+  videoDraftUrl: string;
+  changeSummary: string;
+  reviewStatus: 'pending' | 'approved' | 'rejected';
+  reviewedAt?: string;
+  reviewedBy?: string;
+  reviewNotes?: string;
+}
+
+export interface TokenExtensionRequest {
+  id: string;
+  projectId: string;
+  episodeId: string;
+  episodeTitle: string;
+  requestedTokens: number;
+  reason: string;
+  requestedBy: string;
+  requestedAt: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewerNotes?: string;
+  reviewedAt?: string;
+}
+
+export type SceneReviewStatus = 'pending' | 'approved' | 'changes_requested';
+
 export interface Scene {
   id: string;
   sceneNumber: number;
@@ -60,6 +128,9 @@ export interface Scene {
   tokenCost: number;
   videoUrl: string;
   thumbnailUrl: string;
+  reviewStatus?: SceneReviewStatus;
+  reviewFeedback?: string;
+  reviewedAt?: string;
 }
 
 export interface QuotaAllocation {
@@ -90,16 +161,22 @@ export interface ProductionEpisode {
   quota: QuotaAllocation | null;
   scenes: Scene[];
   totalDuration: string;
+  maxDurationSec?: number;
   actualTokensUsed: number;
   videoDraftUrl: string;
   compliance: ComplianceMetadata | null;
   scheduledReleaseDate: string | null;
+  milestoneId?: string;
+  submissions?: EpisodeSubmission[];
+  tokenExtensionRequests?: TokenExtensionRequest[];
+  draftsCount?: number;
+  assigneeName?: string;
 }
 
 export interface Project {
   id: string;
   title: string;
-  genre: string[];
+  genre: string[] | string;
   synopsis: string;
   totalEpisodes: number;
   episodes: ProductionEpisode[];
@@ -113,4 +190,7 @@ export interface Project {
   updatedAt: string;
   creatorName: string;
   reviewerName: string;
+  milestones?: ProjectMilestone[];
+  appliedPolicy?: AIPolicy;
+  tokenExtensionRequests?: TokenExtensionRequest[];
 }

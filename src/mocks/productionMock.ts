@@ -1,4 +1,147 @@
-import { Project, Scene } from '../types/production';
+import {
+  Project,
+  Scene,
+  AIPolicy,
+  ProjectMilestone,
+  UserDevice,
+  TokenExtensionRequest,
+} from '../types/production';
+
+export const mockAIPolicies: AIPolicy[] = [
+  {
+    id: 'policy-vn-2025',
+    code: 'LAW-AI-VN2025',
+    name: 'Quy chuẩn Luật Trí tuệ Nhân tạo 2025 & NĐ 142/2024',
+    version: 'v2.4.0',
+    description: 'Bắt buộc gắn nhãn AI Watermark, kiểm duyệt ngôn từ Điều 44, độ chính xác nhận diện nội dung số tối thiểu 95%.',
+    minModerationScore: 95.0,
+    watermarkRequired: true,
+    disclaimerText: 'Toàn bộ hình ảnh, âm thanh và chuyển động trong tác phẩm này được tạo sinh 100% bằng Trí tuệ Nhân tạo. Không có diễn viên thật tham gia.',
+    allowedModels: ['CinemaGen v3.2 (4K Photoreal)', 'Sora Vision Pro v2', 'ElevenLabs Pro HD', 'Dolby Spatial AI'],
+  },
+  {
+    id: 'policy-ethics-strict',
+    code: 'STRICT-ETHICS-2026',
+    name: 'Bộ Quy tắc Đạo đức AI & Kiểm duyệt Bản quyền Khắt khe',
+    version: 'v1.8.2',
+    description: 'Chống đạo nhái phong cách nghệ sĩ độc quyền, kiểm duyệt không bạo lực, điểm an toàn tối thiểu 98%.',
+    minModerationScore: 98.0,
+    watermarkRequired: true,
+    disclaimerText: 'Phim tuân thủ tiêu chuẩn an toàn nội dung toàn cầu và bảo vệ quyền sở hữu trí tuệ số.',
+    allowedModels: ['CinemaGen v3.2 (4K Photoreal)', 'ElevenLabs Pro HD'],
+  },
+  {
+    id: 'policy-experimental',
+    code: 'OPEN-CREATIVE-SANDBOX',
+    name: 'Khung Thử nghiệm Sáng tạo Mở (Studio Sandbox)',
+    version: 'v3.0.0',
+    description: 'Cho phép thử nghiệm các kỹ thuật sinh hình ảnh và âm thanh mới nhất, gắn nhãn thử nghiệm.',
+    minModerationScore: 90.0,
+    watermarkRequired: true,
+    disclaimerText: 'Tác phẩm thử nghiệm công nghệ AI thế hệ mới.',
+    allowedModels: ['CinemaGen v3.2 (4K Photoreal)', 'Sora Vision Pro v2', 'Runway Gen-3', 'ElevenLabs Pro HD', 'Suno AI v3'],
+  },
+];
+
+export const mockMilestones: ProjectMilestone[] = [
+  {
+    id: 'ms-01',
+    title: 'Cột mốc 1: Kịch bản & Phân cảnh mẫu (Storyboards)',
+    description: 'Hoàn thiện kịch bản 5 tập phim, phân rã 25 phân cảnh và xác lập phong cách hình ảnh Cyberpunk.',
+    dueDate: '2026-09-15',
+    status: 'completed',
+    assignedTo: 'Biên Kịch & Creator Team',
+    deliverable: 'Kịch bản tổng quan + 25 prompt phân cảnh mẫu',
+  },
+  {
+    id: 'ms-02',
+    title: 'Cột mốc 2: Sinh video AI các tập 1, 2, 3 (Alpha Render)',
+    description: 'Tạo sinh toàn bộ video, audio, lời thoại và lồng ghép âm thanh vòm Dolby Atmos.',
+    dueDate: '2026-10-30',
+    status: 'in_progress',
+    assignedTo: 'Đạo diễn AI Trần Minh Huy',
+    deliverable: 'Bản dựng thô (Drafts) 3 tập đầu',
+  },
+  {
+    id: 'ms-03',
+    title: 'Cột mốc 3: Thẩm định pháp lý & Kiểm duyệt Điều 44',
+    description: 'Reviewer kiểm tra từng phân cảnh, quét bản quyền AI, kiểm định điểm an toàn Moderation >= 95%.',
+    dueDate: '2026-11-20',
+    status: 'pending',
+    assignedTo: 'Thẩm định viên Lê Quốc Bảo (Reviewer)',
+    deliverable: 'Biên bản chứng nhận kiểm định & Phê duyệt nội dung',
+  },
+  {
+    id: 'ms-04',
+    title: 'Cột mốc 4: Master 4K & Công chiếu nền tảng (Public Premiere)',
+    description: 'Render bản Master 4K không nén, lên lịch phát hành sớm 24h cho hội viên VIP và công chiếu rộng rãi.',
+    dueDate: '2026-12-31',
+    status: 'pending',
+    assignedTo: 'Bộ phận Phát hành & Vận hành',
+    deliverable: '5 tập phim Full 4K phát hành trên AI Cinema',
+  },
+];
+
+export const mockUserDevices: UserDevice[] = [
+  {
+    id: 'dev-01',
+    deviceName: 'MacBook Pro M3 Max 16"',
+    deviceType: 'desktop',
+    browser: 'Google Chrome 128.0',
+    os: 'macOS Sonoma',
+    ipAddress: '113.161.72.45',
+    location: 'Quận 1, TP. Hồ Chí Minh',
+    lastActive: 'Đang hoạt động',
+    isCurrentDevice: false,
+  },
+  {
+    id: 'dev-02',
+    deviceName: 'iPhone 15 Pro Max',
+    deviceType: 'mobile',
+    browser: 'Ứng dụng AI Cinema iOS',
+    os: 'iOS 18.1',
+    ipAddress: '14.169.84.102',
+    location: 'Quận 7, TP. Hồ Chí Minh',
+    lastActive: 'Đang dùng',
+    isCurrentDevice: true,
+  },
+  {
+    id: 'dev-03',
+    deviceName: 'Samsung Neo QLED 4K 65"',
+    deviceType: 'tv',
+    browser: 'AI Cinema SmartTV App',
+    os: 'Tizen OS 7.0',
+    ipAddress: '115.78.23.190',
+    location: 'Cầu Giấy, Hà Nội',
+    lastActive: 'Hôm qua lúc 21:40',
+    isCurrentDevice: false,
+  },
+  {
+    id: 'dev-04',
+    deviceName: 'iPad Pro M2 12.9"',
+    deviceType: 'tablet',
+    browser: 'Safari Mobile 18.0',
+    os: 'iPadOS 18.0',
+    ipAddress: '118.69.191.12',
+    location: 'Hải Châu, Đà Nẵng',
+    lastActive: '3 ngày trước',
+    isCurrentDevice: false,
+  },
+];
+
+export const mockTokenExtensionRequests: TokenExtensionRequest[] = [
+  {
+    id: 'req-token-01',
+    projectId: 'proj-cyber-01',
+    episodeId: 'ep-prod-03',
+    episodeTitle: 'Tập 3: Ranh Giới Bóng Tối',
+    requestedTokens: 120,
+    reason: 'Phân cảnh 2 (Đột Kích Máy Chủ) cần kết xuất lại ở tốc độ 60fps và tăng cường độ chi tiết của hiệu ứng khúc xạ laser ma trận, dự kiến tiêu tốn thêm 120 Tokens.',
+    requestedBy: 'Trần Minh Huy (Creator)',
+    requestedAt: '2026-09-08T10:30:00Z',
+    status: 'pending',
+  },
+];
 
 const mockScenesEp2: Scene[] = [
   {
@@ -15,6 +158,9 @@ const mockScenesEp2: Scene[] = [
     tokenCost: 65,
     videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     thumbnailUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&auto=format&fit=crop&q=80',
+    reviewStatus: 'approved',
+    reviewFeedback: 'Ánh sáng neon volumetric và khẩu hình nhân vật khớp rất tốt. Đã duyệt.',
+    reviewedAt: '2026-09-03T10:00:00Z',
   },
   {
     id: 'sc-202',
@@ -30,6 +176,9 @@ const mockScenesEp2: Scene[] = [
     tokenCost: 55,
     videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     thumbnailUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop&q=80',
+    reviewStatus: 'approved',
+    reviewFeedback: 'Đã tối ưu lại prompt khói và tia lửa điện. Đạt chuẩn kỹ thuật.',
+    reviewedAt: '2026-09-03T11:20:00Z',
   },
   {
     id: 'sc-203',
@@ -45,6 +194,7 @@ const mockScenesEp2: Scene[] = [
     tokenCost: 75,
     videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+    reviewStatus: 'pending',
   },
 ];
 
@@ -299,4 +449,7 @@ export const mockProjectCyber: Project = {
       },
     },
   ],
+  milestones: mockMilestones,
+  appliedPolicy: mockAIPolicies[0],
+  tokenExtensionRequests: mockTokenExtensionRequests,
 };
