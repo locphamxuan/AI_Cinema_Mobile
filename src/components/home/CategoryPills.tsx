@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme';
 import { genreCategories } from '../../mocks/mockData';
 
@@ -10,12 +11,12 @@ interface CategoryPillsProps {
 }
 
 const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  'Tất cả': 'grid-outline',
-  'Thịnh hành': 'trending-up-outline',
+  'Tất cả': 'sparkles',
+  'Thịnh hành': 'flame',
   'Khoa học Viễn tưởng': 'planet-outline',
-  'Cyberpunk 2049': 'flash-outline',
-  'Hành động Kịch tính': 'film-outline',
-  'Trí tuệ Nhân tạo': 'hardware-chip-outline',
+  'Cyberpunk 2049': 'hardware-chip-outline',
+  'Hành động Kịch tính': 'flash-outline',
+  'Trí tuệ Nhân tạo': 'code-slash-outline',
   'Tâm lý & Bí ẩn': 'eye-outline',
 };
 
@@ -35,48 +36,45 @@ export const CategoryPills: React.FC<CategoryPillsProps> = ({
         {genreCategories.map((category) => {
           const isSelected = selectedCategory === category;
           const iconName = CATEGORY_ICONS[category];
-          const itemColor = isSelected ? '#FFFFFF' : colors.textSecondary;
 
           return (
             <TouchableOpacity
               key={category}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               onPress={() => onSelectCategory(category)}
-              style={[
-                styles.pill,
-                {
-                  backgroundColor: isSelected
-                    ? colors.ruby
-                    : isDark
-                    ? '#1E293B'
-                    : '#F1F5F9',
-                  borderColor: isSelected
-                    ? colors.ruby
-                    : isDark
-                    ? '#334155'
-                    : '#E2E8F0',
-                },
-              ]}
             >
-              {iconName && (
-                <Ionicons
-                  name={iconName}
-                  size={14}
-                  color={itemColor}
-                  style={styles.icon}
-                />
+              {isSelected ? (
+                <LinearGradient
+                  colors={['#E50914', '#B91C1C']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.pill, styles.pillActive]}
+                >
+                  {iconName && (
+                    <Ionicons name={iconName} size={13.5} color="#FFFFFF" />
+                  )}
+                  <Text style={[styles.pillText, { color: '#FFFFFF', fontWeight: '800' }]}>
+                    {category}
+                  </Text>
+                </LinearGradient>
+              ) : (
+                <View
+                  style={[
+                    styles.pill,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                    },
+                  ]}
+                >
+                  {iconName && (
+                    <Ionicons name={iconName} size={13.5} color={colors.textSecondary} />
+                  )}
+                  <Text style={[styles.pillText, { color: colors.textSecondary, fontWeight: '600' }]}>
+                    {category}
+                  </Text>
+                </View>
               )}
-              <Text
-                style={[
-                  styles.pillText,
-                  {
-                    color: itemColor,
-                    fontWeight: isSelected ? '700' : '600',
-                  },
-                ]}
-              >
-                {category}
-              </Text>
             </TouchableOpacity>
           );
         })}
@@ -102,10 +100,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 6,
   },
+  pillActive: {
+    shadowColor: '#E50914',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 3,
+    borderColor: '#E50914',
+  },
   icon: {
     marginRight: 0,
   },
   pillText: {
-    fontSize: 12.5,
+    fontSize: 12,
   },
 });
