@@ -16,6 +16,15 @@ import {
   botResponses,
 } from '../mocks/mockData';
 
+export const emptySubscription: UserSubscription = {
+  plan: null,
+  status: 'none',
+  startDate: null,
+  endDate: null,
+  autoRenew: false,
+  paymentMethod: '',
+};
+
 interface AppState {
   // Auth
   isAuthenticated: boolean;
@@ -124,6 +133,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         user: demoUser,
         isVIPMode: false,
         isAuthModalOpen: false,
+        subscription: emptySubscription,
         wallet: { mainCoin: 60, bonusCoin: 20 },
       });
 
@@ -180,6 +190,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         user: customUser,
         isVIPMode: false,
         isAuthModalOpen: false,
+        subscription: emptySubscription,
         wallet: { mainCoin: 50, bonusCoin: 20 },
       });
 
@@ -212,6 +223,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       user: newUser,
       isVIPMode: false,
       isAuthModalOpen: false,
+      subscription: emptySubscription,
       wallet: {
         mainCoin: 0,
         bonusCoin: 50,
@@ -237,6 +249,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       isAuthenticated: false,
       user: null,
       isVIPMode: false,
+      subscription: emptySubscription,
     });
   },
 
@@ -249,23 +262,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // ===== VIP MODE =====
-  isVIPMode: true,
+  isVIPMode: false,
   toggleVIPMode: () =>
     set((state) => {
       const newIsVIP = !state.isVIPMode;
       return {
         isVIPMode: newIsVIP,
         user: state.user ? { ...state.user, isVIP: newIsVIP } : null,
-        subscription: newIsVIP
-          ? mockSubscriptionVIP
-          : {
-              plan: null,
-              status: 'none' as const,
-              startDate: null,
-              endDate: null,
-              autoRenew: false,
-              paymentMethod: '',
-            },
+        subscription: newIsVIP ? mockSubscriptionVIP : emptySubscription,
       };
     }),
 
@@ -364,7 +368,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // ===== SUBSCRIPTION =====
-  subscription: mockSubscriptionVIP,
+  subscription: emptySubscription,
 
   toggleAutoRenew: () =>
     set((s) => ({
