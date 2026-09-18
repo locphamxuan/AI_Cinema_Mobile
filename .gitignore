@@ -111,6 +111,7 @@ vite.config.ts.timestamp-*
 
 # Local-only, machine-specific — not shared
 .claude/
+.claude-tools/
 .claude-mem/
 CLAUDE.md
 TESTING.md
