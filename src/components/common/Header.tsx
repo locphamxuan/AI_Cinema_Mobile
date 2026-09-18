@@ -47,11 +47,6 @@ export const Header: React.FC<HeaderProps> = ({ onProfilePress }) => {
     }
   };
 
-  const handleNavigateStudio = () => {
-    closeDropdown();
-    router.push('/studio');
-  };
-
   const handleNavigateVIP = () => {
     closeDropdown();
     router.push('/vip');
@@ -63,7 +58,6 @@ export const Header: React.FC<HeaderProps> = ({ onProfilePress }) => {
   };
 
   const isVIP = isVIPMode || user?.isVIP;
-  const isProductionStaff = user?.role === 'creator' || user?.role === 'reviewer' || user?.role === 'admin';
 
   return (
     <View
@@ -222,40 +216,6 @@ export const Header: React.FC<HeaderProps> = ({ onProfilePress }) => {
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
                     </TouchableOpacity>
-
-                    {user?.role === 'creator' && (
-                      <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={handleNavigateStudio}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[styles.menuItemIconWrap, { backgroundColor: isDark ? 'rgba(229, 9, 20, 0.15)' : '#FEF2F2' }]}>
-                          <Ionicons name="film-outline" size={18} color="#E50914" />
-                        </View>
-                        <View style={styles.menuItemTextWrap}>
-                          <Text style={[styles.menuItemTitle, { color: colors.text }]}>Studio Sản Xuất AI (Maker)</Text>
-                          <Text style={[styles.menuItemSub, { color: colors.textSecondary }]}>Kịch bản & tạo phân cảnh</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-                      </TouchableOpacity>
-                    )}
-
-                    {user?.role === 'reviewer' && (
-                      <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={handleNavigateStudio}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[styles.menuItemIconWrap, { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.15)' : '#F5F3FF' }]}>
-                          <Ionicons name="shield-checkmark-outline" size={18} color="#8B5CF6" />
-                        </View>
-                        <View style={styles.menuItemTextWrap}>
-                          <Text style={[styles.menuItemTitle, { color: colors.text }]}>Thẩm Định & Duyệt Phim (Checker)</Text>
-                          <Text style={[styles.menuItemSub, { color: colors.textSecondary }]}>Kiểm duyệt 100% cảnh & cấp token</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-                      </TouchableOpacity>
-                    )}
 
                     <TouchableOpacity
                       style={styles.menuItem}

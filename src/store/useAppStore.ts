@@ -5,7 +5,6 @@ import { UserSubscription } from '../types/subscription';
 import { Transaction } from '../types/transaction';
 import { ChatMessage, ChatPhase, SupportTicket } from '../types/chat';
 import { UserProfile } from '../types/auth';
-import { useProductionStore } from './useProductionStore';
 import {
   mockWallet,
   mockCheckInStreak,
@@ -131,7 +130,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { success: true, redirectUrl: '/', role: 'user' };
     }
 
-    // 2. VIP User (Khán giả gói VIP - được quản lý thiết bị, nhưng không có Maker/Checker)
+    // 2. VIP User (Khán giả gói VIP - được quản lý thiết bị)
     if (trimmedEmail === 'vipdemo@gmail.com' && password === '1') {
       const vipUser: UserProfile = {
         id: 'user-vip-001',
@@ -156,56 +155,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { success: true, redirectUrl: '/', role: 'vip' };
     }
 
-    // 3. Creator Account (Nhà sáng tạo / Maker - chuyển thẳng vào Studio Maker)
-    if (trimmedEmail === 'creator@gmail.com' && password === '1') {
-      const creatorUser: UserProfile = {
-        id: 'usr-creator-01',
-        name: 'Đạo diễn Trần Minh Huy (Maker)',
-        email: 'creator@gmail.com',
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        role: 'creator',
-        isVIP: true,
-        createdAt: '2026-01-01',
+    // Chặn tài khoản Maker / Checker trên Mobile - chỉ hỗ trợ trên Web
+    if (trimmedEmail === 'creator@gmail.com' || trimmedEmail === 'reviewer@gmail.com') {
+      return {
+        success: false,
+        error: 'Tài khoản Sản xuất & Kiểm duyệt (Maker/Checker) chỉ hỗ trợ trên phiên bản Web Studio máy tính. Ứng dụng di động chỉ dành riêng cho Khán giả!',
       };
-
-      useProductionStore.getState().setActiveRole('creator');
-
-      set({
-        isAuthenticated: true,
-        user: creatorUser,
-        isVIPMode: true,
-        isAuthModalOpen: false,
-        subscription: mockSubscriptionVIP,
-        wallet: { mainCoin: 1500, bonusCoin: 500 },
-      });
-
-      return { success: true, redirectUrl: '/studio', role: 'creator' };
-    }
-
-    // 4. Reviewer Account (Ban kiểm duyệt / Checker - chuyển thẳng vào Studio Reviewer)
-    if (trimmedEmail === 'reviewer@gmail.com' && password === '1') {
-      const reviewerUser: UserProfile = {
-        id: 'usr-reviewer-01',
-        name: 'Thẩm định viên Lê Quốc Bảo (Checker)',
-        email: 'reviewer@gmail.com',
-        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-        role: 'reviewer',
-        isVIP: true,
-        createdAt: '2026-01-01',
-      };
-
-      useProductionStore.getState().setActiveRole('reviewer');
-
-      set({
-        isAuthenticated: true,
-        user: reviewerUser,
-        isVIPMode: true,
-        isAuthModalOpen: false,
-        subscription: mockSubscriptionVIP,
-        wallet: { mainCoin: 2000, bonusCoin: 1000 },
-      });
-
-      return { success: true, redirectUrl: '/studio', role: 'reviewer' };
     }
 
     // 5. Allow any other registered/custom email as regular user
