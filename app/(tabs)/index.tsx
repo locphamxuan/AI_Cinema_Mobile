@@ -16,7 +16,6 @@ import { ContinueWatchingSection } from '../../src/components/home/ContinueWatch
 import { CategoryPills } from '../../src/components/home/CategoryPills';
 import { TopRankRow } from '../../src/components/home/TopRankRow';
 import { MovieRow } from '../../src/components/home/MovieRow';
-import { VersionSelectorModal } from '../../src/components/player/VersionSelectorModal';
 import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
@@ -30,7 +29,6 @@ export default function HomeScreen() {
 
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [refreshing, setRefreshing] = useState(false);
-  const [versionModalVisible, setVersionModalVisible] = useState(false);
   const [complianceModalVisible, setComplianceModalVisible] = useState(false);
 
   const onRefresh = () => {
@@ -132,7 +130,7 @@ export default function HomeScreen() {
         <HeroBanner
           movies={top10Movies}
           onPlayPress={handleMoviePress}
-          onDetailPress={() => setVersionModalVisible(true)}
+          onDetailPress={handleMoviePress}
         />
 
         {/* Continue Watching Section (Đang Xem Dở) */}
@@ -176,17 +174,6 @@ export default function HomeScreen() {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
-
-      {/* Multi-version Modal */}
-      {mockMovie.episodes[0]?.versions && (
-        <VersionSelectorModal
-          visible={versionModalVisible}
-          onClose={() => setVersionModalVisible(false)}
-          versions={mockMovie.episodes[0].versions}
-          selectedVersionId="v-ep1-3"
-          onSelectVersion={() => setVersionModalVisible(false)}
-        />
-      )}
 
       {/* AI Compliance Modal */}
       <AIComplianceModal
