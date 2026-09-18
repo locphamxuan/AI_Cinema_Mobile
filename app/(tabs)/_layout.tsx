@@ -7,9 +7,7 @@ import { useAppStore } from '../../src/store/useAppStore';
 
 export default function TabLayout() {
   const { colors, isDark } = useTheme();
-  const { isAuthenticated, user } = useAppStore();
-
-  const isProductionStaff = user?.role === 'creator' || user?.role === 'reviewer' || user?.role === 'admin';
+  const { isAuthenticated } = useAppStore();
 
   return (
     <Tabs
@@ -61,7 +59,7 @@ export default function TabLayout() {
         name="studio"
         options={{
           title: 'Studio AI',
-          href: isProductionStaff ? '/studio' : null,
+          href: null, // Mobile dành riêng cho Khán Giả, ẩn hoàn toàn Studio
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'videocam' : 'videocam-outline'} size={22} color={color} />
           ),
