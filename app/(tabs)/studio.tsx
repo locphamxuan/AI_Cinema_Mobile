@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -44,7 +44,12 @@ export default function StudioScreen() {
     submitEpisodeForReview,
     approveContent,
     requestContentChanges,
+    loadProjects,
   } = useProductionStore();
+
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
 
   const project = getProject();
   const [selectedEpId, setSelectedEpId] = useState('ep-prod-02');

@@ -14,8 +14,7 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-ico
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
 import { allMockMovies } from '../../src/mocks/mockData';
-import { Episode, EpisodeVersion } from '../../src/types/movie';
-import { VersionSelectorModal } from '../../src/components/player/VersionSelectorModal';
+import { Episode } from '../../src/types/movie';
 import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
 
@@ -24,16 +23,13 @@ export default function WatchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { currentMovie, openAuthModal, isAuthenticated } = useAppStore();
+  const { currentMovie, openAuthModal, isAuthenticated, movies } = useAppStore();
 
-  const movie = allMockMovies.find((m) => m.id === id) || currentMovie;
+  const movie = (movies && movies.length > 0 ? movies : allMockMovies).find((m) => m.id === id) || currentMovie;
 
   const [activeEpisode, setActiveEpisode] = useState<Episode>(movie.episodes[0]);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [activeVersionId, setActiveVersionId] = useState('v-ep1-3');
-  const [activeVersionNumber, setActiveVersionNumber] = useState('v1.2.0');
 
-  const [versionModalOpen, setVersionModalOpen] = useState(false);
   const [complianceModalOpen, setComplianceModalOpen] = useState(false);
   const [unlockModalOpen, setUnlockModalOpen] = useState(false);
   const [targetUnlockEp, setTargetUnlockEp] = useState<Episode | null>(null);
@@ -50,13 +46,6 @@ export default function WatchScreen() {
       setTargetUnlockEp(ep);
       setUnlockModalOpen(true);
     }
-  };
-
-  const handleSelectVersion = (ver: EpisodeVersion) => {
-    setActiveVersionId(ver.id);
-    setActiveVersionNumber(ver.versionNumber);
-    setVersionModalOpen(false);
-    Alert.alert('Chuyển phiên bản', `Đang phát "${ver.versionTitle}" (${ver.versionNumber})`);
   };
 
   return (
@@ -108,19 +97,8 @@ export default function WatchScreen() {
           </TouchableOpacity>
 
           {/* Bottom Bar: Version pill, Scrubber, Fullscreen */}
+          {/* Bottom Bar: Scrubber, Fullscreen */}
           <View style={styles.playerBottomBar}>
-            {/* Version Switcher Pill */}
-            {activeEpisode.versions && activeEpisode.versions.length > 0 && (
-              <TouchableOpacity
-                style={styles.versionPill}
-                onPress={() => setVersionModalOpen(true)}
-              >
-                <MaterialCommunityIcons name="history" size={13} color="#FFFFFF" />
-                <Text style={styles.versionPillText}>Bản {activeVersionNumber}</Text>
-                <Ionicons name="chevron-down" size={12} color="#FFFFFF" />
-              </TouchableOpacity>
-            )}
-
             {/* Time progress bar */}
             <View style={styles.scrubberContainer}>
               <View style={styles.scrubberTrack}>
@@ -270,17 +248,6 @@ export default function WatchScreen() {
         </View>
       </ScrollView>
 
-      {/* Multi-version Modal */}
-      {activeEpisode.versions && (
-        <VersionSelectorModal
-          visible={versionModalOpen}
-          onClose={() => setVersionModalOpen(false)}
-          versions={activeEpisode.versions}
-          selectedVersionId={activeVersionId}
-          onSelectVersion={handleSelectVersion}
-        />
-      )}
-
       {/* AI Compliance Modal */}
       <AIComplianceModal
         visible={complianceModalOpen}
@@ -373,20 +340,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-  },
-  versionPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(59, 130, 246, 0.85)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    gap: 4,
-  },
-  versionPillText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
   },
   scrubberContainer: {
     flex: 1,

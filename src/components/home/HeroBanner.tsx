@@ -11,6 +11,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Movie } from '../../types/movie';
 import { useTheme } from '../../theme';
 import { useAppStore } from '../../store/useAppStore';
@@ -91,13 +92,23 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 style={styles.bannerImage}
                 imageStyle={styles.imageRadius}
               >
-                {/* Dark Vignette Overlay for readability */}
-                <View style={styles.overlay}>
-                  {/* Top Row: TOP 10 Tag + Compliance Badge */}
+                {/* Dark Cinema Vignette Overlay with LinearGradient */}
+                <LinearGradient
+                  colors={['rgba(0, 0, 0, 0.15)', 'rgba(10, 13, 22, 0.42)', 'rgba(8, 10, 18, 0.95)']}
+                  locations={[0, 0.45, 1]}
+                  style={styles.overlay}
+                >
+                  {/* Top Row: TOP 10 Flame Ribbon + Compliance Badge */}
                   <View style={styles.topRow}>
-                    <View style={styles.top10Badge}>
-                      <Text style={styles.top10Text}>TOP 10</Text>
-                    </View>
+                    <LinearGradient
+                      colors={['#EF4444', '#F59E0B']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.top10Badge}
+                    >
+                      <Ionicons name="flame" size={11} color="#FFFFFF" style={{ marginRight: 3 }} />
+                      <Text style={styles.top10Text}>TOP 10 PHIM AI</Text>
+                    </LinearGradient>
 
                     <View style={styles.complianceBadge}>
                       <MaterialCommunityIcons name="shield-check" size={12} color="#10B981" />
@@ -119,7 +130,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
 
                       {item.matchScore && (
                         <View style={[styles.badge, styles.matchBadge]}>
-                          <Text style={styles.matchText}>{item.matchScore}% Match</Text>
+                          <Text style={styles.matchText}>{item.matchScore}% Phù hợp</Text>
                         </View>
                       )}
 
@@ -152,14 +163,20 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
 
                     {/* CTA Action Buttons */}
                     <View style={styles.btnRow}>
-                      {/* Primary Emerald Xem Ngay Button */}
+                      {/* Primary Ruby Red Xem Ngay Button with Gradient */}
                       <TouchableOpacity
-                        activeOpacity={0.85}
-                        style={styles.playBtn}
+                        activeOpacity={0.88}
                         onPress={() => onPlayPress?.(item)}
                       >
-                        <Ionicons name="play" size={16} color="#0F172A" />
-                        <Text style={styles.playBtnText}>Xem Ngay</Text>
+                        <LinearGradient
+                          colors={['#E50914', '#B91C1C']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.playBtn}
+                        >
+                          <Ionicons name="play" size={15} color="#FFFFFF" />
+                          <Text style={styles.playBtnText}>Xem Ngay</Text>
+                        </LinearGradient>
                       </TouchableOpacity>
 
                       {/* My List Bookmark Button */}
@@ -173,7 +190,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                       >
                         <Ionicons
                           name={isAdded ? 'checkmark' : 'add'}
-                          size={18}
+                          size={17}
                           color="#FFFFFF"
                         />
                         <Text style={styles.actionBtnText}>
@@ -206,7 +223,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                       )}
                     </View>
                   </View>
-                </View>
+                </LinearGradient>
               </ImageBackground>
             </View>
           );
@@ -250,7 +267,7 @@ const styles = StyleSheet.create({
   },
   bannerImage: {
     width: '100%',
-    height: 290,
+    height: 310,
     justifyContent: 'space-between',
   },
   imageRadius: {
@@ -259,7 +276,6 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.48)',
     justifyContent: 'space-between',
     padding: 14,
   },
@@ -269,19 +285,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   top10Badge: {
-    backgroundColor: '#10B981',
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 3.5,
     borderRadius: 6,
-    shadowColor: '#10B981',
+    shadowColor: '#EF4444',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.4,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 4,
   },
   top10Text: {
-    color: '#090D16',
-    fontSize: 10,
+    color: '#FFFFFF',
+    fontSize: 9.5,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
@@ -331,9 +348,9 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   matchBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.3)',
+    backgroundColor: 'rgba(16, 185, 129, 0.25)',
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.6)',
+    borderColor: 'rgba(16, 185, 129, 0.55)',
   },
   matchText: {
     color: '#34D399',
@@ -371,9 +388,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   description: {
-    color: 'rgba(255, 255, 255, 0.82)',
+    color: 'rgba(255, 255, 255, 0.85)',
     fontSize: 11,
-    lineHeight: 15,
+    lineHeight: 15.5,
   },
   btnRow: {
     flexDirection: 'row',
@@ -384,21 +401,21 @@ const styles = StyleSheet.create({
   playBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10B981',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 8.5,
     borderRadius: 24,
     gap: 5,
-    shadowColor: '#10B981',
+    shadowColor: '#E50914',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.4,
     shadowRadius: 6,
     elevation: 4,
   },
   playBtnText: {
-    color: '#0B0C10',
+    color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '900',
+    letterSpacing: 0.2,
   },
   actionIconBtn: {
     flexDirection: 'row',
@@ -449,8 +466,8 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   paginationDotActive: {
-    width: 16,
-    backgroundColor: '#10B981',
+    width: 20,
+    backgroundColor: '#E50914',
   },
   paginationDotInactive: {
     width: 5,

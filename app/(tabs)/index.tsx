@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,13 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Header } from '../../src/components/common/Header';
 import { HeroBanner } from '../../src/components/home/HeroBanner';
 import { ContinueWatchingSection } from '../../src/components/home/ContinueWatchingSection';
 import { CategoryPills } from '../../src/components/home/CategoryPills';
 import { TopRankRow } from '../../src/components/home/TopRankRow';
 import { MovieRow } from '../../src/components/home/MovieRow';
-import { VersionSelectorModal } from '../../src/components/player/VersionSelectorModal';
 import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
@@ -25,16 +25,22 @@ import { Movie } from '../../src/types/movie';
 export default function HomeScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { isAuthenticated, openAuthModal } = useAppStore();
+  const { isAuthenticated, openAuthModal, movies, loadInitialData } = useAppStore();
 
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [refreshing, setRefreshing] = useState(false);
-  const [versionModalVisible, setVersionModalVisible] = useState(false);
   const [complianceModalVisible, setComplianceModalVisible] = useState(false);
 
-  const onRefresh = () => {
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  const movieList = movies && movies.length > 0 ? movies : allMockMovies;
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 600);
+    await loadInitialData();
+    setRefreshing(false);
   };
 
   const handleMoviePress = (movie: Movie) => {
@@ -42,6 +48,10 @@ export default function HomeScreen() {
       pathname: '/watch/[id]',
       params: { id: movie.id },
     });
+  };
+
+  const handleSeeAll = (category?: string) => {
+    router.push('/(tabs)/explore');
   };
 
   return (
@@ -60,46 +70,74 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Guest Announcement Banner if unauthenticated */}
+        {/* Luxury Guest Announcement Banner if unauthenticated */}
         {!isAuthenticated && (
-          <View
-            style={[
-              styles.guestBanner,
-              {
-                backgroundColor: isDark ? '#1E293B' : '#EFF6FF',
-                borderColor: colors.ruby,
-              },
-            ]}
+          <TouchableOpacity
+            activeOpacity={0.92}
+            onPress={() => openAuthModal('login')}
+            style={styles.guestBannerWrapper}
           >
-            <View style={styles.guestBannerContent}>
-              <View style={styles.guestIcon}>
-                <Ionicons name="film" size={18} color="#E50914" />
-              </View>
-              <View style={styles.guestTextContainer}>
-                <Text style={[styles.guestTitle, { color: colors.text }]}>
-                  Đăng Nhập Nhận 50 Coin Thưởng
-                </Text>
-                <Text style={[styles.guestSubtitle, { color: colors.textSecondary }]}>
-                  Trải nghiệm phim AI 4K, hỗ trợ tạo sinh trong Studio AI
-                </Text>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              activeOpacity={0.85}
-              style={[styles.guestBtn, { backgroundColor: colors.ruby }]}
-              onPress={() => openAuthModal('login')}
+            <LinearGradient
+              colors={
+                isDark
+                  ? ['#2A1020', '#181226', '#0F172A']
+                  : ['#FFF1F2', '#FFE4E6', '#F8FAFC']
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[
+                styles.guestBanner,
+                {
+                  borderColor: isDark ? 'rgba(239, 68, 68, 0.35)' : 'rgba(239, 68, 68, 0.25)',
+                },
+              ]}
             >
-              <Text style={styles.guestBtnText}>Đăng Nhập</Text>
-            </TouchableOpacity>
-          </View>
+              <View style={styles.guestLeft}>
+                <LinearGradient
+                  colors={['#EF4444', '#F59E0B']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.guestIconGradient}
+                >
+                  <Ionicons name="gift" size={18} color="#FFFFFF" />
+                </LinearGradient>
+
+                <View style={styles.guestTextContainer}>
+                  <View style={styles.guestBadgeRow}>
+                    <View style={styles.guestTag}>
+                      <Text style={styles.guestTagText}>QUÀ TÂN THỦ</Text>
+                    </View>
+                    <Text style={[styles.guestTitle, { color: colors.text }]}>
+                      Tặng 50 Coin Trải Nghiệm
+                    </Text>
+                  </View>
+                  <Text
+                    style={[styles.guestSubtitle, { color: colors.textSecondary }]}
+                    numberOfLines={1}
+                  >
+                    Xem trọn vẹn phim AI 4K & Trải nghiệm Studio AI
+                  </Text>
+                </View>
+              </View>
+
+              <LinearGradient
+                colors={['#EF4444', '#B91C1C']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.guestBtn}
+              >
+                <Text style={styles.guestBtnText}>Nhận ngay</Text>
+                <Ionicons name="arrow-forward" size={12} color="#FFFFFF" />
+              </LinearGradient>
+            </LinearGradient>
+          </TouchableOpacity>
         )}
 
         {/* Featured Hero Banner Carousel */}
         <HeroBanner
           movies={top10Movies}
           onPlayPress={handleMoviePress}
-          onDetailPress={() => setVersionModalVisible(true)}
+          onDetailPress={handleMoviePress}
         />
 
         {/* Continue Watching Section (Đang Xem Dở) */}
@@ -112,42 +150,37 @@ export default function HomeScreen() {
         />
 
         {/* Top 5 Ranked Row */}
-        <TopRankRow movies={allMockMovies} onMoviePress={handleMoviePress} />
+        <TopRankRow movies={movieList} onMoviePress={handleMoviePress} />
 
         {/* Trending Movies Row */}
         <MovieRow
           title="Phim Mới Phát Hành & Thịnh Hành"
-          movies={allMockMovies}
+          iconName="flame"
+          movies={movieList}
           onMoviePress={handleMoviePress}
+          onSeeAllPress={() => handleSeeAll('Phim Mới')}
         />
 
         {/* Cyberpunk Collection Row */}
         <MovieRow
           title="Tuyển Tập Cyberpunk 2049"
-          movies={[allMockMovies[1], allMockMovies[4], allMockMovies[0], allMockMovies[3]]}
+          iconName="hardware-chip-outline"
+          movies={[movieList[1] || movieList[0], movieList[4] || movieList[0], movieList[0], movieList[3] || movieList[0]]}
           onMoviePress={handleMoviePress}
+          onSeeAllPress={() => handleSeeAll('Cyberpunk')}
         />
 
         {/* Sci-Fi Collection Row */}
         <MovieRow
           title="Khoa Học Viễn Tưởng Đỉnh Cao"
-          movies={[allMockMovies[2], allMockMovies[3], allMockMovies[5], allMockMovies[1]]}
+          iconName="planet-outline"
+          movies={[movieList[2] || movieList[0], movieList[3] || movieList[0], movieList[5] || movieList[0], movieList[1] || movieList[0]]}
           onMoviePress={handleMoviePress}
+          onSeeAllPress={() => handleSeeAll('Sci-Fi')}
         />
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
-
-      {/* Multi-version Modal */}
-      {mockMovie.episodes[0]?.versions && (
-        <VersionSelectorModal
-          visible={versionModalVisible}
-          onClose={() => setVersionModalVisible(false)}
-          versions={mockMovie.episodes[0].versions}
-          selectedVersionId="v-ep1-3"
-          onSelectVersion={() => setVersionModalVisible(false)}
-        />
-      )}
 
       {/* AI Compliance Modal */}
       <AIComplianceModal
@@ -164,56 +197,96 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 24,
   },
-  guestBanner: {
+  guestBannerWrapper: {
     marginHorizontal: 16,
     marginTop: 10,
-    marginBottom: 4,
-    padding: 12,
-    borderRadius: 12,
+    marginBottom: 6,
+    borderRadius: 14,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  guestBanner: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: 10,
   },
-  guestBannerContent: {
+  guestLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     flex: 1,
   },
-  guestIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(229, 9, 20, 0.12)',
+  guestIconGradient: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   guestTextContainer: {
     flex: 1,
-    gap: 2,
+    gap: 3,
+  },
+  guestBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  guestTag: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  guestTagText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.4,
   },
   guestTitle: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
   },
   guestSubtitle: {
-    fontSize: 10,
+    fontSize: 10.5,
+    fontWeight: '500',
   },
   guestBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 6,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
   },
   guestBtnText: {
     color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 11.5,
+    fontWeight: '800',
   },
   bottomSpacer: {
-    height: 30,
+    height: 36,
   },
 });

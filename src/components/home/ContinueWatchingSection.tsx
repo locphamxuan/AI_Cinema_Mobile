@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme';
 import { useAppStore } from '../../store/useAppStore';
@@ -18,7 +19,7 @@ export const ContinueWatchingSection: React.FC = () => {
   const { watchHistory } = useAppStore();
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
-  const cardWidth = Math.min(windowWidth, 600) * 0.65;
+  const cardWidth = Math.min(windowWidth, 600) * 0.68;
 
   if (!watchHistory || watchHistory.length === 0) return null;
 
@@ -49,7 +50,7 @@ export const ContinueWatchingSection: React.FC = () => {
               {
                 width: cardWidth,
                 backgroundColor: colors.surface,
-                borderColor: colors.border,
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
               },
             ]}
           >
@@ -68,14 +69,16 @@ export const ContinueWatchingSection: React.FC = () => {
                 <Text style={styles.episodeText}>Tập {item.episodeNumber}</Text>
               </View>
 
-              {/* Progress Bar at Bottom of Thumbnail */}
+              {/* Progress Bar with Gradient at Bottom of Thumbnail */}
               <View style={styles.progressTrack}>
-                <View
+                <LinearGradient
+                  colors={['#EF4444', '#F59E0B']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
                   style={[
                     styles.progressBar,
                     {
                       width: `${item.progressPercent}%`,
-                      backgroundColor: colors.ruby,
                     },
                   ]}
                 />
@@ -89,14 +92,12 @@ export const ContinueWatchingSection: React.FC = () => {
                   {item.movieTitle}
                 </Text>
                 <Text style={[styles.subText, { color: colors.textMuted }]} numberOfLines={1}>
-                  {item.duration} • {item.progressPercent}%
+                  Đã xem {item.progressPercent}% • {item.duration}
                 </Text>
               </View>
 
-              <View style={styles.lastWatchedTag}>
-                <Text style={[styles.lastWatchedText, { color: colors.textSecondary }]}>
-                  {item.lastWatchedAt}
-                </Text>
+              <View style={styles.playArrowWrap}>
+                <Ionicons name="play-circle" size={24} color={colors.ruby} />
               </View>
             </View>
           </TouchableOpacity>
@@ -216,6 +217,9 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
     marginRight: 6,
+  },
+  playArrowWrap: {
+    paddingLeft: 4,
   },
   movieTitle: {
     fontSize: 13,

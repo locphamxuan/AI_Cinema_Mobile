@@ -102,7 +102,7 @@ export const AuthModal: React.FC = () => {
     await new Promise((r) => setTimeout(r, 350));
 
     if (isLogin) {
-      const result = login(email, password);
+      const result = await login(email, password);
       if (result.success) {
         // Persist or clear credentials
         try {
@@ -131,7 +131,7 @@ export const AuthModal: React.FC = () => {
         setError(result.error || 'Đăng nhập không thành công');
       }
     } else {
-      const result = register(name, email, password);
+      const result = await register(name, email, password);
       if (result.success) {
         try {
           if (rememberMe) {

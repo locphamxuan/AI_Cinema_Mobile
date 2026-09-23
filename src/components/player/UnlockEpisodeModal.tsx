@@ -27,9 +27,9 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({
   const totalBalance = wallet.mainCoin + wallet.bonusCoin;
   const isEnough = totalBalance >= episode.price;
 
-  const handleUnlock = () => {
+  const handleUnlock = async () => {
     setErrorMsg(null);
-    const result = unlockEpisode(episode.id);
+    const result = await unlockEpisode(episode.id);
     if (result.success) {
       onUnlocked();
       onClose();
