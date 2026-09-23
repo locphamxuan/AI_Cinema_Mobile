@@ -135,7 +135,7 @@ export default function HomeScreen() {
 
         {/* Featured Hero Banner Carousel */}
         <HeroBanner
-          movies={top10Movies}
+          movies={movieList.slice(0, 5)}
           onPlayPress={handleMoviePress}
           onDetailPress={handleMoviePress}
         />
