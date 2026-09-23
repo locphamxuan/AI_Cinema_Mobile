@@ -32,6 +32,7 @@ import {
   adaptApiCheckInToStreak,
   adaptUserProfile,
 } from '../lib/apiAdapter';
+import { getTodayDayIndex, getTodayDateString } from '../utils/date';
 
 export const emptySubscription: UserSubscription = {
   plan: null,
@@ -74,6 +75,7 @@ interface AppState {
   wallet: WalletState;
   checkInStreak: CheckInStreak;
   claimDailyCheckIn: () => Promise<boolean>;
+  syncCheckInStreak: () => void;
   setWalletBalance: (main: number, bonus: number) => void;
 
   // Movie
@@ -415,14 +417,41 @@ export const useAppStore = create<AppState>()(
       wallet: mockWallet,
       checkInStreak: mockCheckInStreak,
 
+      syncCheckInStreak: () => {
+        const todayIdx = getTodayDayIndex();
+        const todayStr = getTodayDateString();
+        set((s) => {
+          const current = s.checkInStreak || mockCheckInStreak;
+          const isTodayClaimed = current.lastCheckInDate === todayStr && current.todayClaimed;
+          const updatedDays = current.days.map((d, idx) => ({
+            ...d,
+            isToday: idx === todayIdx,
+            claimed: idx < todayIdx ? true : idx === todayIdx ? isTodayClaimed : false,
+          }));
+          return {
+            checkInStreak: {
+              ...current,
+              todayClaimed: isTodayClaimed,
+              currentStreak: isTodayClaimed ? Math.max(current.currentStreak, todayIdx + 1) : Math.max(current.currentStreak, todayIdx),
+              days: updatedDays,
+            },
+          };
+        });
+      },
+
       claimDailyCheckIn: async () => {
         const state = get();
-        if (state.checkInStreak.todayClaimed) return false;
+        const todayIdx = getTodayDayIndex();
+        const todayStr = getTodayDateString();
 
-        const todayDay = state.checkInStreak.days.find((d) => d.isToday);
-        if (!todayDay) return false;
+        if (state.checkInStreak.todayClaimed && state.checkInStreak.lastCheckInDate === todayStr) {
+          return false;
+        }
 
-        const reward = todayDay.reward;
+        const todayDay =
+          state.checkInStreak.days[todayIdx] ||
+          state.checkInStreak.days.find((d) => d.isToday);
+        const reward = todayDay ? todayDay.reward : 10;
 
         try {
           await walletService.checkIn();
@@ -439,10 +468,10 @@ export const useAppStore = create<AppState>()(
           checkInStreak: {
             ...s.checkInStreak,
             todayClaimed: true,
-            currentStreak: s.checkInStreak.currentStreak + 1,
-            lastCheckInDate: new Date().toISOString().split('T')[0],
-            days: s.checkInStreak.days.map((d) =>
-              d.isToday ? { ...d, claimed: true } : d
+            currentStreak: Math.max(s.checkInStreak.currentStreak, todayIdx + 1),
+            lastCheckInDate: todayStr,
+            days: s.checkInStreak.days.map((d, idx) =>
+              idx === todayIdx || d.isToday ? { ...d, claimed: true, isToday: true } : d
             ),
           },
         }));
@@ -669,7 +698,12 @@ export const useAppStore = create<AppState>()(
 
       // ===== MODALS =====
       isCheckInModalOpen: false,
-      setCheckInModalOpen: (open) => set({ isCheckInModalOpen: open }),
+      setCheckInModalOpen: (open) => {
+        if (open) {
+          get().syncCheckInStreak();
+        }
+        set({ isCheckInModalOpen: open });
+      },
 
       isUnlockModalOpen: false,
       selectedEpisodeId: null,
@@ -736,6 +770,11 @@ export const useAppStore = create<AppState>()(
     {
       name: 'ai_cinema_mobile_app_store',
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state && typeof state.syncCheckInStreak === 'function') {
+          state.syncCheckInStreak();
+        }
+      },
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
         user: state.user,

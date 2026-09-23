@@ -3,6 +3,7 @@ import type { WalletState, CheckInStreak } from '../types/wallet';
 import type { Project, ProductionEpisode, Scene } from '../types/production';
 import type { UserProfile } from '../types/auth';
 import { mockMovie, mockCheckInStreak } from '../mocks/mockData';
+import { getTodayDayIndex, getTodayDateString } from '../utils/date';
 
 export function adaptUserProfile(api: any): UserProfile {
   if (!api) {
@@ -135,16 +136,31 @@ export function adaptApiWalletToWallet(api: any): WalletState {
 }
 
 export function adaptApiCheckInToStreak(api: any): CheckInStreak {
+  const todayIdx = getTodayDayIndex();
+  const todayStr = getTodayDateString();
+
   if (!api) return mockCheckInStreak;
+
+  const currentDay = typeof api.currentDay === 'number' ? api.currentDay : todayIdx;
+  const isClaimedToday = Boolean(
+    api.todayClaimed ?? (api.lastCheckInDate === todayStr || !api.canClaimToday)
+  );
+
   return {
-    days: mockCheckInStreak.days.map((d, idx) => ({
-      ...d,
-      claimed: api.claimedDays ? api.claimedDays.includes(idx) : idx < (api.streakCount || 0),
-      isToday: idx === (api.currentDay ?? 3),
-    })),
-    currentStreak: api.streakCount || 0,
-    lastCheckInDate: api.lastCheckInDate || new Date().toISOString().split('T')[0],
-    todayClaimed: Boolean(api.todayClaimed ?? !api.canClaimToday),
+    days: mockCheckInStreak.days.map((d, idx) => {
+      const isToday = idx === currentDay;
+      const claimed = api.claimedDays
+        ? api.claimedDays.includes(idx)
+        : idx < (api.streakCount ?? currentDay) || (isToday && isClaimedToday);
+      return {
+        ...d,
+        claimed,
+        isToday,
+      };
+    }),
+    currentStreak: api.streakCount ?? (isClaimedToday ? currentDay + 1 : currentDay),
+    lastCheckInDate: api.lastCheckInDate || (isClaimedToday ? todayStr : null),
+    todayClaimed: isClaimedToday,
   };
 }
 
