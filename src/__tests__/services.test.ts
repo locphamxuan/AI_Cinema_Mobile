@@ -179,19 +179,19 @@ describe('Live Backend Connection (Port 3001)', () => {
   });
 
   it('successfully fetches real genres list from live NestJS BE', async () => {
-    const res = await apiClient.get('/genres');
+    const res = await apiClient.get<Array<{ id: string; name: string }>>('/genres');
     expect(res.statusCode).toBe(200);
     expect(res.success).toBe(true);
     expect(Array.isArray(res.data)).toBe(true);
-    expect(res.data.length).toBeGreaterThan(0);
-    expect(res.data[0].name).toBeDefined();
+    expect(res.data?.length).toBeGreaterThan(0);
+    expect(res.data?.[0]?.name).toBeDefined();
   });
 
   it('successfully fetches real policies from live NestJS BE', async () => {
-    const res = await apiClient.get('/policies');
+    const res = await apiClient.get<any[]>('/policies');
     expect(res.statusCode).toBe(200);
     expect(res.success).toBe(true);
     expect(Array.isArray(res.data)).toBe(true);
-    expect(res.data.length).toBeGreaterThan(0);
+    expect(res.data?.length).toBeGreaterThan(0);
   });
 });
