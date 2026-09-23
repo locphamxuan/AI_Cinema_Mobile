@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -25,15 +25,22 @@ import { Movie } from '../../src/types/movie';
 export default function HomeScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { isAuthenticated, openAuthModal } = useAppStore();
+  const { isAuthenticated, openAuthModal, movies, loadInitialData } = useAppStore();
 
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [refreshing, setRefreshing] = useState(false);
   const [complianceModalVisible, setComplianceModalVisible] = useState(false);
 
-  const onRefresh = () => {
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  const movieList = movies && movies.length > 0 ? movies : allMockMovies;
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 600);
+    await loadInitialData();
+    setRefreshing(false);
   };
 
   const handleMoviePress = (movie: Movie) => {
@@ -143,13 +150,13 @@ export default function HomeScreen() {
         />
 
         {/* Top 5 Ranked Row */}
-        <TopRankRow movies={allMockMovies} onMoviePress={handleMoviePress} />
+        <TopRankRow movies={movieList} onMoviePress={handleMoviePress} />
 
         {/* Trending Movies Row */}
         <MovieRow
           title="Phim Mới Phát Hành & Thịnh Hành"
           iconName="flame"
-          movies={allMockMovies}
+          movies={movieList}
           onMoviePress={handleMoviePress}
           onSeeAllPress={() => handleSeeAll('Phim Mới')}
         />
@@ -158,7 +165,7 @@ export default function HomeScreen() {
         <MovieRow
           title="Tuyển Tập Cyberpunk 2049"
           iconName="hardware-chip-outline"
-          movies={[allMockMovies[1], allMockMovies[4], allMockMovies[0], allMockMovies[3]]}
+          movies={[movieList[1] || movieList[0], movieList[4] || movieList[0], movieList[0], movieList[3] || movieList[0]]}
           onMoviePress={handleMoviePress}
           onSeeAllPress={() => handleSeeAll('Cyberpunk')}
         />
@@ -167,7 +174,7 @@ export default function HomeScreen() {
         <MovieRow
           title="Khoa Học Viễn Tưởng Đỉnh Cao"
           iconName="planet-outline"
-          movies={[allMockMovies[2], allMockMovies[3], allMockMovies[5], allMockMovies[1]]}
+          movies={[movieList[2] || movieList[0], movieList[3] || movieList[0], movieList[5] || movieList[0], movieList[1] || movieList[0]]}
           onMoviePress={handleMoviePress}
           onSeeAllPress={() => handleSeeAll('Sci-Fi')}
         />

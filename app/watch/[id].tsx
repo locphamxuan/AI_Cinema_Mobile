@@ -23,9 +23,9 @@ export default function WatchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { currentMovie, openAuthModal, isAuthenticated } = useAppStore();
+  const { currentMovie, openAuthModal, isAuthenticated, movies } = useAppStore();
 
-  const movie = allMockMovies.find((m) => m.id === id) || currentMovie;
+  const movie = (movies && movies.length > 0 ? movies : allMockMovies).find((m) => m.id === id) || currentMovie;
 
   const [activeEpisode, setActiveEpisode] = useState<Episode>(movie.episodes[0]);
   const [isPlaying, setIsPlaying] = useState(true);

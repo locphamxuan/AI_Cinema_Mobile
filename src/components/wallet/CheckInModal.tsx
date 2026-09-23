@@ -14,8 +14,8 @@ export const CheckInModal: React.FC = () => {
     wallet,
   } = useAppStore();
 
-  const handleClaim = () => {
-    const success = claimDailyCheckIn();
+  const handleClaim = async () => {
+    const success = await claimDailyCheckIn();
     if (success) {
       Alert.alert('Thành công 🎉', 'Bạn đã nhận thưởng điểm danh hôm nay!');
     }

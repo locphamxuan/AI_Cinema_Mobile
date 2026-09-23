@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Header } from '../../src/components/common/Header';
 import { MovieCard } from '../../src/components/home/MovieCard';
 import { useTheme } from '../../src/theme';
+import { useAppStore } from '../../src/store/useAppStore';
 import { allMockMovies, genreCategories } from '../../src/mocks/mockData';
 import { Movie } from '../../src/types/movie';
 
@@ -40,6 +41,7 @@ const GENRE_ITEMS: GenreItem[] = [
 export default function ExploreScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { movies } = useAppStore();
   const { width: windowWidth } = useWindowDimensions();
 
   // Responsive layout calculations
@@ -54,25 +56,26 @@ export default function ExploreScreen() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   // Filter and sort movies
-  const filteredMovies = useMemo(() => {
-    let result = allMockMovies.filter((movie) => {
+  const filteredMovies = useMemo<Movie[]>(() => {
+    const sourceList: Movie[] = movies && movies.length > 0 ? movies : allMockMovies;
+    let result: Movie[] = sourceList.filter((movie: Movie) => {
       const q = query.trim().toLowerCase();
       const matchesQuery =
         !q ||
         movie.title.toLowerCase().includes(q) ||
-        movie.genre.some((g) => g.toLowerCase().includes(q)) ||
+        movie.genre.some((g: string) => g.toLowerCase().includes(q)) ||
         (movie.aiCompliance?.aiModel && movie.aiCompliance.aiModel.toLowerCase().includes(q));
 
       const matchesTag =
         selectedTag === 'Tất cả' ||
-        movie.genre.some((g) => g.toLowerCase().includes(selectedTag.toLowerCase())) ||
-        (selectedTag === 'Thịnh hành' && movie.badge);
+        movie.genre.some((g: string) => g.toLowerCase().includes(selectedTag.toLowerCase())) ||
+        (selectedTag === 'Thịnh hành' && Boolean(movie.badge));
 
       return matchesQuery && matchesTag;
     });
 
     // Sorting
-    result.sort((a, b) => {
+    result.sort((a: Movie, b: Movie) => {
       if (sortBy === 'rating') {
         return (b.matchScore || 0) - (a.matchScore || 0);
       }

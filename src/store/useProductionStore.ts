@@ -15,11 +15,15 @@ import {
   SceneReviewStatus,
 } from '../types/production';
 import { mockProjectCyber, mockUserDevices } from '../mocks/productionMock';
+import { productionService } from '../services';
+import { adaptApiProjectToProject } from '../lib/apiAdapter';
 
 interface ProductionStoreState {
   projects: Project[];
   activeProjectId: string;
   activeRole: ProductionRole;
+  isLoadingProjects: boolean;
+  loadProjects: () => Promise<void>;
 
   // Global Actions
   setActiveRole: (role: ProductionRole) => void;
@@ -77,6 +81,30 @@ export const useProductionStore = create<ProductionStoreState>((set, get) => ({
   projects: [mockProjectCyber],
   activeProjectId: 'proj-cyber-01',
   activeRole: 'reviewer',
+  isLoadingProjects: false,
+
+  loadProjects: async () => {
+    try {
+      set({ isLoadingProjects: true });
+      const res = await productionService.listProjects();
+      if (res.success && res.data) {
+        const raw = Array.isArray(res.data) ? res.data : (res.data as any).items || [];
+        if (raw.length > 0) {
+          const adapted = raw.map(adaptApiProjectToProject);
+          set({
+            projects: adapted,
+            activeProjectId: adapted[0]?.id || get().activeProjectId,
+            isLoadingProjects: false,
+          });
+          return;
+        }
+      }
+      set({ isLoadingProjects: false });
+    } catch (e) {
+      console.warn('loadProjects fallback:', e);
+      set({ isLoadingProjects: false });
+    }
+  },
 
   setActiveRole: (role) => set({ activeRole: role }),
   setActiveProject: (projectId) => set({ activeProjectId: projectId }),
@@ -145,6 +173,10 @@ export const useProductionStore = create<ProductionStoreState>((set, get) => ({
   },
 
   approveAndAllocateQuota: (projectId, episodeId, tokenQuota, notes) => {
+    productionService.allocateQuota(projectId, episodeId, tokenQuota, notes).catch((e) => {
+      console.warn('productionService.allocateQuota fallback:', e);
+    });
+
     const feedback: FeedbackItem = {
       id: `fb-${Date.now()}`,
       author: 'Lê Quốc Bảo (Reviewer)',
@@ -382,6 +414,12 @@ export const useProductionStore = create<ProductionStoreState>((set, get) => ({
     }
 
     get().updateScene(projectId, episodeId, sceneId, { status: 'rendering', progress: 20 });
+    
+    // Call backend generation service
+    productionService.generateSceneVideo(projectId, episodeId, sceneId).catch((e) => {
+      console.warn('productionService.generateSceneVideo fallback:', e);
+    });
+
     await new Promise((r) => setTimeout(r, 400));
     get().updateScene(projectId, episodeId, sceneId, { progress: 65 });
     await new Promise((r) => setTimeout(r, 400));
