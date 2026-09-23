@@ -19,6 +19,7 @@ import {
   productionService,
   chatService,
 } from '../services';
+import { apiClient } from '../services/apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
 import { API_CONFIG } from '../constants/config';
 
@@ -166,5 +167,31 @@ describe('Mobile Services with Safe Offline Fallbacks', () => {
     const res = await chatService.sendMessage('Xin chào');
     expect(res.success).toBe(true);
     expect(res.data.content).toBeDefined();
+  });
+});
+
+describe('Live Backend Connection (Port 3001)', () => {
+  it('successfully connects to live NestJS BE and fetches production-projects', async () => {
+    const res = await apiClient.get('/production-projects');
+    expect(res.statusCode).toBe(200);
+    expect(res.success).toBe(true);
+    expect(res.data).toBeDefined();
+  });
+
+  it('successfully fetches real genres list from live NestJS BE', async () => {
+    const res = await apiClient.get('/genres');
+    expect(res.statusCode).toBe(200);
+    expect(res.success).toBe(true);
+    expect(Array.isArray(res.data)).toBe(true);
+    expect(res.data.length).toBeGreaterThan(0);
+    expect(res.data[0].name).toBeDefined();
+  });
+
+  it('successfully fetches real policies from live NestJS BE', async () => {
+    const res = await apiClient.get('/policies');
+    expect(res.statusCode).toBe(200);
+    expect(res.success).toBe(true);
+    expect(Array.isArray(res.data)).toBe(true);
+    expect(res.data.length).toBeGreaterThan(0);
   });
 });

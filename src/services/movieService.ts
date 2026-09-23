@@ -33,11 +33,16 @@ class MovieService {
         return list;
       }
     ).then((res) => {
-      if (res.success && Array.isArray(res.data)) {
-        return {
-          ...res,
-          data: res.data.map(adaptApiMovieToMovie),
-        };
+      if (res.success && res.data) {
+        const rawList = Array.isArray(res.data)
+          ? res.data
+          : (res.data as any)?.items || (res.data as any)?.data || [];
+        if (Array.isArray(rawList)) {
+          return {
+            ...res,
+            data: rawList.length > 0 ? rawList.map(adaptApiMovieToMovie) : allMockMovies,
+          };
+        }
       }
       return res;
     });
