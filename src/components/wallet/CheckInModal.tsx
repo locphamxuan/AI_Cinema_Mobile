@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useAppStore } from '../../store/useAppStore';
@@ -11,8 +11,15 @@ export const CheckInModal: React.FC = () => {
     setCheckInModalOpen,
     checkInStreak,
     claimDailyCheckIn,
+    syncCheckInStreak,
     wallet,
   } = useAppStore();
+
+  useEffect(() => {
+    if (isCheckInModalOpen) {
+      syncCheckInStreak();
+    }
+  }, [isCheckInModalOpen, syncCheckInStreak]);
 
   const handleClaim = async () => {
     const success = await claimDailyCheckIn();
@@ -90,7 +97,15 @@ export const CheckInModal: React.FC = () => {
                     },
                   ]}
                 >
-                  <Text style={[styles.dayLabel, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.dayLabel,
+                      {
+                        color: day.isToday ? (day.claimed ? '#10B981' : colors.ruby) : colors.textSecondary,
+                        fontWeight: day.isToday ? '800' : '700',
+                      },
+                    ]}
+                  >
                     {day.dayLabel}
                   </Text>
                   <FontAwesome5
@@ -102,7 +117,22 @@ export const CheckInModal: React.FC = () => {
                     +{day.reward}
                   </Text>
                   {day.claimed ? (
-                    <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                    <View style={{ alignItems: 'center', gap: 2 }}>
+                      <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                      {day.isToday && (
+                        <Text
+                          style={[
+                            styles.todayTag,
+                            {
+                              backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                              color: '#10B981',
+                            },
+                          ]}
+                        >
+                          Hôm nay
+                        </Text>
+                      )}
+                    </View>
                   ) : day.isToday ? (
                     <Text style={styles.todayTag}>Hôm nay</Text>
                   ) : null}
@@ -149,7 +179,9 @@ export const CheckInModal: React.FC = () => {
               color="#FFFFFF"
             />
             <Text style={styles.claimBtnText}>
-              {checkInStreak.todayClaimed ? 'Đã Nhận Thưởng Hôm Nay' : 'Điểm Danh Nhận Thưởng Ngay'}
+              {checkInStreak.todayClaimed
+                ? 'Đã Nhận Thưởng Hôm Nay'
+                : `Điểm Danh Nhận Thưởng Ngay (+${checkInStreak.days.find((d) => d.isToday)?.reward ?? 10} Coin)`}
             </Text>
           </TouchableOpacity>
         </View>

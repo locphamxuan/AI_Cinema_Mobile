@@ -1,7 +1,8 @@
 import { apiClient } from './apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
-import { mockWallet, mockCheckInStreak, mockTransactions } from '../mocks/mockData';
+import { mockWallet, mockCheckInStreak, mockTransactions, getInitialCheckInStreak } from '../mocks/mockData';
 import { adaptApiWalletToWallet, adaptApiCheckInToStreak } from '../lib/apiAdapter';
+import { getTodayDayIndex, getTodayDateString } from '../utils/date';
 import type { ApiResponse, DepositRequestDto, UnlockEpisodeRequestDto } from '../types/api';
 import type { WalletState, CheckInStreak } from '../types/wallet';
 import type { Transaction } from '../types/transaction';
@@ -27,7 +28,7 @@ class WalletService {
     return apiClient.get<CheckInStreak>(
       API_ROUTES.WALLET.STREAK,
       undefined,
-      async () => mockCheckInStreak
+      async () => getInitialCheckInStreak()
     ).then((res) => {
       if (res.success && res.data) {
         return {
@@ -40,17 +41,28 @@ class WalletService {
   }
 
   async checkIn(): Promise<ApiResponse<CheckInStreak & { wallet?: WalletState }>> {
+    const todayIdx = getTodayDayIndex();
+    const todayStr = getTodayDateString();
+    const baseStreak = getInitialCheckInStreak();
+    const reward = baseStreak.days[todayIdx]?.reward ?? 10;
+
     return apiClient.post<CheckInStreak & { wallet?: WalletState }>(
       API_ROUTES.WALLET.CHECK_IN,
       {},
       undefined,
       async () => ({
-        ...mockCheckInStreak,
-        currentStreak: mockCheckInStreak.currentStreak + 1,
+        ...baseStreak,
+        currentStreak: todayIdx + 1,
         todayClaimed: true,
+        lastCheckInDate: todayStr,
+        days: baseStreak.days.map((d, idx) => ({
+          ...d,
+          claimed: idx <= todayIdx,
+          isToday: idx === todayIdx,
+        })),
         wallet: {
           mainCoin: mockWallet.mainCoin,
-          bonusCoin: mockWallet.bonusCoin + 20,
+          bonusCoin: mockWallet.bonusCoin + reward,
         },
       })
     ).then((res) => {

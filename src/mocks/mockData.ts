@@ -3,6 +3,7 @@ import { Movie, WatchHistoryItem } from '../types/movie';
 import { UserSubscription, SubscriptionPlan } from '../types/subscription';
 import { Transaction } from '../types/transaction';
 import { ChatMessage } from '../types/chat';
+import { getTodayDayIndex, VN_DAY_LABELS } from '../utils/date';
 
 // ====== WALLET MOCK ======
 export const mockWallet: WalletState = {
@@ -16,20 +17,25 @@ export const mockWalletLow: WalletState = {
 };
 
 // ====== CHECK-IN STREAK ======
-export const mockCheckInStreak: CheckInStreak = {
-  days: [
-    { dayIndex: 0, dayLabel: 'T2', reward: 5, claimed: true, isToday: false },
-    { dayIndex: 1, dayLabel: 'T3', reward: 5, claimed: true, isToday: false },
-    { dayIndex: 2, dayLabel: 'T4', reward: 10, claimed: true, isToday: false },
-    { dayIndex: 3, dayLabel: 'T5', reward: 5, claimed: false, isToday: false },
-    { dayIndex: 4, dayLabel: 'T6', reward: 5, claimed: false, isToday: false },
-    { dayIndex: 5, dayLabel: 'T7', reward: 15, claimed: false, isToday: false },
-    { dayIndex: 6, dayLabel: 'CN', reward: 20, claimed: false, isToday: true },
-  ],
-  currentStreak: 3,
-  lastCheckInDate: '2026-09-03',
-  todayClaimed: false,
-};
+export const DEFAULT_CHECK_IN_REWARDS = [5, 5, 10, 5, 5, 15, 20];
+
+export function getInitialCheckInStreak(): CheckInStreak {
+  const todayIdx = getTodayDayIndex();
+  return {
+    days: VN_DAY_LABELS.map((dayLabel, idx) => ({
+      dayIndex: idx,
+      dayLabel,
+      reward: DEFAULT_CHECK_IN_REWARDS[idx],
+      claimed: idx < todayIdx,
+      isToday: idx === todayIdx,
+    })),
+    currentStreak: todayIdx,
+    lastCheckInDate: null,
+    todayClaimed: false,
+  };
+}
+
+export const mockCheckInStreak: CheckInStreak = getInitialCheckInStreak();
 
 // ====== SUBSCRIPTION PLANS ======
 export const subscriptionPlans: SubscriptionPlan[] = [
