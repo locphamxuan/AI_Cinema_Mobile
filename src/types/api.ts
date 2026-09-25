@@ -26,20 +26,30 @@ export interface LoginRequestDto {
 
 export interface RegisterRequestDto {
   name: string;
+  fullName?: string;
   email: string;
   password?: string;
+  role?: string;
+}
+
+export interface BEUserDto {
+  id: string;
+  email: string;
+  fullName: string;
+  name?: string;
+  avatarUrl?: string;
+  role: string;
+  isActive?: boolean;
+  isVip?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AuthResponseDto {
-  user: {
-    id: string;
-    email: string;
-    fullName: string;
-    avatarUrl?: string;
-    role: string;
-    isVip?: boolean;
-  };
+  message?: string;
+  user: BEUserDto;
   accessToken?: string;
+  token?: string;
   refreshToken?: string;
 }
 
