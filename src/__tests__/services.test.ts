@@ -226,4 +226,39 @@ describe('Live Backend Connection (Port 3001)', () => {
       expect(res.statusCode).toBeUndefined();
     }
   });
+
+  it('authService.login blocks Maker and Checker accounts on Mobile', async () => {
+    const res = await authService.login({ email: 'creator@gmail.com', password: 'password123' });
+    expect(res.success).toBe(false);
+    expect(res.statusCode).toBe(403);
+    expect(res.message).toContain('Maker/Checker');
+  });
+
+  it('authService.login allows demo accounts with password 1', async () => {
+    const resUser = await authService.login({ email: 'userdemo@gmail.com', password: '1' });
+    expect(resUser.success).toBe(true);
+    expect(resUser.data.user.role).toBe('user');
+
+    const resVip = await authService.login({ email: 'vipdemo@gmail.com', password: '1' });
+    expect(resVip.success).toBe(true);
+    expect(resVip.data.user.role).toBe('vip');
+  });
+
+  it('authService.login returns 401 with real BE error for wrong password', async () => {
+    const res = await authService.login({ email: 'nonexistent_test@example.com', password: 'wrongpassword' });
+    expect(res.success).toBe(false);
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('authService.register rejects duplicate email without mock masking', async () => {
+    // Attempt registering duplicate email
+    const res = await authService.register({
+      name: 'Test Duplicate',
+      email: 'test_node_check@example.com',
+      password: 'password123',
+    });
+    expect(res.success).toBe(false);
+    expect(res.statusCode).toBe(409);
+    expect(res.message).toContain('Email already registered');
+  });
 });

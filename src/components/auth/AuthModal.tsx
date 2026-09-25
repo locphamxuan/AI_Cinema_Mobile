@@ -102,6 +102,12 @@ export const AuthModal: React.FC = () => {
     await new Promise((r) => setTimeout(r, 350));
 
     if (isLogin) {
+      if (!email.trim() || !password) {
+        setError('Vui lòng nhập đầy đủ email và mật khẩu!');
+        setLoading(false);
+        return;
+      }
+
       const result = await login(email, password);
       if (result.success) {
         // Persist or clear credentials
@@ -131,6 +137,18 @@ export const AuthModal: React.FC = () => {
         setError(result.error || 'Đăng nhập không thành công');
       }
     } else {
+      if (!name.trim() || !email.trim() || !password) {
+        setError('Vui lòng điền đầy đủ họ tên, email và mật khẩu!');
+        setLoading(false);
+        return;
+      }
+
+      if (password.length < 8) {
+        setError('Mật khẩu đăng ký phải có ít nhất 8 ký tự!');
+        setLoading(false);
+        return;
+      }
+
       const result = await register(name, email, password);
       if (result.success) {
         try {
@@ -363,6 +381,11 @@ export const AuthModal: React.FC = () => {
                   />
                 </TouchableOpacity>
               </View>
+              {!isLogin && (
+                <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 5, marginLeft: 2 }}>
+                  * Mật khẩu tối thiểu 8 ký tự theo tiêu chuẩn bảo mật.
+                </Text>
+              )}
             </View>
 
             {/* Remember Me Checkbox & Forgot Password */}

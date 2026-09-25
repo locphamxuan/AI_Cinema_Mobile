@@ -73,6 +73,9 @@ class ApiClient {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+    const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
+    const shouldFallback = options.useMockFallback ?? isTest;
+
     try {
       const requestInit: RequestInit = {
         ...restOptions,
@@ -91,7 +94,7 @@ class ApiClient {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        if (mockFallbackFn) {
+        if (shouldFallback && mockFallbackFn && options.useMockFallback !== false) {
           try {
             const fallbackData = await mockFallbackFn();
             return {
@@ -132,7 +135,7 @@ class ApiClient {
     } catch (err: any) {
       clearTimeout(timeoutId);
 
-      if (mockFallbackFn) {
+      if (shouldFallback && mockFallbackFn && options.useMockFallback !== false) {
         try {
           const fallbackData = await mockFallbackFn();
           return {

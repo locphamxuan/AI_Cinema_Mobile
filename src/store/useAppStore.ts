@@ -202,108 +202,40 @@ export const useAppStore = create<AppState>()(
         }
 
         try {
-          // 2. Tra cứu tài khoản trực tiếp từ database thật của Backend (/api/users)
-          const usersRes = await apiClient.get('/users');
-          if (usersRes.success && Array.isArray(usersRes.data)) {
-            const dbUser = usersRes.data.find(
-              (u: any) => u.email?.toLowerCase() === trimmedEmail
-            );
-            if (dbUser) {
-              const profile = adaptUserProfile(dbUser);
-              const isVip = trimmedEmail === 'vipdemo@gmail.com' || profile.role === 'vip' || profile.isVIP;
+          const res = await authService.login({ email: trimmedEmail, password });
+          if (res.success && res.data?.user) {
+            const profile = adaptUserProfile(res.data.user);
+            const isVip = trimmedEmail === 'vipdemo@gmail.com' || profile.role === 'vip' || profile.isVIP;
 
-              set({
-                isAuthenticated: true,
-                user: {
-                  ...profile,
-                  role: isVip ? 'vip' : 'user',
-                  isVIP: isVip,
-                },
-                isVIPMode: isVip,
-                isAuthModalOpen: false,
-                subscription: isVip ? mockSubscriptionVIP : emptySubscription,
-              });
-
-              return {
-                success: true,
-                redirectUrl: '/',
+            set({
+              isAuthenticated: true,
+              user: {
+                ...profile,
                 role: isVip ? 'vip' : 'user',
-              };
-            }
+                isVIP: isVip,
+              },
+              isVIPMode: isVip,
+              isAuthModalOpen: false,
+              subscription: isVip ? mockSubscriptionVIP : emptySubscription,
+            });
+
+            return {
+              success: true,
+              redirectUrl: '/',
+              role: isVip ? 'vip' : 'user',
+            };
           }
-        } catch (e) {
-          console.warn('Database user lookup failed, falling back:', e);
-        }
 
-        // 3. Fallback Demo accounts
-        if (trimmedEmail === 'userdemo@gmail.com' && password === '1') {
-          const demoUser: UserProfile = {
-            id: '7315fdbf-081a-4f18-9273-41b50dc93928',
-            name: 'Phạm Xuân Lộc (Khán Giả)',
-            email: 'userdemo@gmail.com',
-            avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
-            role: 'user',
-            isVIP: false,
-            createdAt: '2026-01-01',
+          return {
+            success: false,
+            error: res.message || 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại!',
           };
-
-          set({
-            isAuthenticated: true,
-            user: demoUser,
-            isVIPMode: false,
-            isAuthModalOpen: false,
-            subscription: emptySubscription,
-          });
-
-          return { success: true, redirectUrl: '/', role: 'user' };
-        }
-
-        if (trimmedEmail === 'vipdemo@gmail.com' && password === '1') {
-          const vipUser: UserProfile = {
-            id: 'fe9b4427-c5b0-4b3a-85f0-4406d56eb3b6',
-            name: 'Phạm Xuân Lộc (Khán Giả VIP)',
-            email: 'vipdemo@gmail.com',
-            avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
-            role: 'vip',
-            isVIP: true,
-            vipExpiresAt: '2026-10-01',
-            createdAt: '2026-01-01',
+        } catch (e: any) {
+          return {
+            success: false,
+            error: e?.message || 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau!',
           };
-
-          set({
-            isAuthenticated: true,
-            user: vipUser,
-            isVIPMode: true,
-            isAuthModalOpen: false,
-            subscription: mockSubscriptionVIP,
-          });
-
-          return { success: true, redirectUrl: '/', role: 'vip' };
         }
-
-        if (trimmedEmail && password) {
-          const customUser: UserProfile = {
-            id: `user-${Date.now()}`,
-            name: trimmedEmail.split('@')[0] || 'Khán giả AI',
-            email: trimmedEmail,
-            avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
-            role: 'user',
-            isVIP: false,
-            createdAt: new Date().toISOString(),
-          };
-
-          set({
-            isAuthenticated: true,
-            user: customUser,
-            isVIPMode: false,
-            isAuthModalOpen: false,
-            subscription: emptySubscription,
-          });
-
-          return { success: true, redirectUrl: '/', role: 'user' };
-        }
-
-        return { success: false, error: 'Email hoặc mật khẩu không chính xác. Thử lại với userdemo@gmail.com / 1' };
       },
 
       register: async (name, email, password) => {
@@ -314,9 +246,19 @@ export const useAppStore = create<AppState>()(
           return { success: false, error: 'Vui lòng điền đầy đủ thông tin đăng ký!' };
         }
 
+        if (password.length < 8) {
+          return { success: false, error: 'Mật khẩu phải có ít nhất 8 ký tự!' };
+        }
+
         try {
-          const res = await authService.register({ name: trimmedName, email: trimmedEmail, password });
-          if (res.success && res.data) {
+          const res = await authService.register({
+            name: trimmedName,
+            fullName: trimmedName,
+            email: trimmedEmail,
+            password,
+          });
+
+          if (res.success && res.data?.user) {
             const profile = adaptUserProfile(res.data.user);
             set({
               isAuthenticated: true,
@@ -339,44 +281,17 @@ export const useAppStore = create<AppState>()(
 
             return { success: true, redirectUrl: '/', role: 'user' };
           }
-        } catch (e) {
-          console.warn('API register error, falling back:', e);
+
+          return {
+            success: false,
+            error: res.message || 'Đăng ký không thành công. Vui lòng thử lại!',
+          };
+        } catch (e: any) {
+          return {
+            success: false,
+            error: e?.message || 'Lỗi kết nối máy chủ khi đăng ký',
+          };
         }
-
-        const newUser: UserProfile = {
-          id: `user-reg-${Date.now()}`,
-          name: trimmedName,
-          email: trimmedEmail,
-          avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
-          role: 'user',
-          isVIP: false,
-          createdAt: new Date().toISOString(),
-        };
-
-        set({
-          isAuthenticated: true,
-          user: newUser,
-          isVIPMode: false,
-          isAuthModalOpen: false,
-          subscription: emptySubscription,
-          wallet: {
-            mainCoin: 0,
-            bonusCoin: 50,
-          },
-        });
-
-        get().addTransaction({
-          type: 'checkin',
-          typeLabel: 'Quà tân thủ',
-          description: 'Tặng 50 Coin Thưởng chào mừng thành viên mới AI Cinema Mobile',
-          mainCoinDelta: 0,
-          bonusCoinDelta: 50,
-          totalAmount: 50,
-          status: 'success',
-          statusLabel: 'Thành công',
-        });
-
-        return { success: true, redirectUrl: '/', role: 'user' };
       },
 
       logout: async () => {
