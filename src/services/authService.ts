@@ -18,65 +18,13 @@ class AuthService {
       };
     }
 
-    // 2. Fast-path cho tài khoản demo với mật khẩu '1' (tránh 400 Bad Request do BE yêu cầu tối thiểu 8 ký tự)
-    if (dto.password === '1') {
-      if (trimmedEmail === 'userdemo@gmail.com') {
-        const demoUser = {
-          id: '7315fdbf-081a-4f18-9273-41b50dc93928',
-          email: 'userdemo@gmail.com',
-          fullName: 'Phạm Xuân Lộc (Khán Giả)',
-          name: 'Phạm Xuân Lộc (Khán Giả)',
-          role: 'user',
-          isVip: false,
-          avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
-        };
-        const demoToken = 'mock_jwt_token_demo_user';
-        await storage.set(STORAGE_KEYS.AUTH_TOKEN, demoToken);
-        await storage.set(STORAGE_KEYS.USER_DATA, demoUser);
-        return {
-          success: true,
-          data: {
-            user: demoUser,
-            accessToken: demoToken,
-            message: 'Đăng nhập thành công với tài khoản demo Khán Giả',
-          },
-          statusCode: 200,
-        };
-      }
-
-      if (trimmedEmail === 'vipdemo@gmail.com') {
-        const demoVipUser = {
-          id: 'fe9b4427-c5b0-4b3a-85f0-4406d56eb3b6',
-          email: 'vipdemo@gmail.com',
-          fullName: 'Phạm Xuân Lộc (Khán Giả VIP)',
-          name: 'Phạm Xuân Lộc (Khán Giả VIP)',
-          role: 'vip',
-          isVip: true,
-          avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
-        };
-        const demoToken = 'mock_jwt_token_demo_vip';
-        await storage.set(STORAGE_KEYS.AUTH_TOKEN, demoToken);
-        await storage.set(STORAGE_KEYS.USER_DATA, demoVipUser);
-        return {
-          success: true,
-          data: {
-            user: demoVipUser,
-            accessToken: demoToken,
-            message: 'Đăng nhập thành công với tài khoản demo Khán Giả VIP',
-          },
-          statusCode: 200,
-        };
-      }
-    }
-
-    // 3. Kết nối trực tiếp tới Backend NestJS thật (/api/auth/login)
+    // Kết nối trực tiếp tới Backend NestJS (/api/auth/login)
     const res = await apiClient.post<AuthResponseDto>(
       API_ROUTES.AUTH.LOGIN,
       {
         email: trimmedEmail,
         password: dto.password,
-      },
-      { useMockFallback: false }
+      }
     );
 
     if (res.success && res.data?.accessToken) {
@@ -108,8 +56,7 @@ class AuthService {
         fullName,
         name: fullName,
         role: 'MEMBER',
-      },
-      { useMockFallback: false }
+      }
     );
 
     if (res.success && res.data?.user) {
@@ -119,7 +66,7 @@ class AuthService {
           const loginRes = await apiClient.post<AuthResponseDto>(
             API_ROUTES.AUTH.LOGIN,
             { email: trimmedEmail, password: dto.password },
-            { useMockFallback: false }
+            {}
           );
 
           if (loginRes.success && loginRes.data?.accessToken) {
@@ -155,25 +102,13 @@ class AuthService {
   async getProfile(): Promise<ApiResponse<UserProfile>> {
     return apiClient.get<UserProfile>(
       API_ROUTES.AUTH.PROFILE,
-      undefined,
-      async () => {
-        const saved = await storage.get<UserProfile | null>(STORAGE_KEYS.USER_DATA, null);
-        return saved || {
-          id: 'usr-default',
-          email: 'user@aicinema.vn',
-          name: 'Khán Giả AI Cinema',
-          role: 'user' as const,
-          isVIP: true,
-          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
-          createdAt: new Date().toISOString(),
-        };
-      }
+      undefined
     );
   }
 
   async logout(): Promise<void> {
     try {
-      await apiClient.post(API_ROUTES.AUTH.LOGOUT, undefined, { useMockFallback: false });
+      await apiClient.post(API_ROUTES.AUTH.LOGOUT);
     } catch {
       // ignore
     } finally {

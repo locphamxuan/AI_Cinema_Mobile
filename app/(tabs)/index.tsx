@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Header } from '../../src/components/common/Header';
 import { HeroBanner } from '../../src/components/home/HeroBanner';
 import { ContinueWatchingSection } from '../../src/components/home/ContinueWatchingSection';
@@ -19,13 +18,12 @@ import { MovieRow } from '../../src/components/home/MovieRow';
 import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
-import { allMockMovies, mockMovie, top10Movies } from '../../src/mocks/mockData';
 import { Movie } from '../../src/types/movie';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { isAuthenticated, openAuthModal, movies, loadInitialData } = useAppStore();
+  const { movies, currentMovie, loadInitialData, fetchMovies } = useAppStore();
 
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [refreshing, setRefreshing] = useState(false);
@@ -35,7 +33,7 @@ export default function HomeScreen() {
     loadInitialData();
   }, [loadInitialData]);
 
-  const movieList = movies && movies.length > 0 ? movies : allMockMovies;
+  const movieList = movies;
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -70,69 +68,6 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Luxury Guest Announcement Banner if unauthenticated */}
-        {!isAuthenticated && (
-          <TouchableOpacity
-            activeOpacity={0.92}
-            onPress={() => openAuthModal('login')}
-            style={styles.guestBannerWrapper}
-          >
-            <LinearGradient
-              colors={
-                isDark
-                  ? ['#2A1020', '#181226', '#0F172A']
-                  : ['#FFF1F2', '#FFE4E6', '#F8FAFC']
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[
-                styles.guestBanner,
-                {
-                  borderColor: isDark ? 'rgba(239, 68, 68, 0.35)' : 'rgba(239, 68, 68, 0.25)',
-                },
-              ]}
-            >
-              <View style={styles.guestLeft}>
-                <LinearGradient
-                  colors={['#EF4444', '#F59E0B']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.guestIconGradient}
-                >
-                  <Ionicons name="gift" size={18} color="#FFFFFF" />
-                </LinearGradient>
-
-                <View style={styles.guestTextContainer}>
-                  <View style={styles.guestBadgeRow}>
-                    <View style={styles.guestTag}>
-                      <Text style={styles.guestTagText}>QUÀ TÂN THỦ</Text>
-                    </View>
-                    <Text style={[styles.guestTitle, { color: colors.text }]}>
-                      Tặng 50 Coin Trải Nghiệm
-                    </Text>
-                  </View>
-                  <Text
-                    style={[styles.guestSubtitle, { color: colors.textSecondary }]}
-                    numberOfLines={1}
-                  >
-                    Xem trọn vẹn phim AI 4K & Trải nghiệm Studio AI
-                  </Text>
-                </View>
-              </View>
-
-              <LinearGradient
-                colors={['#EF4444', '#B91C1C']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.guestBtn}
-              >
-                <Text style={styles.guestBtnText}>Nhận ngay</Text>
-                <Ionicons name="arrow-forward" size={12} color="#FFFFFF" />
-              </LinearGradient>
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-
         {/* Featured Hero Banner Carousel */}
         <HeroBanner
           movies={movieList.slice(0, 5)}
@@ -146,7 +81,10 @@ export default function HomeScreen() {
         {/* Categories Bar */}
         <CategoryPills
           selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
+          onSelectCategory={(category) => {
+            setSelectedCategory(category);
+            void fetchMovies({ genre: category === 'Tất cả' ? undefined : category });
+          }}
         />
 
         {/* Top 5 Ranked Row */}
@@ -154,7 +92,7 @@ export default function HomeScreen() {
 
         {/* Trending Movies Row */}
         <MovieRow
-          title="Phim Mới Phát Hành & Thịnh Hành"
+          title="Danh sách phim"
           iconName="flame"
           movies={movieList}
           onMoviePress={handleMoviePress}
@@ -162,32 +100,17 @@ export default function HomeScreen() {
         />
 
         {/* Cyberpunk Collection Row */}
-        <MovieRow
-          title="Tuyển Tập Cyberpunk 2049"
-          iconName="hardware-chip-outline"
-          movies={[movieList[1] || movieList[0], movieList[4] || movieList[0], movieList[0], movieList[3] || movieList[0]]}
-          onMoviePress={handleMoviePress}
-          onSeeAllPress={() => handleSeeAll('Cyberpunk')}
-        />
-
-        {/* Sci-Fi Collection Row */}
-        <MovieRow
-          title="Khoa Học Viễn Tưởng Đỉnh Cao"
-          iconName="planet-outline"
-          movies={[movieList[2] || movieList[0], movieList[3] || movieList[0], movieList[5] || movieList[0], movieList[1] || movieList[0]]}
-          onMoviePress={handleMoviePress}
-          onSeeAllPress={() => handleSeeAll('Sci-Fi')}
-        />
-
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
       {/* AI Compliance Modal */}
-      <AIComplianceModal
-        visible={complianceModalVisible}
-        onClose={() => setComplianceModalVisible(false)}
-        compliance={mockMovie.aiCompliance}
-      />
+      {currentMovie && (
+        <AIComplianceModal
+          visible={complianceModalVisible}
+          onClose={() => setComplianceModalVisible(false)}
+          compliance={currentMovie.aiCompliance}
+        />
+      )}
     </View>
   );
 }

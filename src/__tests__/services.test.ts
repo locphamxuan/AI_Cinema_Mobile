@@ -127,6 +127,13 @@ describe('API Adapters', () => {
     expect(streak.days[6].isToday).toBe(false);
   });
 
+  it('adaptApiCheckInToStreak does not invent claims for an empty response', () => {
+    const streak = adaptApiCheckInToStreak({});
+    expect(streak.currentStreak).toBe(0);
+    expect(streak.todayClaimed).toBe(false);
+    expect(streak.days.every((day) => !day.claimed && day.reward === 0)).toBe(true);
+  });
+
   it('adaptApiProjectToProject maps project data properly', () => {
     const rawProject = {
       id: 'proj-01',
@@ -145,51 +152,43 @@ describe('API Adapters', () => {
   });
 });
 
-describe('Mobile Services with Safe Offline Fallbacks', () => {
-  it('movieService.listMovies falls back gracefully when backend offline', async () => {
+describe('Mobile Services do not return mock fallbacks', () => {
+  beforeEach(() => {
+    jest.spyOn(global, 'fetch').mockRejectedValue(new Error('network offline'));
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('movieService.listMovies reports the backend network error', async () => {
     const res = await movieService.listMovies();
-    expect(res.success).toBe(true);
-    expect(Array.isArray(res.data)).toBe(true);
-    expect(res.data.length).toBeGreaterThan(0);
+    expect(res.success).toBe(false);
+    expect(res.message).toContain('network offline');
   });
 
-  it('movieService.getMovieDetail returns detail for id', async () => {
-    const res = await movieService.getMovieDetail('movie-001');
-    expect(res.success).toBe(true);
-    expect(res.data.id).toBe('movie-001');
-  });
-
-  it('walletService.getWalletInfo returns wallet balance', async () => {
+  it('walletService.getWalletInfo reports the backend network error', async () => {
     const res = await walletService.getWalletInfo();
-    expect(res.success).toBe(true);
-    expect(res.data.mainCoin).toBeDefined();
-    expect(res.data.bonusCoin).toBeDefined();
+    expect(res.success).toBe(false);
+    expect(res.message).toContain('network offline');
   });
 
-  it('walletService.checkIn returns streak', async () => {
-    const res = await walletService.checkIn();
-    expect(res.success).toBe(true);
-    expect(res.data.todayClaimed).toBe(true);
-  });
-
-  it('subscriptionService.getPlans returns available VIP plans', async () => {
+  it('subscriptionService.getPlans reports the backend network error', async () => {
     const res = await subscriptionService.getPlans();
-    expect(res.success).toBe(true);
-    expect(Array.isArray(res.data)).toBe(true);
-    expect(res.data.length).toBeGreaterThan(0);
+    expect(res.success).toBe(false);
+    expect(res.message).toContain('network offline');
   });
 
-  it('productionService.listProjects returns projects', async () => {
+  it('productionService.listProjects reports the backend network error', async () => {
     const res = await productionService.listProjects();
-    expect(res.success).toBe(true);
-    expect(Array.isArray(res.data)).toBe(true);
-    expect(res.data[0].id).toBeDefined();
+    expect(res.success).toBe(false);
+    expect(res.message).toContain('network offline');
   });
 
-  it('chatService.sendMessage returns bot response', async () => {
+  it('chatService.sendMessage reports the backend network error', async () => {
     const res = await chatService.sendMessage('Xin chào');
-    expect(res.success).toBe(true);
-    expect(res.data.content).toBeDefined();
+    expect(res.success).toBe(false);
+    expect(res.message).toContain('network offline');
   });
 });
 
@@ -234,24 +233,18 @@ describe('Live Backend Connection (Port 3001)', () => {
     expect(res.message).toContain('Maker/Checker');
   });
 
-  it('authService.login allows demo accounts with password 1', async () => {
-    const resUser = await authService.login({ email: 'userdemo@gmail.com', password: '1' });
-    expect(resUser.success).toBe(true);
-    expect(resUser.data.user.role).toBe('user');
-
-    const resVip = await authService.login({ email: 'vipdemo@gmail.com', password: '1' });
-    expect(resVip.success).toBe(true);
-    expect(resVip.data.user.role).toBe('vip');
-  });
-
   it('authService.login returns 401 with real BE error for wrong password', async () => {
     const res = await authService.login({ email: 'nonexistent_test@example.com', password: 'wrongpassword' });
     expect(res.success).toBe(false);
     expect(res.statusCode).toBe(401);
   });
 
-  it('authService.register rejects duplicate email without mock masking', async () => {
-    // Attempt registering duplicate email
+  it('authService.register reports duplicate email from backend', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({ message: 'Email already exists' }),
+    } as Response);
     const res = await authService.register({
       name: 'Test Duplicate',
       email: 'test_node_check@example.com',
@@ -260,5 +253,6 @@ describe('Live Backend Connection (Port 3001)', () => {
     expect(res.success).toBe(false);
     expect(res.statusCode).toBe(409);
     expect(res.message).toMatch(/(email already|exists|tồn tại)/i);
+    jest.restoreAllMocks();
   });
 });

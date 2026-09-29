@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
-import { allMockMovies } from '../../src/mocks/mockData';
 import { Episode } from '../../src/types/movie';
 import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
@@ -23,16 +22,21 @@ export default function WatchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { currentMovie, openAuthModal, isAuthenticated, movies } = useAppStore();
+  const { currentMovie, setCurrentMovie, openAuthModal, isAuthenticated, movies } = useAppStore();
 
-  const movie = (movies && movies.length > 0 ? movies : allMockMovies).find((m) => m.id === id) || currentMovie;
+  const movie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
 
-  const [activeEpisode, setActiveEpisode] = useState<Episode>(movie.episodes[0]);
+  const [activeEpisode, setActiveEpisode] = useState<Episode | null>(movie?.episodes[0] || null);
   const [isPlaying, setIsPlaying] = useState(true);
 
   const [complianceModalOpen, setComplianceModalOpen] = useState(false);
   const [unlockModalOpen, setUnlockModalOpen] = useState(false);
   const [targetUnlockEp, setTargetUnlockEp] = useState<Episode | null>(null);
+
+  useEffect(() => {
+    setCurrentMovie(movie);
+    setActiveEpisode(movie?.episodes[0] || null);
+  }, [movie, setCurrentMovie]);
 
   const handleSelectEpisode = (ep: Episode) => {
     if (ep.isFree || ep.isUnlocked) {
@@ -47,6 +51,14 @@ export default function WatchScreen() {
       setUnlockModalOpen(true);
     }
   };
+
+  if (!movie || !activeEpisode) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Không tìm thấy phim</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

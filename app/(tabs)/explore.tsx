@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,6 @@ import { Header } from '../../src/components/common/Header';
 import { MovieCard } from '../../src/components/home/MovieCard';
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
-import { allMockMovies, genreCategories } from '../../src/mocks/mockData';
 import { Movie } from '../../src/types/movie';
 
 type SortOption = 'trending' | 'rating' | 'newest';
@@ -41,7 +40,7 @@ const GENRE_ITEMS: GenreItem[] = [
 export default function ExploreScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { movies } = useAppStore();
+  const { movies, fetchMovies } = useAppStore();
   const { width: windowWidth } = useWindowDimensions();
 
   // Responsive layout calculations
@@ -55,9 +54,19 @@ export default function ExploreScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchMovies({
+        search: query.trim() || undefined,
+        genre: selectedTag === 'Tất cả' || selectedTag === 'Thịnh hành' ? undefined : selectedTag,
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [fetchMovies, query, selectedTag]);
+
   // Filter and sort movies
   const filteredMovies = useMemo<Movie[]>(() => {
-    const sourceList: Movie[] = movies && movies.length > 0 ? movies : allMockMovies;
+    const sourceList: Movie[] = movies;
     let result: Movie[] = sourceList.filter((movie: Movie) => {
       const q = query.trim().toLowerCase();
       const matchesQuery =
@@ -89,7 +98,7 @@ export default function ExploreScreen() {
     });
 
     return result;
-  }, [query, selectedTag, sortBy]);
+  }, [movies, query, selectedTag, sortBy]);
 
   const handleMoviePress = (movie: Movie) => {
     router.push({

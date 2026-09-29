@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,8 +13,8 @@ import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-ico
 import { Header } from '../../src/components/common/Header';
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
-import { subscriptionPlans } from '../../src/mocks/mockData';
 import { SubscriptionPlan } from '../../src/types/subscription';
+import { subscriptionService } from '../../src/services';
 
 export default function VipScreen() {
   const router = useRouter();
@@ -22,7 +22,7 @@ export default function VipScreen() {
   const {
     subscription,
     toggleAutoRenew,
-    toggleVIPMode,
+    subscribeToPlan,
     isVIPMode,
     user,
     isAuthenticated,
@@ -30,8 +30,18 @@ export default function VipScreen() {
   } = useAppStore();
 
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
-  const [selectedPlanId, setSelectedPlanId] = useState<string>('premium');
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+
+  useEffect(() => {
+    subscriptionService.getPlans().then((response) => {
+      if (response.success && Array.isArray(response.data)) {
+        setPlans(response.data);
+        setSelectedPlanId(response.data[0]?.id || '');
+      }
+    });
+  }, []);
 
   const isUserVIP = isAuthenticated && (isVIPMode || user?.isVIP);
 
@@ -54,9 +64,12 @@ export default function VipScreen() {
         { text: 'Để Sau', style: 'cancel' },
         {
           text: 'Kích Hoạt Ngay',
-          onPress: () => {
-            if (!isVIPMode) toggleVIPMode();
-            Alert.alert('Chúc Mừng 🎉', `Gói ${plan.name} đã được kích hoạt thành công! Quyền quản lý thiết bị và kho phim 4K đã sẵn sàng.`);
+          onPress: async () => {
+            const result = await subscribeToPlan(plan.id);
+            Alert.alert(
+              result.success ? 'Đăng ký thành công' : 'Không thể đăng ký',
+              result.success ? `Gói ${plan.name} đã được xác nhận.` : result.error
+            );
           },
         },
       ]
@@ -140,7 +153,7 @@ export default function VipScreen() {
             <View style={styles.vipPassMiddle}>
               <View>
                 <Text style={styles.vipPassLabel}>CHỦ THẺ HỘI VIÊN</Text>
-                <Text style={styles.vipPassName}>{user?.name || 'Phạm Xuân Lộc'}</Text>
+                <Text style={styles.vipPassName}>{user?.name || ''}</Text>
               </View>
               <View style={styles.vipChipSimulator}>
                 <View style={styles.vipChipLine} />
@@ -148,11 +161,11 @@ export default function VipScreen() {
             </View>
 
             {/* Quota & Device Meter */}
-            <View style={styles.vipPassDeviceBox}>
+              <View style={styles.vipPassDeviceBox}>
               <View style={styles.vipDeviceHeader}>
                 <View style={styles.vipDeviceLeft}>
                   <MaterialCommunityIcons name="devices" size={16} color="#F59E0B" />
-                  <Text style={styles.vipDeviceText}>Hạn ngạch thiết bị: 3/5 thiết bị đang kết nối</Text>
+                  <Text style={styles.vipDeviceText}>Quản lý thiết bị đã đăng nhập</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.manageDeviceBtn}
@@ -162,16 +175,15 @@ export default function VipScreen() {
                   <Text style={styles.manageDeviceBtnText}>Quản lý ›</Text>
                 </TouchableOpacity>
               </View>
-              <View style={styles.quotaProgressBarBg}>
-                <View style={[styles.quotaProgressBarFill, { width: '60%' }]} />
-              </View>
             </View>
 
             {/* Expiry & Auto Renew */}
             <View style={styles.vipPassFooter}>
               <View style={styles.expiryInfo}>
                 <Ionicons name="time-outline" size={14} color="#FBBF24" />
-                <Text style={styles.expiryInfoText}>Hạn dùng: 07/10/2026 (Còn 20 ngày)</Text>
+                <Text style={styles.expiryInfoText}>
+                  Hạn dùng: {subscription.endDate ? new Date(subscription.endDate).toLocaleDateString('vi-VN') : 'Chưa có dữ liệu'}
+                </Text>
               </View>
 
               <View style={styles.autoRenewSwitchWrap}>
@@ -272,7 +284,7 @@ export default function VipScreen() {
 
         {/* Pricing Plan Cards */}
         <View style={styles.plansList}>
-          {subscriptionPlans.map((plan) => {
+          {plans.map((plan) => {
             const isSelected = selectedPlanId === plan.id;
             const isVip = plan.id === 'vip';
             const isPopular = plan.popular;
@@ -329,7 +341,7 @@ export default function VipScreen() {
                     <View>
                       <Text style={[styles.planCardTitle, { color: colors.text }]}>{plan.name}</Text>
                       <Text style={[styles.planCardQuality, { color: colors.textSecondary }]}>
-                        {getQualityBadge(plan.id)}
+                        {plan.duration} ngày
                       </Text>
                     </View>
                   </View>
@@ -338,7 +350,7 @@ export default function VipScreen() {
                   <View style={[styles.deviceQuotaBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9' }]}>
                     <MaterialCommunityIcons name="devices" size={13} color="#F59E0B" />
                     <Text style={[styles.deviceQuotaText, { color: colors.text }]}>
-                      {getDeviceQuota(plan.id)}
+                      {plan.duration} ngày
                     </Text>
                   </View>
                 </View>

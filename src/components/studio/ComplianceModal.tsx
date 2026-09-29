@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useProductionStore } from '../../store/useProductionStore';
 import { useTheme } from '../../theme';
@@ -28,20 +28,19 @@ export const ComplianceModal: React.FC<ComplianceModalProps> = ({
 
   const canPublish = article44 && decree142 && watermark;
 
-  const handlePublish = () => {
-    verifyComplianceAndPublish(projectId, episodeId, {
+  const handlePublish = async () => {
+    const success = await verifyComplianceAndPublish(projectId, episodeId, {
       aiLawArticle44Verified: article44,
       decree142LabelAttached: decree142,
       aiWatermarkEnabled: watermark,
-      certificationId: `AI-VN-2026-${Date.now().toString().slice(-6)}`,
-      moderationScore: 99.4,
-      aiContentPercentage: 100,
-      verifiedBy: 'Hội đồng Thẩm định AI Cinema',
-      verifiedAt: new Date().toISOString(),
     });
 
-    onPublished();
-    onClose();
+    if (success) {
+      onPublished();
+      onClose();
+    } else {
+      Alert.alert('Chưa thể phát hành', 'Máy chủ chưa xác nhận kết quả thẩm định. Vui lòng thử lại.');
+    }
   };
 
   return (

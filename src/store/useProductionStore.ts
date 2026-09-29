@@ -10,11 +10,9 @@ import {
   UserDevice,
   ProjectMilestone,
   AIPolicy,
-  EpisodeSubmission,
   TokenExtensionRequest,
   SceneReviewStatus,
 } from '../types/production';
-import { mockProjectCyber, mockUserDevices } from '../mocks/productionMock';
 import { productionService } from '../services';
 import { adaptApiProjectToProject } from '../lib/apiAdapter';
 
@@ -35,14 +33,14 @@ interface ProductionStoreState {
   createProject: (projectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'allocatedTokens' | 'consumedTokens' | 'status'>) => Project;
   requestPlanChanges: (projectId: string, episodeId: string, feedbackContent: string) => boolean;
   approveAndAllocateQuota: (projectId: string, episodeId: string, tokenQuota: number, notes?: string) => boolean;
-  requestContentChanges: (projectId: string, episodeId: string, feedbackContent: string) => boolean;
-  approveContent: (projectId: string, episodeId: string) => boolean;
+  requestContentChanges: (projectId: string, episodeId: string, feedbackContent: string) => Promise<boolean>;
+  approveContent: (projectId: string, episodeId: string) => Promise<boolean>;
   verifyComplianceAndPublish: (
     projectId: string,
     episodeId: string,
-    complianceData: ComplianceMetadata,
+    complianceData: Partial<ComplianceMetadata>,
     scheduledReleaseDate?: string
-  ) => boolean;
+  ) => Promise<boolean>;
 
   // Creator Actions
   submitProductionPlan: (projectId: string, episodeId: string, planData: Partial<ProductionPlan>) => boolean;
@@ -50,7 +48,7 @@ interface ProductionStoreState {
   addScene: (projectId: string, episodeId: string, newScene: Omit<Scene, 'id' | 'status' | 'progress' | 'videoUrl'>) => void;
   removeScene: (projectId: string, episodeId: string, sceneId: string) => void;
   generateSceneVideo: (projectId: string, episodeId: string, sceneId: string) => Promise<{ success: boolean; error?: string }>;
-  submitEpisodeForReview: (projectId: string, episodeId: string) => { success: boolean; error?: string };
+  submitEpisodeForReview: (projectId: string, episodeId: string) => Promise<{ success: boolean; error?: string }>;
 
   // Devices Management
   devices: UserDevice[];
@@ -67,19 +65,17 @@ interface ProductionStoreState {
 
   // Reorder & Review Scenes
   reorderScenes: (projectId: string, episodeId: string, fromIndex: number, toIndex: number) => void;
-  reviewScene: (projectId: string, episodeId: string, sceneId: string, status: SceneReviewStatus, feedback?: string) => void;
+  reviewScene: (projectId: string, episodeId: string, sceneId: string, status: SceneReviewStatus, feedback?: string) => Promise<boolean>;
 
   // Token Extension Requests
   requestTokenExtension: (projectId: string, episodeId: string, requestedTokens: number, reason: string) => void;
   respondToTokenExtension: (projectId: string, requestId: string, approve: boolean, notes?: string) => void;
 
-  // Submission Management
-  submitEpisodeDraft: (projectId: string, episodeId: string, changeSummary: string) => { success: boolean; submission?: EpisodeSubmission; error?: string };
 }
 
 export const useProductionStore = create<ProductionStoreState>((set, get) => ({
-  projects: [mockProjectCyber],
-  activeProjectId: 'proj-cyber-01',
+  projects: [],
+  activeProjectId: '',
   activeRole: 'reviewer',
   isLoadingProjects: false,
 
@@ -89,20 +85,17 @@ export const useProductionStore = create<ProductionStoreState>((set, get) => ({
       const res = await productionService.listProjects();
       if (res.success && res.data) {
         const raw = Array.isArray(res.data) ? res.data : (res.data as any).items || [];
-        if (raw.length > 0) {
-          const adapted = raw.map(adaptApiProjectToProject);
-          set({
-            projects: adapted,
-            activeProjectId: adapted[0]?.id || get().activeProjectId,
-            isLoadingProjects: false,
-          });
-          return;
-        }
+        const adapted = raw.map(adaptApiProjectToProject);
+        set({
+          projects: adapted,
+          activeProjectId: adapted[0]?.id || '',
+          isLoadingProjects: false,
+        });
+        return;
       }
-      set({ isLoadingProjects: false });
+      set({ projects: [], activeProjectId: '', isLoadingProjects: false });
     } catch (e) {
-      console.warn('loadProjects fallback:', e);
-      set({ isLoadingProjects: false });
+      set({ projects: [], activeProjectId: '', isLoadingProjects: false });
     }
   },
 
@@ -111,7 +104,7 @@ export const useProductionStore = create<ProductionStoreState>((set, get) => ({
 
   getProject: (projectId) => {
     const pId = projectId || get().activeProjectId;
-    return get().projects.find((p) => p.id === pId) || get().projects[0];
+    return get().projects.find((p) => p.id === pId);
   },
 
   getEpisode: (episodeId, projectId) => {
@@ -173,127 +166,38 @@ export const useProductionStore = create<ProductionStoreState>((set, get) => ({
   },
 
   approveAndAllocateQuota: (projectId, episodeId, tokenQuota, notes) => {
-    productionService.allocateQuota(projectId, episodeId, tokenQuota, notes).catch((e) => {
-      console.warn('productionService.allocateQuota fallback:', e);
+    void productionService.allocateQuota(projectId, episodeId, tokenQuota, notes).then((response) => {
+      if (response.success) return get().loadProjects();
     });
 
-    const feedback: FeedbackItem = {
-      id: `fb-${Date.now()}`,
-      author: 'Lê Quốc Bảo (Reviewer)',
-      role: 'reviewer',
-      type: 'approval',
-      content: `Kế hoạch được phê duyệt. Đã cấp hạn ngạch ${tokenQuota} AI Tokens. ${notes || ''}`,
-      createdAt: new Date().toISOString(),
-    };
+    return false;
 
-    set((state) => ({
-      projects: state.projects.map((proj) => {
-        if (proj.id !== projectId) return proj;
-        const newAllocatedTokens = proj.allocatedTokens + tokenQuota;
-        return {
-          ...proj,
-          allocatedTokens: newAllocatedTokens,
-          status: 'in_production',
-          updatedAt: new Date().toISOString(),
-          episodes: proj.episodes.map((ep) => {
-            if (ep.id !== episodeId) return ep;
-            return {
-              ...ep,
-              status: 'QUOTA_ALLOCATED',
-              quota: {
-                allocatedTokens: tokenQuota,
-                allocatedAt: new Date().toISOString(),
-                allocatedBy: 'Lê Quốc Bảo (Reviewer)',
-                notes: notes || 'Hạn ngạch được cấp chính thức',
-              },
-              plan: {
-                ...ep.plan,
-                feedbackHistory: [feedback, ...ep.plan.feedbackHistory],
-              },
-            };
-          }),
-        };
-      }),
-    }));
+  },
 
+  requestContentChanges: async (projectId, episodeId, feedbackContent) => {
+    const episode = get().getEpisode(episodeId, projectId);
+    if (!episode) return false;
+    const response = await productionService.reviewPlan(episode.plan.id || episodeId, 'rejected', feedbackContent);
+    if (!response.success) return false;
+    await get().loadProjects();
     return true;
   },
 
-  requestContentChanges: (projectId, episodeId, feedbackContent) => {
-    const feedback: FeedbackItem = {
-      id: `fb-${Date.now()}`,
-      author: 'Lê Quốc Bảo (Reviewer)',
-      role: 'reviewer',
-      type: 'content_changes',
-      content: feedbackContent,
-      createdAt: new Date().toISOString(),
-    };
-
-    set((state) => ({
-      projects: state.projects.map((proj) => {
-        if (proj.id !== projectId) return proj;
-        return {
-          ...proj,
-          updatedAt: new Date().toISOString(),
-          episodes: proj.episodes.map((ep) => {
-            if (ep.id !== episodeId) return ep;
-            return {
-              ...ep,
-              status: 'CONTENT_REJECTED',
-              plan: {
-                ...ep.plan,
-                feedbackHistory: [feedback, ...ep.plan.feedbackHistory],
-              },
-            };
-          }),
-        };
-      }),
-    }));
-
+  approveContent: async (projectId, episodeId) => {
+    const episode = get().getEpisode(episodeId, projectId);
+    if (!episode) return false;
+    const response = await productionService.reviewPlan(episode.plan.id || episodeId, 'approved');
+    if (!response.success) return false;
+    await get().loadProjects();
     return true;
   },
 
-  approveContent: (projectId, episodeId) => {
-    set((state) => ({
-      projects: state.projects.map((proj) => {
-        if (proj.id !== projectId) return proj;
-        return {
-          ...proj,
-          updatedAt: new Date().toISOString(),
-          episodes: proj.episodes.map((ep) => {
-            if (ep.id !== episodeId) return ep;
-            return {
-              ...ep,
-              status: 'COMPLIANCE_PENDING',
-            };
-          }),
-        };
-      }),
-    }));
-
-    return true;
-  },
-
-  verifyComplianceAndPublish: (projectId, episodeId, complianceData, scheduledReleaseDate) => {
-    set((state) => ({
-      projects: state.projects.map((proj) => {
-        if (proj.id !== projectId) return proj;
-        return {
-          ...proj,
-          updatedAt: new Date().toISOString(),
-          episodes: proj.episodes.map((ep) => {
-            if (ep.id !== episodeId) return ep;
-            return {
-              ...ep,
-              status: 'PUBLISHED',
-              compliance: complianceData,
-              scheduledReleaseDate: scheduledReleaseDate || new Date().toISOString(),
-            };
-          }),
-        };
-      }),
-    }));
-
+  verifyComplianceAndPublish: async (projectId, episodeId, complianceData) => {
+    const episode = get().getEpisode(episodeId, projectId);
+    if (!episode) return false;
+    const response = await productionService.verifyCompliance(episodeId, complianceData);
+    if (!response.success) return false;
+    await get().loadProjects();
     return true;
   },
 
@@ -413,21 +317,17 @@ export const useProductionStore = create<ProductionStoreState>((set, get) => ({
       };
     }
 
-    get().updateScene(projectId, episodeId, sceneId, { status: 'rendering', progress: 20 });
-    
-    // Call backend generation service
-    productionService.generateSceneVideo(projectId, episodeId, sceneId).catch((e) => {
-      console.warn('productionService.generateSceneVideo fallback:', e);
+    const response = await productionService.generateSceneVideo(projectId, episodeId, sceneId);
+    if (!response.success || !response.data) {
+      return { success: false, error: response.message || 'Không thể gửi yêu cầu render' };
+    }
+    get().updateScene(projectId, episodeId, sceneId, {
+      status: response.data.status,
+      progress: response.data.progress,
+      videoUrl: response.data.videoUrl,
     });
 
-    await new Promise((r) => setTimeout(r, 400));
-    get().updateScene(projectId, episodeId, sceneId, { progress: 65 });
-    await new Promise((r) => setTimeout(r, 400));
-    get().updateScene(projectId, episodeId, sceneId, {
-      status: 'completed',
-      progress: 100,
-      videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-    });
+    if (response.data.status !== 'completed') return { success: true };
 
     set((state) => ({
       projects: state.projects.map((proj) => {
@@ -450,7 +350,7 @@ export const useProductionStore = create<ProductionStoreState>((set, get) => ({
     return { success: true };
   },
 
-  submitEpisodeForReview: (projectId, episodeId) => {
+  submitEpisodeForReview: async (projectId, episodeId) => {
     const ep = get().getEpisode(episodeId, projectId);
     if (!ep) return { success: false, error: 'Không tìm thấy tập phim' };
 
@@ -462,14 +362,8 @@ export const useProductionStore = create<ProductionStoreState>((set, get) => ({
       };
     }
 
-    const feedback: FeedbackItem = {
-      id: `fb-${Date.now()}`,
-      author: 'Trần Minh Huy (Creator)',
-      role: 'creator',
-      type: 'approval',
-      content: `Đã render thành công ${ep.scenes.length} phân cảnh và nộp bản video draft lên Reviewer.`,
-      createdAt: new Date().toISOString(),
-    };
+    const response = await productionService.submitEpisodeForReview(episodeId);
+    if (!response.success) return { success: false, error: response.message || 'Không thể gửi bản dựng' };
 
     set((state) => ({
       projects: state.projects.map((proj) => {
@@ -481,12 +375,8 @@ export const useProductionStore = create<ProductionStoreState>((set, get) => ({
             if (e.id !== episodeId) return e;
             return {
               ...e,
-              status: 'CONTENT_SUBMITTED',
-              videoDraftUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-              plan: {
-                ...e.plan,
-                feedbackHistory: [feedback, ...e.plan.feedbackHistory],
-              },
+              status: response.data?.status || 'CONTENT_SUBMITTED',
+              videoDraftUrl: response.data?.videoDraftUrl || e.videoDraftUrl,
             };
           }),
         };
@@ -497,7 +387,7 @@ export const useProductionStore = create<ProductionStoreState>((set, get) => ({
   },
 
   // ===== DEVICES MANAGEMENT =====
-  devices: mockUserDevices,
+  devices: [],
 
   revokeDevice: (deviceId) => {
     set((state) => ({
@@ -594,30 +484,11 @@ export const useProductionStore = create<ProductionStoreState>((set, get) => ({
     }));
   },
 
-  reviewScene: (projectId, episodeId, sceneId, status, feedback) => {
-    set((state) => ({
-      projects: state.projects.map((proj) => {
-        if (proj.id !== projectId) return proj;
-        return {
-          ...proj,
-          episodes: proj.episodes.map((ep) => {
-            if (ep.id !== episodeId) return ep;
-            return {
-              ...ep,
-              scenes: ep.scenes.map((s) => {
-                if (s.id !== sceneId) return s;
-                return {
-                  ...s,
-                  reviewStatus: status,
-                  reviewFeedback: feedback || s.reviewFeedback,
-                  reviewedAt: new Date().toISOString(),
-                };
-              }),
-            };
-          }),
-        };
-      }),
-    }));
+  reviewScene: async (projectId, episodeId, sceneId, status, feedback) => {
+    const response = await productionService.reviewScene(sceneId, status, feedback);
+    if (!response.success) return false;
+    await get().loadProjects();
+    return true;
   },
 
   // ===== TOKEN EXTENSION REQUESTS =====
@@ -693,69 +564,4 @@ export const useProductionStore = create<ProductionStoreState>((set, get) => ({
     }));
   },
 
-  // ===== SUBMISSION MANAGEMENT =====
-  submitEpisodeDraft: (projectId, episodeId, changeSummary) => {
-    const ep = get().getEpisode(episodeId, projectId);
-    if (!ep) return { success: false, error: 'Không tìm thấy tập phim' };
-
-    const uncompleted = ep.scenes.filter((s) => s.status !== 'completed');
-    if (uncompleted.length > 0) {
-      return {
-        success: false,
-        error: `Còn ${uncompleted.length} phân cảnh chưa hoàn thành render.`,
-      };
-    }
-
-    const nextVersionNum = `v1.${(ep.submissions?.length || 0) + 1}.0`;
-    const totalDurationSec = ep.scenes.reduce((sum, s) => sum + s.durationSec, 0);
-
-    const submission: EpisodeSubmission = {
-      id: `sub-${Date.now()}`,
-      episodeId,
-      projectId,
-      submittedAt: new Date().toISOString(),
-      submittedBy: 'Trần Minh Huy (Creator)',
-      versionNumber: nextVersionNum,
-      totalScenes: ep.scenes.length,
-      totalDurationSec,
-      totalTokensSpent: ep.actualTokensUsed,
-      videoDraftUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-      changeSummary,
-      reviewStatus: 'pending',
-    };
-
-    const feedback: FeedbackItem = {
-      id: `fb-${Date.now()}`,
-      author: 'Trần Minh Huy (Creator)',
-      role: 'creator',
-      type: 'approval',
-      content: `[Bản Nộp ${nextVersionNum}]: ${changeSummary}`,
-      createdAt: new Date().toISOString(),
-    };
-
-    set((state) => ({
-      projects: state.projects.map((proj) => {
-        if (proj.id !== projectId) return proj;
-        return {
-          ...proj,
-          updatedAt: new Date().toISOString(),
-          episodes: proj.episodes.map((e) => {
-            if (e.id !== episodeId) return e;
-            return {
-              ...e,
-              status: 'CONTENT_SUBMITTED',
-              videoDraftUrl: submission.videoDraftUrl,
-              submissions: [submission, ...(e.submissions || [])],
-              plan: {
-                ...e.plan,
-                feedbackHistory: [feedback, ...e.plan.feedbackHistory],
-              },
-            };
-          }),
-        };
-      }),
-    }));
-
-    return { success: true, submission };
-  },
 }));

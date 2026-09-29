@@ -1,17 +1,13 @@
 import { apiClient } from './apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
-import { mockProjectCyber } from '../mocks/productionMock';
 import { adaptApiProjectToProject } from '../lib/apiAdapter';
 import type { ApiResponse } from '../types/api';
-import type { Project, Scene } from '../types/production';
+import type { ComplianceMetadata, ProductionEpisode, Project, Scene } from '../types/production';
+import type { SceneReviewStatus } from '../types/production';
 
 class ProductionService {
   async listProjects(): Promise<ApiResponse<Project[]>> {
-    return apiClient.get<Project[]>(
-      API_ROUTES.PRODUCTION.PROJECTS,
-      undefined,
-      async () => [mockProjectCyber]
-    ).then((res) => {
+    return apiClient.get<Project[]>(API_ROUTES.PRODUCTION.PROJECTS).then((res) => {
       if (res.success && res.data) {
         const rawList = Array.isArray(res.data)
           ? res.data
@@ -19,7 +15,7 @@ class ProductionService {
         if (Array.isArray(rawList)) {
           return {
             ...res,
-            data: rawList.length > 0 ? rawList.map(adaptApiProjectToProject) : [mockProjectCyber],
+            data: rawList.map(adaptApiProjectToProject),
           };
         }
       }
@@ -28,11 +24,7 @@ class ProductionService {
   }
 
   async getProject(projectId: string): Promise<ApiResponse<Project>> {
-    return apiClient.get<Project>(
-      API_ROUTES.PRODUCTION.PROJECT_DETAIL(projectId),
-      undefined,
-      async () => mockProjectCyber
-    ).then((res) => {
+    return apiClient.get<Project>(API_ROUTES.PRODUCTION.PROJECT_DETAIL(projectId)).then((res) => {
       if (res.success && res.data) {
         return {
           ...res,
@@ -41,6 +33,22 @@ class ProductionService {
       }
       return res;
     });
+  }
+
+  async submitEpisodeForReview(planId: string): Promise<ApiResponse<Partial<ProductionEpisode>>> {
+    return apiClient.post<Partial<ProductionEpisode>>(API_ROUTES.PRODUCTION.PLAN_SUBMIT(planId), {});
+  }
+
+  async verifyCompliance(packageId: string, checks: Partial<ComplianceMetadata>): Promise<ApiResponse<unknown>> {
+    return apiClient.post(API_ROUTES.PRODUCTION.COMPLIANCE_CHECKS(packageId), checks);
+  }
+
+  async reviewPlan(planId: string, status: string, feedback?: string): Promise<ApiResponse<unknown>> {
+    return apiClient.post(API_ROUTES.PRODUCTION.PLAN_REVIEWS(planId), { status, feedback });
+  }
+
+  async reviewScene(sceneId: string, status: SceneReviewStatus, feedback?: string): Promise<ApiResponse<unknown>> {
+    return apiClient.patch(API_ROUTES.PRODUCTION.SCENE_DETAIL(sceneId), { reviewStatus: status, reviewFeedback: feedback });
   }
 
   async allocateQuota(
@@ -64,9 +72,7 @@ class ProductionService {
         allocatedAmount: quota,
         allocatedById: '1deebe95-e8ca-49aa-bd4d-c44489f9964f',
         notes: actualNotes,
-      },
-      undefined,
-      async () => ({ success: true, allocatedAmount: quota })
+      }
     );
   }
 
@@ -83,13 +89,7 @@ class ProductionService {
       {
         sceneId: actualSceneId,
         jobType: 'VIDEO_GENERATION',
-      },
-      undefined,
-      async () => ({
-        status: 'completed',
-        progress: 100,
-        videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-      })
+      }
     );
   }
 }

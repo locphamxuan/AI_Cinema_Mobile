@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme';
-import { genreCategories } from '../../mocks/mockData';
 
 interface CategoryPillsProps {
   selectedCategory: string;
@@ -20,6 +19,8 @@ const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   'Tâm lý & Bí ẩn': 'eye-outline',
 };
 
+const CATEGORIES = Object.keys(CATEGORY_ICONS);
+
 export const CategoryPills: React.FC<CategoryPillsProps> = ({
   selectedCategory,
   onSelectCategory,
@@ -33,7 +34,7 @@ export const CategoryPills: React.FC<CategoryPillsProps> = ({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {genreCategories.map((category) => {
+        {CATEGORIES.map((category) => {
           const isSelected = selectedCategory === category;
           const iconName = CATEGORY_ICONS[category];
 

@@ -6,7 +6,6 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: any;
   params?: Record<string, string | number | boolean | undefined>;
   timeoutMs?: number;
-  useMockFallback?: boolean;
 }
 
 class ApiClient {
@@ -63,8 +62,7 @@ class ApiClient {
 
   public async request<T = any>(
     endpoint: string,
-    options: RequestOptions = {},
-    mockFallbackFn?: () => Promise<T> | T
+    options: RequestOptions = {}
   ): Promise<ApiResponse<T>> {
     const { body, params, timeoutMs = API_CONFIG.TIMEOUT_MS, headers: customHeaders, ...restOptions } = options;
     const url = this.buildUrl(endpoint, params);
@@ -72,9 +70,6 @@ class ApiClient {
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
-    const shouldFallback = options.useMockFallback ?? isTest;
 
     try {
       const requestInit: RequestInit = {
@@ -94,20 +89,6 @@ class ApiClient {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        if (shouldFallback && mockFallbackFn && options.useMockFallback !== false) {
-          try {
-            const fallbackData = await mockFallbackFn();
-            return {
-              success: true,
-              data: fallbackData,
-              statusCode: 200,
-              message: 'Fallback to mock data (Server responded with error)',
-            };
-          } catch {
-            // ignore mock error
-          }
-        }
-
         let errorMessage = `HTTP error! status: ${response.status}`;
         try {
           const errJson = await response.json();
@@ -135,20 +116,6 @@ class ApiClient {
     } catch (err: any) {
       clearTimeout(timeoutId);
 
-      if (shouldFallback && mockFallbackFn && options.useMockFallback !== false) {
-        try {
-          const fallbackData = await mockFallbackFn();
-          return {
-            success: true,
-            data: fallbackData,
-            statusCode: 200,
-            message: 'Fallback to mock data (Network unreachable)',
-          };
-        } catch {
-          // ignore mock error
-        }
-      }
-
       return {
         success: false,
         data: null as unknown as T,
@@ -157,24 +124,24 @@ class ApiClient {
     }
   }
 
-  public get<T>(endpoint: string, options?: RequestOptions, mockFallbackFn?: () => Promise<T> | T) {
-    return this.request<T>(endpoint, { ...options, method: 'GET' }, mockFallbackFn);
+  public get<T>(endpoint: string, options?: RequestOptions) {
+    return this.request<T>(endpoint, { ...options, method: 'GET' });
   }
 
-  public post<T>(endpoint: string, body?: any, options?: RequestOptions, mockFallbackFn?: () => Promise<T> | T) {
-    return this.request<T>(endpoint, { ...options, method: 'POST', body }, mockFallbackFn);
+  public post<T>(endpoint: string, body?: any, options?: RequestOptions) {
+    return this.request<T>(endpoint, { ...options, method: 'POST', body });
   }
 
-  public put<T>(endpoint: string, body?: any, options?: RequestOptions, mockFallbackFn?: () => Promise<T> | T) {
-    return this.request<T>(endpoint, { ...options, method: 'PUT', body }, mockFallbackFn);
+  public put<T>(endpoint: string, body?: any, options?: RequestOptions) {
+    return this.request<T>(endpoint, { ...options, method: 'PUT', body });
   }
 
-  public patch<T>(endpoint: string, body?: any, options?: RequestOptions, mockFallbackFn?: () => Promise<T> | T) {
-    return this.request<T>(endpoint, { ...options, method: 'PATCH', body }, mockFallbackFn);
+  public patch<T>(endpoint: string, body?: any, options?: RequestOptions) {
+    return this.request<T>(endpoint, { ...options, method: 'PATCH', body });
   }
 
-  public delete<T>(endpoint: string, options?: RequestOptions, mockFallbackFn?: () => Promise<T> | T) {
-    return this.request<T>(endpoint, { ...options, method: 'DELETE' }, mockFallbackFn);
+  public delete<T>(endpoint: string, options?: RequestOptions) {
+    return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }
 }
 

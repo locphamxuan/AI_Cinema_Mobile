@@ -416,7 +416,7 @@ export const AuthModal: React.FC = () => {
                   onPress={() => {
                     Alert.alert(
                       'Khôi phục mật khẩu',
-                      'Vui lòng sử dụng tài khoản Demo (userdemo@gmail.com / mật khẩu: 1) hoặc liên hệ đội ngũ AI Cinema qua Chat Hỗ trợ.'
+                      'Vui lòng liên hệ đội ngũ AI Cinema qua Chat Hỗ trợ để được trợ giúp khôi phục mật khẩu.'
                     );
                   }}
                 >
@@ -427,15 +427,6 @@ export const AuthModal: React.FC = () => {
               )}
             </View>
 
-            {/* Bonus Reward Badge for Register */}
-            {!isLogin && (
-              <View style={styles.registerBonusBadge}>
-                <Ionicons name="gift" size={16} color="#8B5CF6" />
-                <Text style={styles.registerBonusText}>
-                  Đăng ký ngay nhận ngay <Text style={{ fontWeight: '800', color: '#F59E0B' }}>+50 Coin Thưởng</Text> vào ví!
-                </Text>
-              </View>
-            )}
           </View>
 
           {/* Error display */}
