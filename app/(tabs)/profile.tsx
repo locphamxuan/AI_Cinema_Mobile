@@ -26,7 +26,6 @@ export default function ProfileScreen() {
     transactions,
     watchHistory,
     isVIPMode,
-    toggleVIPMode,
     logout,
     openAuthModal,
     setCheckInModalOpen,
@@ -146,7 +145,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
             <TouchableOpacity
-              onPress={toggleVIPMode}
+              onPress={() => router.push('/(tabs)/vip')}
               style={[
                 styles.vipToggleBtn,
                 { backgroundColor: isVIPMode ? '#F59E0B20' : colors.ruby },
@@ -197,7 +196,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               activeOpacity={0.85}
               style={[styles.deviceUnlockBtn, { backgroundColor: colors.ruby }]}
-              onPress={toggleVIPMode}
+              onPress={() => router.push('/(tabs)/vip')}
             >
               <Ionicons name="sparkles" size={14} color="#FFFFFF" />
               <Text style={styles.deviceUnlockBtnText}>Nâng Cấp Gói Để Quản Lý Thiết Bị</Text>

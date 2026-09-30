@@ -82,7 +82,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         snapToInterval={BANNER_WIDTH}
         contentContainerStyle={styles.scrollContainer}
       >
-        {movieList.map((item, idx) => {
+        {movieList.map((item) => {
           const isAdded = myList.includes(item.id);
 
           return (
@@ -100,20 +100,22 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 >
                   {/* Top Row: TOP 10 Flame Ribbon + Compliance Badge */}
                   <View style={styles.topRow}>
-                    <LinearGradient
+                    {item.badge ? <LinearGradient
                       colors={['#EF4444', '#F59E0B']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={styles.top10Badge}
                     >
                       <Ionicons name="flame" size={11} color="#FFFFFF" style={{ marginRight: 3 }} />
-                      <Text style={styles.top10Text}>TOP 10 PHIM AI</Text>
-                    </LinearGradient>
+                      <Text style={styles.top10Text}>{item.badge}</Text>
+                    </LinearGradient> : null}
 
-                    <View style={styles.complianceBadge}>
-                      <MaterialCommunityIcons name="shield-check" size={12} color="#10B981" />
-                      <Text style={styles.complianceText}>Đạt chuẩn Đ.44 Luật AI</Text>
-                    </View>
+                    {item.aiCompliance.complianceArticle ? (
+                      <View style={styles.complianceBadge}>
+                        <MaterialCommunityIcons name="shield-check" size={12} color="#10B981" />
+                        <Text style={styles.complianceText}>{item.aiCompliance.complianceArticle}</Text>
+                      </View>
+                    ) : null}
                   </View>
 
                   {/* Title & Metadata */}
@@ -125,7 +127,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                     {/* Metadata chips row */}
                     <View style={styles.badgeRow}>
                       <Text style={styles.metaSubtitle}>
-                        {item.year} | {idx % 2 === 0 ? 'Âu Mỹ' : 'Việt Nam AI'}
+                        {item.year || ''}
                       </Text>
 
                       {item.matchScore && (

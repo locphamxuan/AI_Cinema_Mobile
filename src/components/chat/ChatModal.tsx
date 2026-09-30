@@ -13,7 +13,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../../theme';
-import { quickActions } from '../../mocks/mockData';
+
+const quickActions = [
+  { id: 'coin-error', label: 'Lỗi Coin' },
+  { id: 'cancel-renew', label: 'Hủy gia hạn' },
+  { id: 'report', label: 'Báo cáo vi phạm' },
+];
 
 export const ChatModal: React.FC = () => {
   const { colors, isDark } = useTheme();

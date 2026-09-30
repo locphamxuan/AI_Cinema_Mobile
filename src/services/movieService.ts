@@ -1,6 +1,5 @@
 import { apiClient } from './apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
-import { allMockMovies, mockMovie } from '../mocks/mockData';
 import { adaptApiMovieToMovie, adaptApiEpisodeToEpisode } from '../lib/apiAdapter';
 import type { ApiResponse } from '../types/api';
 import type { Movie, Episode } from '../types/movie';
@@ -15,24 +14,9 @@ class MovieService {
       ? API_ROUTES.MOVIES.SEARCH
       : API_ROUTES.MOVIES.LIST;
 
-    return apiClient.get<Movie[]>(
-      endpoint,
-      { params: searchVal ? { q: searchVal } : params?.limit ? { limit: params.limit } : undefined },
-      async () => {
-        let list = [...allMockMovies];
-        if (catVal) {
-          list = list.filter((m) => m.genre.includes(catVal));
-        }
-        if (searchVal) {
-          const q = searchVal.toLowerCase();
-          list = list.filter((m) => m.title.toLowerCase().includes(q) || m.description.toLowerCase().includes(q));
-        }
-        if (params?.limit) {
-          list = list.slice(0, params.limit);
-        }
-        return list;
-      }
-    ).then((res) => {
+    return apiClient.get<Movie[]>(endpoint, {
+      params: searchVal ? { q: searchVal } : params?.limit ? { limit: params.limit } : undefined,
+    }).then((res) => {
       if (res.success && res.data) {
         const rawList = Array.isArray(res.data)
           ? res.data
@@ -40,7 +24,7 @@ class MovieService {
         if (Array.isArray(rawList)) {
           return {
             ...res,
-            data: rawList.length > 0 ? rawList.map(adaptApiMovieToMovie) : allMockMovies,
+            data: rawList.map(adaptApiMovieToMovie),
           };
         }
       }
@@ -49,14 +33,7 @@ class MovieService {
   }
 
   async getMovieDetail(id: string): Promise<ApiResponse<Movie>> {
-    return apiClient.get<Movie>(
-      API_ROUTES.MOVIES.DETAIL(id),
-      undefined,
-      async () => {
-        const found = allMockMovies.find((m) => m.id === id);
-        return found || mockMovie;
-      }
-    ).then((res) => {
+    return apiClient.get<Movie>(API_ROUTES.MOVIES.DETAIL(id)).then((res) => {
       if (res.success && res.data) {
         return {
           ...res,
@@ -68,11 +45,7 @@ class MovieService {
   }
 
   async getFeaturedMovie(): Promise<ApiResponse<Movie>> {
-    return apiClient.get<Movie>(
-      API_ROUTES.MOVIES.FEATURED,
-      undefined,
-      async () => mockMovie
-    ).then((res) => {
+    return apiClient.get<Movie>(API_ROUTES.MOVIES.FEATURED).then((res) => {
       if (res.success && res.data) {
         return {
           ...res,
@@ -84,11 +57,7 @@ class MovieService {
   }
 
   async getPopularMovies(): Promise<ApiResponse<Movie[]>> {
-    return apiClient.get<Movie[]>(
-      API_ROUTES.MOVIES.POPULAR,
-      undefined,
-      async () => allMockMovies.slice(0, 5)
-    ).then((res) => {
+    return apiClient.get<Movie[]>(API_ROUTES.MOVIES.POPULAR).then((res) => {
       if (res.success && Array.isArray(res.data)) {
         return {
           ...res,
@@ -100,11 +69,7 @@ class MovieService {
   }
 
   async getNewReleases(): Promise<ApiResponse<Movie[]>> {
-    return apiClient.get<Movie[]>(
-      API_ROUTES.MOVIES.NEW_RELEASES,
-      undefined,
-      async () => allMockMovies
-    ).then((res) => {
+    return apiClient.get<Movie[]>(API_ROUTES.MOVIES.NEW_RELEASES).then((res) => {
       if (res.success && Array.isArray(res.data)) {
         return {
           ...res,
@@ -116,17 +81,7 @@ class MovieService {
   }
 
   async getEpisodeDetail(id: string): Promise<ApiResponse<Episode>> {
-    return apiClient.get<Episode>(
-      API_ROUTES.MOVIES.EPISODE_DETAIL(id),
-      undefined,
-      async () => {
-        for (const m of allMockMovies) {
-          const found = m.episodes.find((e) => e.id === id);
-          if (found) return found;
-        }
-        return mockMovie.episodes[0];
-      }
-    ).then((res) => {
+    return apiClient.get<Episode>(API_ROUTES.MOVIES.EPISODE_DETAIL(id)).then((res) => {
       if (res.success && res.data) {
         return {
           ...res,

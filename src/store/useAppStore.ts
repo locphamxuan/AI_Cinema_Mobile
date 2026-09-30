@@ -1,23 +1,14 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storage, STORAGE_KEYS } from '../lib/storage';
 import { WalletState, CheckInStreak } from '../types/wallet';
 import { Movie, WatchHistoryItem } from '../types/movie';
 import { UserSubscription } from '../types/subscription';
 import { Transaction } from '../types/transaction';
 import { ChatMessage, ChatPhase, SupportTicket } from '../types/chat';
 import { UserProfile } from '../types/auth';
-import {
-  mockWallet,
-  mockCheckInStreak,
-  mockSubscriptionVIP,
-  mockMovie,
-  mockTransactions,
-  mockInitialMessages,
-  mockWatchHistory,
-  botResponses,
-  allMockMovies,
-} from '../mocks/mockData';
+import { VN_DAY_LABELS } from '../utils/date';
 import {
   authService,
   movieService,
@@ -32,7 +23,7 @@ import {
   adaptApiCheckInToStreak,
   adaptUserProfile,
 } from '../lib/apiAdapter';
-import { getTodayDayIndex, getTodayDateString } from '../utils/date';
+import { getTodayDayIndex } from '../utils/date';
 
 export const emptySubscription: UserSubscription = {
   plan: null,
@@ -43,11 +34,27 @@ export const emptySubscription: UserSubscription = {
   paymentMethod: '',
 };
 
+const emptyWallet: WalletState = { mainCoin: 0, bonusCoin: 0 };
+
+const createEmptyCheckInStreak = (): CheckInStreak => ({
+  days: VN_DAY_LABELS.map((dayLabel, dayIndex) => ({
+    dayIndex,
+    dayLabel,
+    reward: 0,
+    claimed: false,
+    isToday: dayIndex === getTodayDayIndex(),
+  })),
+  currentStreak: 0,
+  lastCheckInDate: null,
+  todayClaimed: false,
+});
+
 interface AppState {
   // Movies Data & Loading
   movies: Movie[];
   isLoadingMovies: boolean;
   loadInitialData: () => Promise<void>;
+  loadAccountData: () => Promise<void>;
   fetchMovies: (params?: { search?: string; genre?: string }) => Promise<void>;
 
   // Auth
@@ -69,27 +76,27 @@ interface AppState {
 
   // VIP Mode
   isVIPMode: boolean;
-  toggleVIPMode: () => void;
 
   // Wallet
   wallet: WalletState;
   checkInStreak: CheckInStreak;
   claimDailyCheckIn: () => Promise<boolean>;
-  syncCheckInStreak: () => void;
+  syncCheckInStreak: () => Promise<void>;
   setWalletBalance: (main: number, bonus: number) => void;
 
   // Movie
-  currentMovie: Movie;
+  currentMovie: Movie | null;
+    setCurrentMovie: (movie: Movie | null) => void;
   unlockEpisode: (episodeId: string) => Promise<{ success: boolean; error?: string }>;
 
   // Subscription
   subscription: UserSubscription;
   toggleAutoRenew: () => Promise<void>;
   cancelSubscription: () => Promise<void>;
+  subscribeToPlan: (planId: string) => Promise<{ success: boolean; error?: string }>;
 
   // Transactions
   transactions: Transaction[];
-  addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
 
   // Chat
   chatMessages: ChatMessage[];
@@ -98,9 +105,9 @@ interface AppState {
   chatTicket: SupportTicket | null;
   estimatedWaitMinutes: number;
   toggleChat: () => void;
-  sendMessage: (content: string) => void;
+  sendMessage: (content: string) => Promise<void>;
   handleQuickAction: (actionId: string) => void;
-  escalateToAgent: () => void;
+  escalateToAgent: () => Promise<void>;
 
   // Modals
   isCheckInModalOpen: boolean;
@@ -121,14 +128,14 @@ interface AppState {
   addToWatchHistory: (item: Omit<WatchHistoryItem, 'id' | 'lastWatchedAt'>) => void;
 
   // Deposit
-  depositCoins: (amountVnd: number, mainCoin: number, bonusCoin: number, paymentMethod: string) => Promise<void>;
+  depositCoins: (amountVnd: number, paymentMethod: string) => Promise<boolean>;
 }
 
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       // ===== MOVIES & DATA LOADING =====
-      movies: allMockMovies,
+      movies: [],
       isLoadingMovies: false,
 
       loadInitialData: async () => {
@@ -137,26 +144,39 @@ export const useAppStore = create<AppState>()(
 
           const moviesRes = await movieService.listMovies({ limit: 20 });
 
-          const updates: Partial<AppState> = { isLoadingMovies: false };
-
-          if (moviesRes.success && moviesRes.data) {
-            const rawList = Array.isArray(moviesRes.data)
+          const rawList = moviesRes.success
+            ? Array.isArray(moviesRes.data)
               ? moviesRes.data
-              : (moviesRes.data as any).items || (moviesRes.data as any).data || [];
-            if (Array.isArray(rawList) && rawList.length > 0) {
-              const adaptedMovies = rawList.map(adaptApiMovieToMovie);
-              updates.movies = adaptedMovies;
-              if (adaptedMovies[0]) {
-                updates.currentMovie = adaptedMovies[0];
-              }
-            }
-          }
-
-          set(updates);
+              : (moviesRes.data as any).items || (moviesRes.data as any).data || []
+            : [];
+          const adaptedMovies = Array.isArray(rawList) ? rawList.map(adaptApiMovieToMovie) : [];
+          set({ movies: adaptedMovies, currentMovie: adaptedMovies[0] || null, isLoadingMovies: false });
+          if (get().isAuthenticated) await get().loadAccountData();
         } catch (e) {
-          console.warn('loadInitialData fallback to local data:', e);
           set({ isLoadingMovies: false });
         }
+      },
+
+      loadAccountData: async () => {
+        const [walletRes, streakRes, transactionsRes, subscriptionRes] = await Promise.all([
+          walletService.getWalletInfo(),
+          walletService.getStreak(),
+          walletService.getTransactions(),
+          subscriptionService.getCurrentSubscription(),
+        ]);
+        set((state) => ({
+          ...(walletRes.success && walletRes.data ? { wallet: walletRes.data } : {}),
+          ...(streakRes.success && streakRes.data ? { checkInStreak: streakRes.data } : {}),
+          ...(transactionsRes.success && Array.isArray(transactionsRes.data)
+            ? { transactions: transactionsRes.data }
+            : {}),
+          ...(subscriptionRes.success && subscriptionRes.data
+            ? {
+                subscription: subscriptionRes.data,
+                isVIPMode: subscriptionRes.data.status === 'active' || state.user?.isVIP === true,
+              }
+            : {}),
+        }));
       },
 
       fetchMovies: async (params) => {
@@ -172,9 +192,9 @@ export const useAppStore = create<AppState>()(
               return;
             }
           }
-          set({ isLoadingMovies: false });
+          set({ movies: [], isLoadingMovies: false });
         } catch (e) {
-          set({ isLoadingMovies: false });
+          set({ movies: [], isLoadingMovies: false });
         }
       },
 
@@ -205,7 +225,7 @@ export const useAppStore = create<AppState>()(
           const res = await authService.login({ email: trimmedEmail, password });
           if (res.success && res.data?.user) {
             const profile = adaptUserProfile(res.data.user);
-            const isVip = trimmedEmail === 'vipdemo@gmail.com' || profile.role === 'vip' || profile.isVIP;
+            const isVip = profile.role === 'vip' || profile.isVIP;
 
             set({
               isAuthenticated: true,
@@ -216,8 +236,9 @@ export const useAppStore = create<AppState>()(
               },
               isVIPMode: isVip,
               isAuthModalOpen: false,
-              subscription: isVip ? mockSubscriptionVIP : emptySubscription,
+              subscription: emptySubscription,
             });
+            await get().loadAccountData();
 
             return {
               success: true,
@@ -268,17 +289,6 @@ export const useAppStore = create<AppState>()(
               subscription: emptySubscription,
             });
 
-            get().addTransaction({
-              type: 'checkin',
-              typeLabel: 'Quà tân thủ',
-              description: 'Tặng 50 Coin Thưởng chào mừng thành viên mới AI Cinema Mobile',
-              mainCoinDelta: 0,
-              bonusCoinDelta: 50,
-              totalAmount: 50,
-              status: 'success',
-              statusLabel: 'Thành công',
-            });
-
             return { success: true, redirectUrl: '/', role: 'user' };
           }
 
@@ -318,90 +328,28 @@ export const useAppStore = create<AppState>()(
 
       // ===== VIP MODE =====
       isVIPMode: false,
-      toggleVIPMode: () =>
-        set((state) => {
-          const newIsVIP = !state.isVIPMode;
-          return {
-            isVIPMode: newIsVIP,
-            user: state.user ? { ...state.user, isVIP: newIsVIP } : null,
-            subscription: newIsVIP ? mockSubscriptionVIP : emptySubscription,
-          };
-        }),
-
       // ===== WALLET & CHECK-IN (PERSISTENT) =====
-      wallet: mockWallet,
-      checkInStreak: mockCheckInStreak,
+      wallet: emptyWallet,
+      checkInStreak: createEmptyCheckInStreak(),
 
-      syncCheckInStreak: () => {
-        const todayIdx = getTodayDayIndex();
-        const todayStr = getTodayDateString();
-        set((s) => {
-          const current = s.checkInStreak || mockCheckInStreak;
-          const isTodayClaimed = current.lastCheckInDate === todayStr && current.todayClaimed;
-          const updatedDays = current.days.map((d, idx) => ({
-            ...d,
-            isToday: idx === todayIdx,
-            claimed: idx < todayIdx ? true : idx === todayIdx ? isTodayClaimed : false,
-          }));
-          return {
-            checkInStreak: {
-              ...current,
-              todayClaimed: isTodayClaimed,
-              currentStreak: isTodayClaimed ? Math.max(current.currentStreak, todayIdx + 1) : Math.max(current.currentStreak, todayIdx),
-              days: updatedDays,
-            },
-          };
-        });
+      syncCheckInStreak: async () => {
+        const response = await walletService.getStreak();
+        if (response.success && response.data) set({ checkInStreak: response.data });
       },
 
       claimDailyCheckIn: async () => {
-        const state = get();
-        const todayIdx = getTodayDayIndex();
-        const todayStr = getTodayDateString();
-
-        if (state.checkInStreak.todayClaimed && state.checkInStreak.lastCheckInDate === todayStr) {
-          return false;
+        const response = await walletService.checkIn();
+        if (!response.success || !response.data) return false;
+        set({ checkInStreak: response.data });
+        if (response.data.wallet) set({ wallet: response.data.wallet });
+        else {
+          const walletRes = await walletService.getWalletInfo();
+          if (walletRes.success && walletRes.data) set({ wallet: walletRes.data });
         }
-
-        const todayDay =
-          state.checkInStreak.days[todayIdx] ||
-          state.checkInStreak.days.find((d) => d.isToday);
-        const reward = todayDay ? todayDay.reward : 10;
-
-        try {
-          await walletService.checkIn();
-        } catch (e) {
-          console.warn('claimDailyCheckIn API fallback:', e);
+        const transactionsRes = await walletService.getTransactions();
+        if (transactionsRes.success && Array.isArray(transactionsRes.data)) {
+          set({ transactions: transactionsRes.data });
         }
-
-        // Cập nhật State bền vững (được persist tự động vào AsyncStorage / localStorage)
-        set((s) => ({
-          wallet: {
-            ...s.wallet,
-            bonusCoin: s.wallet.bonusCoin + reward,
-          },
-          checkInStreak: {
-            ...s.checkInStreak,
-            todayClaimed: true,
-            currentStreak: Math.max(s.checkInStreak.currentStreak, todayIdx + 1),
-            lastCheckInDate: todayStr,
-            days: s.checkInStreak.days.map((d, idx) =>
-              idx === todayIdx || d.isToday ? { ...d, claimed: true, isToday: true } : d
-            ),
-          },
-        }));
-
-        get().addTransaction({
-          type: 'checkin',
-          typeLabel: 'Điểm danh',
-          description: `Điểm danh nhận thưởng +${reward} Coin`,
-          mainCoinDelta: 0,
-          bonusCoinDelta: reward,
-          totalAmount: reward,
-          status: 'success',
-          statusLabel: 'Thành công',
-        });
-
         return true;
       },
 
@@ -409,59 +357,39 @@ export const useAppStore = create<AppState>()(
         set((s) => ({ wallet: { ...s.wallet, mainCoin: main, bonusCoin: bonus } })),
 
       // ===== MOVIE =====
-      currentMovie: mockMovie,
+      currentMovie: null,
+      setCurrentMovie: (movie) => set({ currentMovie: movie }),
 
       unlockEpisode: async (episodeId: string) => {
         const state = get();
-        const episode = state.currentMovie.episodes.find((ep) => ep.id === episodeId);
+        const currentMovie = state.currentMovie;
+        if (!currentMovie) return { success: false, error: 'Không có phim đang được chọn' };
+        const episode = currentMovie.episodes.find((ep) => ep.id === episodeId);
         if (!episode) return { success: false, error: 'Tập phim không tồn tại' };
         if (episode.isUnlocked || episode.isFree) return { success: true };
 
-        const price = episode.price;
-        const { mainCoin, bonusCoin } = state.wallet;
-        const total = mainCoin + bonusCoin;
-
-        if (total < price) {
-          return { success: false, error: `Số dư không đủ. Cần ${price} Coin, hiện có ${total} Coin.` };
+        const response = await walletService.unlockEpisode({ movieId: currentMovie.id, episodeId });
+        if (!response.success || response.data?.success === false) {
+          return { success: false, error: response.message || 'Không thể mở khóa tập phim' };
         }
-
-        try {
-          await walletService.unlockEpisode({
-            movieId: state.currentMovie.id,
-            episodeId,
-          });
-        } catch (e) {
-          console.warn('unlockEpisode API fallback:', e);
-        }
-
-        let mainDeduct = Math.min(mainCoin, price);
-        let bonusDeduct = price - mainDeduct;
 
         set((s) => ({
-          wallet: {
-            mainCoin: s.wallet.mainCoin - mainDeduct,
-            bonusCoin: s.wallet.bonusCoin - bonusDeduct,
-          },
+          ...(response.data?.newBalance ? { wallet: response.data.newBalance } : {}),
           currentMovie: {
-            ...s.currentMovie,
-            episodes: s.currentMovie.episodes.map((ep) =>
+            ...currentMovie,
+            episodes: currentMovie.episodes.map((ep) =>
               ep.id === episodeId ? { ...ep, isUnlocked: true } : ep
             ),
           },
         }));
-
-        get().addTransaction({
-          type: 'episode_purchase',
-          typeLabel: 'Mua tập phim',
-          description: `Mở khóa "${state.currentMovie.title}" - Tập ${episode.episodeNumber}: ${episode.title}`,
-          mainCoinDelta: -mainDeduct,
-          bonusCoinDelta: -bonusDeduct,
-          totalAmount: -price,
-          status: 'success',
-          statusLabel: 'Thành công',
-          episodeInfo: `${state.currentMovie.title} - Tập ${episode.episodeNumber}`,
-        });
-
+        if (!response.data?.newBalance) {
+          const walletRes = await walletService.getWalletInfo();
+          if (walletRes.success && walletRes.data) set({ wallet: walletRes.data });
+        }
+        const transactionsRes = await walletService.getTransactions();
+        if (transactionsRes.success && Array.isArray(transactionsRes.data)) {
+          set({ transactions: transactionsRes.data });
+        }
         return { success: true };
       },
 
@@ -470,53 +398,33 @@ export const useAppStore = create<AppState>()(
 
       toggleAutoRenew: async () => {
         const nextVal = !get().subscription.autoRenew;
-        try {
-          await subscriptionService.toggleAutoRenew(nextVal);
-        } catch (e) {
-          console.warn('toggleAutoRenew API fallback:', e);
+        const response = await subscriptionService.toggleAutoRenew(nextVal);
+        if (response.success && response.data) {
+          set((s) => ({ subscription: { ...s.subscription, autoRenew: response.data.autoRenew } }));
         }
-        set((s) => ({
-          subscription: {
-            ...s.subscription,
-            autoRenew: nextVal,
-          },
-        }));
       },
 
       cancelSubscription: async () => {
-        try {
-          await subscriptionService.cancelSubscription();
-        } catch (e) {
-          console.warn('cancelSubscription API fallback:', e);
+        const response = await subscriptionService.cancelSubscription();
+        if (response.success) {
+          set((s) => ({ subscription: { ...s.subscription, autoRenew: false, status: 'cancelled' } }));
         }
-        set((s) => ({
-          subscription: {
-            ...s.subscription,
-            autoRenew: false,
-            status: 'cancelled' as const,
-          },
-        }));
+      },
+
+      subscribeToPlan: async (planId) => {
+        const response = await subscriptionService.subscribe(planId);
+        if (!response.success || !response.data) {
+          return { success: false, error: response.message || 'Không thể đăng ký gói VIP' };
+        }
+        set({ subscription: response.data, isVIPMode: response.data.status === 'active' });
+        return { success: true };
       },
 
       // ===== TRANSACTIONS =====
-      transactions: mockTransactions,
-
-      addTransaction: (tx) => {
-        const id = `TXN-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(
-          Math.floor(Math.random() * 1000)
-        ).padStart(3, '0')}`;
-        const newTx: Transaction = {
-          ...tx,
-          id,
-          createdAt: new Date().toISOString(),
-        };
-        set((s) => ({
-          transactions: [newTx, ...s.transactions],
-        }));
-      },
+      transactions: [],
 
       // ===== CHAT =====
-      chatMessages: mockInitialMessages,
+      chatMessages: [],
       chatPhase: 'bot' as ChatPhase,
       chatIsOpen: false,
       chatTicket: null,
@@ -524,7 +432,7 @@ export const useAppStore = create<AppState>()(
 
       toggleChat: () => set((s) => ({ chatIsOpen: !s.chatIsOpen })),
 
-      sendMessage: (content: string) => {
+      sendMessage: async (content: string) => {
         const userMsg: ChatMessage = {
           id: `msg-${Date.now()}`,
           sender: 'user',
@@ -534,27 +442,21 @@ export const useAppStore = create<AppState>()(
 
         set((s) => ({ chatMessages: [...s.chatMessages, userMsg] }));
 
-        chatService
-          .sendMessage(content)
-          .then((res) => {
-            const reply = res.data?.content || botResponses['default'];
+        const response = await chatService.sendMessage(content);
+        if (response.success && response.data) {
+            const botMsg: ChatMessage = {
+              ...response.data,
+            };
+            set((s) => ({ chatMessages: [...s.chatMessages, botMsg] }));
+        } else {
             const botMsg: ChatMessage = {
               id: `msg-${Date.now()}`,
-              sender: 'bot',
-              content: reply,
+              sender: 'system',
+              content: response.message || 'Không thể gửi tin nhắn. Vui lòng thử lại.',
               timestamp: new Date().toISOString(),
             };
             set((s) => ({ chatMessages: [...s.chatMessages, botMsg] }));
-          })
-          .catch(() => {
-            const botMsg: ChatMessage = {
-              id: `msg-${Date.now()}`,
-              sender: 'bot',
-              content: botResponses['default'],
-              timestamp: new Date().toISOString(),
-            };
-            set((s) => ({ chatMessages: [...s.chatMessages, botMsg] }));
-          });
+        }
       },
 
       handleQuickAction: (actionId: string) => {
@@ -571,44 +473,25 @@ export const useAppStore = create<AppState>()(
           timestamp: new Date().toISOString(),
         };
 
-        set((s) => ({ chatMessages: [...s.chatMessages, userMsg] }));
-
-        setTimeout(() => {
-          const botMsg: ChatMessage = {
-            id: `msg-${Date.now()}`,
-            sender: 'bot',
-            content: botResponses[actionId] || botResponses['default'],
-            timestamp: new Date().toISOString(),
-          };
-          set((s) => ({ chatMessages: [...s.chatMessages, botMsg] }));
-        }, 1000);
+        void get().sendMessage(userMsg.content);
       },
 
-      escalateToAgent: () => {
+      escalateToAgent: async () => {
         const state = get();
-        const ticket: SupportTicket = {
-          id: `TK-${Date.now()}`,
-          summary: state.chatMessages
-            .filter((m) => m.sender === 'user')
-            .map((m) => m.content)
-            .join(' | '),
-          userMessages: state.chatMessages.filter((m) => m.sender === 'user').map((m) => m.content),
-          createdAt: new Date().toISOString(),
-        };
-
-        const systemMsg: ChatMessage = {
-          id: `msg-${Date.now()}`,
-          sender: 'system',
-          content: `📋 Đã tạo phiếu hỗ trợ #${ticket.id}. Đang kết nối Chuyên viên...`,
-          timestamp: new Date().toISOString(),
-        };
-
-        set({
-          chatPhase: 'waiting',
-          chatTicket: ticket,
-          chatMessages: [...state.chatMessages, systemMsg],
-          estimatedWaitMinutes: Math.floor(Math.random() * 5) + 3,
-        });
+        const response = await chatService.createTicket(state.chatMessages);
+        if (response.success && response.data) {
+          const ticket: SupportTicket = response.data;
+          set((current) => ({
+            chatPhase: 'waiting',
+            chatTicket: ticket,
+            chatMessages: [...current.chatMessages, {
+              id: `msg-${Date.now()}`,
+              sender: 'system',
+              content: `Đã tạo phiếu hỗ trợ #${ticket.id}.`,
+              timestamp: new Date().toISOString(),
+            }],
+          }));
+        }
       },
 
       // ===== MODALS =====
@@ -629,7 +512,7 @@ export const useAppStore = create<AppState>()(
       setTopUpModalOpen: (open) => set({ isTopUpModalOpen: open }),
 
       // ===== MY LIST =====
-      myList: ['movie-001', 'movie-002'],
+      myList: [],
       toggleMyList: (movieId) =>
         set((s) => ({
           myList: s.myList.includes(movieId)
@@ -638,7 +521,7 @@ export const useAppStore = create<AppState>()(
         })),
 
       // ===== WATCH HISTORY =====
-      watchHistory: mockWatchHistory,
+      watchHistory: [],
       addToWatchHistory: (item) =>
         set((s) => {
           const existing = s.watchHistory.filter((h) => h.movieId !== item.movieId);
@@ -651,53 +534,51 @@ export const useAppStore = create<AppState>()(
         }),
 
       // ===== DEPOSIT COINS =====
-      depositCoins: async (amountVnd, mainCoin, bonusCoin, paymentMethod) => {
-        try {
-          await walletService.deposit({
-            amountVnd,
-            mainCoin,
-            bonusCoin,
-            paymentMethod,
-          });
-        } catch (e) {
-          console.warn('depositCoins API fallback:', e);
+      depositCoins: async (amountVnd, paymentMethod) => {
+        const response = await walletService.deposit({ amountVnd, paymentMethod });
+        if (!response.success || !response.data) return false;
+        if (response.data.balance) set({ wallet: response.data.balance });
+        else {
+          const walletRes = await walletService.getWalletInfo();
+          if (walletRes.success && walletRes.data) set({ wallet: walletRes.data });
         }
-
-        set((s) => ({
-          wallet: {
-            mainCoin: s.wallet.mainCoin + mainCoin,
-            bonusCoin: s.wallet.bonusCoin + bonusCoin,
-          },
-        }));
-
-        get().addTransaction({
-          type: 'deposit',
-          typeLabel: 'Nạp Coin',
-          description: `Nạp gói ${amountVnd.toLocaleString('vi-VN')}đ qua ${paymentMethod}`,
-          mainCoinDelta: mainCoin,
-          bonusCoinDelta: bonusCoin,
-          totalAmount: mainCoin + bonusCoin,
-          status: 'success',
-          statusLabel: 'Thành công',
-        });
+        const transactionsRes = await walletService.getTransactions();
+        if (transactionsRes.success && Array.isArray(transactionsRes.data)) {
+          set({ transactions: transactionsRes.data });
+        }
+        return true;
       },
     }),
     {
       name: 'ai_cinema_mobile_app_store',
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
+      migrate: async (persistedState: any) => {
+        await Promise.all([
+          storage.remove(STORAGE_KEYS.AUTH_TOKEN),
+          storage.remove(STORAGE_KEYS.USER_DATA),
+          storage.remove(STORAGE_KEYS.WALLET_DATA),
+        ]);
+        return {
+          ...persistedState,
+          isAuthenticated: false,
+          user: null,
+          isVIPMode: false,
+          wallet: emptyWallet,
+          checkInStreak: createEmptyCheckInStreak(),
+          subscription: emptySubscription,
+          transactions: [],
+          myList: [],
+          watchHistory: [],
+        };
+      },
       onRehydrateStorage: () => (state) => {
-        if (state && typeof state.syncCheckInStreak === 'function') {
-          state.syncCheckInStreak();
-        }
+        if (state && typeof state.loadInitialData === 'function') void state.loadInitialData();
       },
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
         user: state.user,
         isVIPMode: state.isVIPMode,
-        wallet: state.wallet,
-        checkInStreak: state.checkInStreak,
-        subscription: state.subscription,
-        transactions: state.transactions,
         myList: state.myList,
         watchHistory: state.watchHistory,
         theme: state.theme,

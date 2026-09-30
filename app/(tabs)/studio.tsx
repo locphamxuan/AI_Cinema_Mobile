@@ -40,7 +40,6 @@ export default function StudioScreen() {
     reviewScene,
     requestTokenExtension,
     respondToTokenExtension,
-    submitEpisodeDraft,
     submitEpisodeForReview,
     approveContent,
     requestContentChanges,
@@ -107,16 +106,10 @@ export default function StudioScreen() {
     reorderScenes(project.id, currentEpisode.id, index, target);
   };
 
-  const handleSubmitForReview = () => {
+  const handleSubmitForReview = async () => {
     if (!project || !currentEpisode) return;
 
-    submitEpisodeDraft(
-      project.id,
-      currentEpisode.id,
-      'Bản dựng hoàn chỉnh đã render đầy đủ các phân cảnh, kiểm tra độ dài và chuẩn chất lượng AI.'
-    );
-
-    const result = submitEpisodeForReview(project.id, currentEpisode.id);
+    const result = await submitEpisodeForReview(project.id, currentEpisode.id);
     if (result.success) {
       Alert.alert('Nộp thành công 🎉', 'Bản dựng đã tạo EpisodeSubmission và gửi lên Reviewer để thẩm định!');
     } else {
@@ -124,7 +117,7 @@ export default function StudioScreen() {
     }
   };
 
-  const handleReviewerApprove = () => {
+  const handleReviewerApprove = async () => {
     if (!project || !currentEpisode) return;
 
     if (!allScenesApproved) {
@@ -135,24 +128,29 @@ export default function StudioScreen() {
       return;
     }
 
-    approveContent(project.id, currentEpisode.id);
-    setComplianceModalVisible(true);
+    const success = await approveContent(project.id, currentEpisode.id);
+    if (success) setComplianceModalVisible(true);
+    else Alert.alert('Chưa thể duyệt', 'Máy chủ chưa xác nhận thao tác duyệt.');
   };
 
-  const handleReviewerReject = () => {
+  const handleReviewerReject = async () => {
     if (!project || !currentEpisode) return;
-    requestContentChanges(
+    const success = await requestContentChanges(
       project.id,
       currentEpisode.id,
       'Cần chỉnh sửa lại biểu cảm nhân vật và khớp khẩu hình lồng tiếng AI theo nhận xét của Reviewer.'
     );
-    Alert.alert('Đã gửi phản hồi', 'Yêu cầu chỉnh sửa đã được gửi về cho Creator.');
+    Alert.alert(success ? 'Đã gửi phản hồi' : 'Chưa thể gửi', success
+      ? 'Yêu cầu chỉnh sửa đã được gửi về cho Creator.'
+      : 'Máy chủ chưa xác nhận yêu cầu chỉnh sửa.');
   };
 
-  const handleApproveScene = (sceneId: string) => {
+  const handleApproveScene = async (sceneId: string) => {
     if (!project || !currentEpisode) return;
-    reviewScene(project.id, currentEpisode.id, sceneId, 'approved');
-    Alert.alert('Đã duyệt cảnh', 'Phân cảnh đã chuyển trạng thái sang Đã Duyệt.');
+    const success = await reviewScene(project.id, currentEpisode.id, sceneId, 'approved');
+    Alert.alert(success ? 'Đã duyệt cảnh' : 'Chưa thể duyệt', success
+      ? 'Máy chủ đã xác nhận phân cảnh.'
+      : 'Máy chủ chưa xác nhận thao tác duyệt.');
   };
 
   const handleOpenFeedbackModal = (scene: Scene) => {
@@ -161,9 +159,13 @@ export default function StudioScreen() {
     setSceneFeedbackModalVisible(true);
   };
 
-  const handleSaveSceneFeedback = () => {
+  const handleSaveSceneFeedback = async () => {
     if (!project || !currentEpisode || !targetSceneForFeedback || !sceneFeedbackText.trim()) return;
-    reviewScene(project.id, currentEpisode.id, targetSceneForFeedback.id, 'changes_requested', sceneFeedbackText.trim());
+    const success = await reviewScene(project.id, currentEpisode.id, targetSceneForFeedback.id, 'changes_requested', sceneFeedbackText.trim());
+    if (!success) {
+      Alert.alert('Chưa thể gửi góp ý', 'Máy chủ chưa xác nhận yêu cầu chỉnh sửa.');
+      return;
+    }
     setSceneFeedbackModalVisible(false);
     setTargetSceneForFeedback(null);
     setSceneFeedbackText('');

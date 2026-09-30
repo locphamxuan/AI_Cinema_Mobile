@@ -1,23 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Modal, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../../theme';
-
-interface CoinPackage {
-  id: string;
-  priceVnd: number;
-  mainCoin: number;
-  bonusCoin: number;
-  popular?: boolean;
-}
-
-const PACKAGES: CoinPackage[] = [
-  { id: 'p1', priceVnd: 50000, mainCoin: 100, bonusCoin: 20 },
-  { id: 'p2', priceVnd: 100000, mainCoin: 220, bonusCoin: 50, popular: true },
-  { id: 'p3', priceVnd: 200000, mainCoin: 480, bonusCoin: 120 },
-  { id: 'p4', priceVnd: 500000, mainCoin: 1300, bonusCoin: 350 },
-];
 
 const PAYMENT_METHODS = [
   { id: 'vietqr', name: 'VietQR', icon: 'qr-code-outline' },
@@ -32,7 +17,7 @@ export const TopUpModal: React.FC = () => {
   const { colors, isDark } = useTheme();
   const { isTopUpModalOpen, setTopUpModalOpen, wallet, depositCoins } = useAppStore();
 
-  const [selectedPkg, setSelectedPkg] = useState<CoinPackage>(PACKAGES[1]);
+  const [amount, setAmount] = useState('');
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethodId>('vietqr');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -43,14 +28,23 @@ export const TopUpModal: React.FC = () => {
     setTopUpModalOpen(false);
   };
 
-  const handleTopUp = () => {
+  const handleTopUp = async () => {
+    const amountVnd = Number(amount);
+    if (!Number.isFinite(amountVnd) || amountVnd <= 0) {
+      Alert.alert('Số tiền không hợp lệ', 'Nhập số tiền nạp lớn hơn 0.');
+      return;
+    }
     setIsProcessing(true);
-    setTimeout(() => {
-      const methodName = PAYMENT_METHODS.find((m) => m.id === selectedMethod)?.name || selectedMethod;
-      depositCoins(selectedPkg.priceVnd, selectedPkg.mainCoin, selectedPkg.bonusCoin, methodName);
+    try {
+      const methodName = PAYMENT_METHODS.find((method) => method.id === selectedMethod)?.name || selectedMethod;
+      const success = await depositCoins(amountVnd, methodName);
       setIsProcessing(false);
-      setIsSuccess(true);
-    }, 800);
+      if (success) setIsSuccess(true);
+      else Alert.alert('Không thể nạp Coin', 'Máy chủ chưa xác nhận giao dịch. Vui lòng thử lại.');
+    } catch {
+      setIsProcessing(false);
+      Alert.alert('Lỗi kết nối', 'Không thể kết nối máy chủ nạp Coin.');
+    }
   };
 
   return (
@@ -80,7 +74,7 @@ export const TopUpModal: React.FC = () => {
                 Nạp Coin Thành Công! 🎉
               </Text>
               <Text style={[styles.successSubtitle, { color: colors.textSecondary }]}>
-                Gói {selectedPkg.priceVnd.toLocaleString('vi-VN')}đ đã được thanh toán
+                Yêu cầu nạp {Number(amount).toLocaleString('vi-VN')}đ đã được máy chủ xác nhận.
               </Text>
 
               <View
@@ -94,14 +88,7 @@ export const TopUpModal: React.FC = () => {
               >
                 <View style={styles.rewardRow}>
                   <Text style={[styles.rewardLabel, { color: colors.textSecondary }]}>Coin nhận được:</Text>
-                  <Text style={styles.rewardValueHighlight}>
-                    +{selectedPkg.mainCoin + selectedPkg.bonusCoin} Coin
-                  </Text>
-                </View>
-                <View style={styles.rewardRow}>
-                  <Text style={[styles.rewardSubLabel, { color: colors.textMuted }]}>
-                    ({selectedPkg.mainCoin} chính + {selectedPkg.bonusCoin} thưởng)
-                  </Text>
+                    <Text style={styles.rewardValueHighlight}>Số dư đã cập nhật</Text>
                 </View>
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <View style={styles.rewardRow}>
@@ -133,61 +120,15 @@ export const TopUpModal: React.FC = () => {
                 </TouchableOpacity>
               </View>
 
-              {/* Package list */}
-              <View style={styles.packageList}>
-                {PACKAGES.map((pkg) => {
-                  const isSelected = selectedPkg.id === pkg.id;
-                  return (
-                    <TouchableOpacity
-                      key={pkg.id}
-                      activeOpacity={0.85}
-                      onPress={() => setSelectedPkg(pkg)}
-                      style={[
-                        styles.packageCard,
-                        {
-                          backgroundColor: isSelected
-                            ? isDark
-                              ? '#1E293B'
-                              : '#EFF6FF'
-                            : isDark
-                            ? '#131B2E'
-                            : '#F8FAFC',
-                          borderColor: isSelected ? colors.ruby : colors.border,
-                          borderWidth: isSelected ? 2 : 1,
-                        },
-                      ]}
-                    >
-                      <View>
-                        <View style={styles.coinAmountRow}>
-                          <FontAwesome5 name="coins" size={13} color="#F59E0B" />
-                          <Text style={[styles.coinText, { color: colors.text }]}>
-                            {pkg.mainCoin} Coin
-                          </Text>
-                          {pkg.bonusCoin > 0 && (
-                            <View style={styles.bonusBadge}>
-                              <Text style={styles.bonusBadgeText}>+{pkg.bonusCoin} thưởng</Text>
-                            </View>
-                          )}
-                          {pkg.popular && (
-                            <View style={styles.hotBadge}>
-                              <Text style={styles.hotBadgeText}>Phổ biến</Text>
-                            </View>
-                          )}
-                        </View>
-                        <Text style={[styles.vndText, { color: colors.textSecondary }]}>
-                          {pkg.priceVnd.toLocaleString('vi-VN')} đ
-                        </Text>
-                      </View>
-
-                      <Ionicons
-                        name={isSelected ? 'radio-button-on' : 'radio-button-off'}
-                        size={20}
-                        color={isSelected ? colors.ruby : colors.textMuted}
-                      />
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <Text style={[styles.methodTitle, { color: colors.textSecondary }]}>Số tiền (VND)</Text>
+              <TextInput
+                value={amount}
+                onChangeText={(value) => setAmount(value.replace(/[^0-9]/g, ''))}
+                keyboardType="numeric"
+                placeholder="Nhập số tiền"
+                placeholderTextColor={colors.textMuted}
+                style={[styles.amountInput, { color: colors.text, borderColor: colors.border }]}
+              />
 
               {/* Payment Method Selector */}
               <Text style={[styles.methodTitle, { color: colors.textSecondary }]}>
@@ -250,7 +191,7 @@ export const TopUpModal: React.FC = () => {
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
                   <Text style={styles.topUpBtnText}>
-                    Thanh Toán {selectedPkg.priceVnd.toLocaleString('vi-VN')} đ
+                    Nạp {Number(amount || 0).toLocaleString('vi-VN')} đ
                   </Text>
                 )}
               </TouchableOpacity>
@@ -293,50 +234,12 @@ const styles = StyleSheet.create({
   closeBtn: {
     padding: 4,
   },
-  packageList: {
-    gap: 8,
-  },
-  packageCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 10,
-  },
-  coinAmountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  coinText: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  bonusBadge: {
-    backgroundColor: 'rgba(139, 92, 246, 0.15)',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  bonusBadgeText: {
-    color: '#8B5CF6',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  hotBadge: {
-    backgroundColor: '#EF444420',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  hotBadgeText: {
-    color: '#EF4444',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  vndText: {
-    fontSize: 12,
-    marginTop: 2,
+  amountInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
   },
   methodTitle: {
     fontSize: 12,

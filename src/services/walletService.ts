@@ -1,19 +1,13 @@
 import { apiClient } from './apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
-import { mockWallet, mockCheckInStreak, mockTransactions, getInitialCheckInStreak } from '../mocks/mockData';
 import { adaptApiWalletToWallet, adaptApiCheckInToStreak } from '../lib/apiAdapter';
-import { getTodayDayIndex, getTodayDateString } from '../utils/date';
-import type { ApiResponse, DepositRequestDto, UnlockEpisodeRequestDto } from '../types/api';
+import type { ApiResponse, DepositRequestDto, DepositResponseDto, UnlockEpisodeRequestDto } from '../types/api';
 import type { WalletState, CheckInStreak } from '../types/wallet';
 import type { Transaction } from '../types/transaction';
 
 class WalletService {
   async getWalletInfo(): Promise<ApiResponse<WalletState>> {
-    return apiClient.get<WalletState>(
-      API_ROUTES.WALLET.INFO,
-      undefined,
-      async () => mockWallet
-    ).then((res) => {
+    return apiClient.get<WalletState>(API_ROUTES.WALLET.INFO).then((res) => {
       if (res.success && res.data) {
         return {
           ...res,
@@ -25,11 +19,7 @@ class WalletService {
   }
 
   async getStreak(): Promise<ApiResponse<CheckInStreak>> {
-    return apiClient.get<CheckInStreak>(
-      API_ROUTES.WALLET.STREAK,
-      undefined,
-      async () => getInitialCheckInStreak()
-    ).then((res) => {
+    return apiClient.get<CheckInStreak>(API_ROUTES.WALLET.STREAK).then((res) => {
       if (res.success && res.data) {
         return {
           ...res,
@@ -41,31 +31,7 @@ class WalletService {
   }
 
   async checkIn(): Promise<ApiResponse<CheckInStreak & { wallet?: WalletState }>> {
-    const todayIdx = getTodayDayIndex();
-    const todayStr = getTodayDateString();
-    const baseStreak = getInitialCheckInStreak();
-    const reward = baseStreak.days[todayIdx]?.reward ?? 10;
-
-    return apiClient.post<CheckInStreak & { wallet?: WalletState }>(
-      API_ROUTES.WALLET.CHECK_IN,
-      {},
-      undefined,
-      async () => ({
-        ...baseStreak,
-        currentStreak: todayIdx + 1,
-        todayClaimed: true,
-        lastCheckInDate: todayStr,
-        days: baseStreak.days.map((d, idx) => ({
-          ...d,
-          claimed: idx <= todayIdx,
-          isToday: idx === todayIdx,
-        })),
-        wallet: {
-          mainCoin: mockWallet.mainCoin,
-          bonusCoin: mockWallet.bonusCoin + reward,
-        },
-      })
-    ).then((res) => {
+    return apiClient.post<CheckInStreak & { wallet?: WalletState }>(API_ROUTES.WALLET.CHECK_IN, {}).then((res) => {
       if (res.success && res.data) {
         return {
           ...res,
@@ -79,56 +45,27 @@ class WalletService {
     });
   }
 
-  async deposit(dto: DepositRequestDto): Promise<ApiResponse<{ balance: WalletState; transaction: Transaction }>> {
-    return apiClient.post<{ balance: WalletState; transaction: Transaction }>(
-      API_ROUTES.WALLET.DEPOSIT,
-      dto,
-      undefined,
-      async () => {
-        const addedCoins = dto.mainCoin ?? Math.round(dto.amountVnd / 1000);
-        const bonusCoins = dto.bonusCoin ?? Math.round(addedCoins * 0.1);
-        const newBalance: WalletState = {
-          mainCoin: mockWallet.mainCoin + addedCoins,
-          bonusCoin: mockWallet.bonusCoin + bonusCoins,
-        };
-        const newTx: Transaction = {
-          id: `tx-${Date.now()}`,
-          type: 'deposit',
-          typeLabel: 'Nạp Coin',
-          description: `Nạp ${dto.amountVnd.toLocaleString('vi-VN')} VND qua ${dto.paymentMethod}`,
-          mainCoinDelta: addedCoins,
-          bonusCoinDelta: bonusCoins,
-          totalAmount: addedCoins + bonusCoins,
-          status: 'success',
-          statusLabel: 'Thành công',
-          createdAt: new Date().toISOString(),
-        };
-        return { balance: newBalance, transaction: newTx };
+  async deposit(dto: DepositRequestDto): Promise<ApiResponse<{ balance: WalletState; transactionId: string }>> {
+    return apiClient.post<DepositResponseDto>(API_ROUTES.WALLET.DEPOSIT, dto).then((response) => {
+      if (!response.success || !response.data) {
+        return { ...response, data: null as unknown as { balance: WalletState; transactionId: string } };
       }
-    );
+      return {
+        ...response,
+        data: {
+          balance: adaptApiWalletToWallet(response.data.balance),
+          transactionId: response.data.transactionId,
+        },
+      };
+    });
   }
 
   async getTransactions(): Promise<ApiResponse<Transaction[]>> {
-    return apiClient.get<Transaction[]>(
-      API_ROUTES.WALLET.TRANSACTIONS,
-      undefined,
-      async () => mockTransactions
-    );
+    return apiClient.get<Transaction[]>(API_ROUTES.WALLET.TRANSACTIONS);
   }
 
   async unlockEpisode(dto: UnlockEpisodeRequestDto): Promise<ApiResponse<{ success: boolean; newBalance?: WalletState }>> {
-    return apiClient.post<{ success: boolean; newBalance?: WalletState }>(
-      API_ROUTES.WALLET.UNLOCK_EPISODE,
-      dto,
-      undefined,
-      async () => ({
-        success: true,
-        newBalance: {
-          mainCoin: Math.max(0, mockWallet.mainCoin - 50),
-          bonusCoin: mockWallet.bonusCoin,
-        },
-      })
-    );
+    return apiClient.post<{ success: boolean; newBalance?: WalletState }>(API_ROUTES.WALLET.UNLOCK_EPISODE, dto);
   }
 }
 
