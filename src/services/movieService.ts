@@ -7,15 +7,13 @@ import type { Movie, Episode } from '../types/movie';
 class MovieService {
   async listMovies(params?: { category?: string; query?: string; search?: string; genre?: string; limit?: number }): Promise<ApiResponse<Movie[]>> {
     const searchVal = params?.search || params?.query;
-    const catVal = params?.genre || params?.category;
-    const endpoint = catVal
-      ? API_ROUTES.MOVIES.BY_CATEGORY(catVal)
-      : searchVal
-      ? API_ROUTES.MOVIES.SEARCH
-      : API_ROUTES.MOVIES.LIST;
+    const limit = params?.limit || 100;
 
-    return apiClient.get<Movie[]>(endpoint, {
-      params: searchVal ? { q: searchVal } : params?.limit ? { limit: params.limit } : undefined,
+    return apiClient.get<Movie[]>(API_ROUTES.MOVIES.LIST, {
+      params: {
+        ...(searchVal ? { search: searchVal } : {}),
+        limit,
+      },
     }).then((res) => {
       if (res.success && res.data) {
         const rawList = Array.isArray(res.data)

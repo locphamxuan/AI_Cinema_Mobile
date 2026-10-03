@@ -142,15 +142,12 @@ export const useAppStore = create<AppState>()(
         try {
           set({ isLoadingMovies: true });
 
-          const moviesRes = await movieService.listMovies({ limit: 20 });
+          const moviesRes = await movieService.listMovies({ limit: 50 });
 
-          const rawList = moviesRes.success
-            ? Array.isArray(moviesRes.data)
-              ? moviesRes.data
-              : (moviesRes.data as any).items || (moviesRes.data as any).data || []
+          const rawList = moviesRes.success && Array.isArray(moviesRes.data)
+            ? moviesRes.data
             : [];
-          const adaptedMovies = Array.isArray(rawList) ? rawList.map(adaptApiMovieToMovie) : [];
-          set({ movies: adaptedMovies, currentMovie: adaptedMovies[0] || null, isLoadingMovies: false });
+          set({ movies: rawList, currentMovie: rawList[0] || null, isLoadingMovies: false });
           if (get().isAuthenticated) await get().loadAccountData();
         } catch (e) {
           set({ isLoadingMovies: false });
@@ -188,7 +185,7 @@ export const useAppStore = create<AppState>()(
               ? res.data
               : (res.data as any).items || (res.data as any).data || [];
             if (Array.isArray(rawList) && rawList.length > 0) {
-              set({ movies: rawList.map(adaptApiMovieToMovie), isLoadingMovies: false });
+              set({ movies: rawList, isLoadingMovies: false });
               return;
             }
           }

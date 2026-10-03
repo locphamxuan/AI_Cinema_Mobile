@@ -100,7 +100,7 @@ class AuthService {
               ...res.data,
               accessToken: token,
               token,
-              user: user || res.data,
+              user: user || (res.data as any),
             },
           };
         }

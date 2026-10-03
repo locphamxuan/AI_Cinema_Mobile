@@ -26,7 +26,7 @@ export interface LoginRequestDto {
 
 export interface RegisterRequestDto {
   name?: string;
-  fullName: string;
+  fullName?: string;
   email: string;
   password?: string;
   dateOfBirth?: string;
@@ -47,10 +47,12 @@ export interface BEUserDto {
 
 export interface AuthResponseDto {
   message?: string;
-  user: BEUserDto;
+  user?: BEUserDto;
   accessToken?: string;
   token?: string;
   refreshToken?: string;
+  id?: string;
+  email?: string;
 }
 
 // Movie & Catalog DTOs
