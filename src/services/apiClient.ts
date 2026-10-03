@@ -85,6 +85,8 @@ class ApiClient {
         requestInit.body = typeof body === 'string' ? body : JSON.stringify(body);
       }
 
+      console.log(`[API Request] ${options.method || 'GET'} ${url}`, body ? { body } : '');
+
       const response = await fetch(url, requestInit);
       clearTimeout(timeoutId);
 
@@ -92,11 +94,12 @@ class ApiClient {
         let errorMessage = `HTTP error! status: ${response.status}`;
         try {
           const errJson = await response.json();
+          console.error(`[API Error Response] ${response.status} ${url}:`, errJson);
           if (errJson?.message) {
             errorMessage = Array.isArray(errJson.message) ? errJson.message.join(', ') : errJson.message;
           }
-        } catch {
-          // Non-JSON response
+        } catch (e) {
+          console.error(`[API Error Non-JSON] ${response.status} ${url}:`, e);
         }
 
         return {
@@ -108,6 +111,7 @@ class ApiClient {
       }
 
       const data = await response.json();
+      console.log(`[API Success] ${url}`, data);
       return {
         success: true,
         data: data?.data !== undefined ? data.data : data,
@@ -115,7 +119,7 @@ class ApiClient {
       };
     } catch (err: any) {
       clearTimeout(timeoutId);
-
+      console.error(`[API Network Exception] ${url}:`, err);
       return {
         success: false,
         data: null as unknown as T,

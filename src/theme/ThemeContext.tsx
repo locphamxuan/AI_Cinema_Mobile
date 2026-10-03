@@ -20,7 +20,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: ReactNode; initialTheme?: ThemeMode }> = ({
   children,
-  initialTheme = 'light', // DEFAULT IS PURE WHITE LIGHT THEME
+  initialTheme = 'dark', // DEFAULT IS CINEMATIC BLACK DARK THEME
 }) => {
   const [theme, setTheme] = useState<ThemeMode>(initialTheme);
 
@@ -54,9 +54,9 @@ export const useTheme = (): ThemeContextType => {
   if (!context) {
     // Fallback if used outside provider
     return {
-      theme: 'light',
-      isDark: false,
-      colors: lightColors,
+      theme: 'dark',
+      isDark: true,
+      colors: darkColors,
       setTheme: () => {},
       toggleTheme: () => {},
       spacing,

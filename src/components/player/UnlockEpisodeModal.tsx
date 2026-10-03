@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { Episode } from '../../types/movie';
 import { useAppStore } from '../../store/useAppStore';
@@ -18,6 +19,7 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({
   episode,
   onUnlocked,
 }) => {
+  const router = useRouter();
   const { colors, isDark } = useTheme();
   const { wallet, unlockEpisode, setTopUpModalOpen } = useAppStore();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -124,6 +126,24 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Option 2: Register Membership */}
+          <TouchableOpacity
+            style={[
+              styles.membershipBtn,
+              {
+                backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.1)',
+                borderColor: 'rgba(245, 158, 11, 0.4)',
+              },
+            ]}
+            onPress={() => {
+              onClose();
+              router.push('/(tabs)/vip');
+            }}
+          >
+            <FontAwesome5 name="crown" size={14} color="#F59E0B" />
+            <Text style={styles.membershipBtnText}>Hoặc Đăng Ký Gói VIP (Membership)</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -245,6 +265,22 @@ const styles = StyleSheet.create({
   },
   topUpBtnText: {
     color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  membershipBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    width: '100%',
+    marginTop: 10,
+    paddingVertical: 11,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  membershipBtnText: {
+    color: '#F59E0B',
     fontSize: 13,
     fontWeight: '700',
   },

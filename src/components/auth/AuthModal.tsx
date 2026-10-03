@@ -33,6 +33,7 @@ export const AuthModal: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('2003-05-14');
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [hasSavedCredentials, setHasSavedCredentials] = useState(false);
@@ -137,8 +138,8 @@ export const AuthModal: React.FC = () => {
         setError(result.error || 'Đăng nhập không thành công');
       }
     } else {
-      if (!name.trim() || !email.trim() || !password) {
-        setError('Vui lòng điền đầy đủ họ tên, email và mật khẩu!');
+      if (!name.trim() || !email.trim() || !password || !dateOfBirth.trim()) {
+        setError('Vui lòng điền đầy đủ họ tên, email, mật khẩu và ngày sinh!');
         setLoading(false);
         return;
       }
@@ -149,7 +150,7 @@ export const AuthModal: React.FC = () => {
         return;
       }
 
-      const result = await register(name, email, password);
+      const result = await register(name, email, password, dateOfBirth);
       if (result.success) {
         try {
           if (rememberMe) {
@@ -295,23 +296,43 @@ export const AuthModal: React.FC = () => {
           {/* Form Inputs */}
           <View style={styles.form}>
             {!isLogin && (
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Họ và tên</Text>
-                <TextInput
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Ví dụ: Nguyễn Văn A"
-                  placeholderTextColor={colors.textMuted}
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
-                      borderColor: colors.border,
-                      color: colors.text,
-                    },
-                  ]}
-                />
-              </View>
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Họ và tên</Text>
+                  <TextInput
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Ví dụ: Nguyễn Văn A"
+                    placeholderTextColor={colors.textMuted}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                        borderColor: colors.border,
+                        color: colors.text,
+                      },
+                    ]}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Ngày sinh (YYYY-MM-DD)</Text>
+                  <TextInput
+                    value={dateOfBirth}
+                    onChangeText={setDateOfBirth}
+                    placeholder="2003-05-14"
+                    placeholderTextColor={colors.textMuted}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                        borderColor: colors.border,
+                        color: colors.text,
+                      },
+                    ]}
+                  />
+                </View>
+              </>
             )}
 
             <View style={styles.inputGroup}>

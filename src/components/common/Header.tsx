@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   Image,
   StyleSheet,
   Modal,
   TouchableWithoutFeedback,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,19 +18,22 @@ import { useAppStore } from '../../store/useAppStore';
 import { useProductionStore } from '../../store/useProductionStore';
 import { ThemeToggle } from './ThemeToggle';
 import { WalletHeaderBadge } from './WalletHeaderBadge';
+import { ExploreModal } from './ExploreModal';
 
 interface HeaderProps {
   onProfilePress?: () => void;
+  onSearch?: (query: string) => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onProfilePress }) => {
+export const Header: React.FC<HeaderProps> = ({ onProfilePress, onSearch }) => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { isAuthenticated, user, openAuthModal, toggleChat, logout, isVIPMode, wallet } = useAppStore();
-  const { activeRole, setActiveRole } = useProductionStore();
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isExploreOpen, setIsExploreOpen] = useState(false);
+  const [searchText, setSearchText] = useState('');
 
   const handleAvatarPress = () => {
     setIsDropdownOpen(prev => !prev);
@@ -64,56 +69,81 @@ export const Header: React.FC<HeaderProps> = ({ onProfilePress }) => {
       style={[
         styles.container,
         {
-          paddingTop: Math.max(insets.top, 12),
+          paddingTop: Math.max(insets.top, 10),
           backgroundColor: colors.surface,
           borderBottomColor: colors.border,
         },
       ]}
     >
       <View style={styles.content}>
-        {/* Brand Logo */}
-        <View style={styles.brand}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoBadgeText}>AI</Text>
-          </View>
-          <Text style={[styles.brandText, { color: colors.text }]}>CINEMA</Text>
+        {/* Left: Grid Icon + Brand Logo */}
+        <View style={styles.leftGroup}>
+          <TouchableOpacity
+            style={styles.gridBtn}
+            onPress={() => setIsExploreOpen(true)}
+            accessibilityLabel="Mở danh mục khám phá"
+          >
+            <Ionicons name="grid-outline" size={20} color={colors.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.brand}
+            onPress={() => router.push('/')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.logoBadge}>
+              <Text style={styles.logoBadgeText}>AI</Text>
+            </View>
+            <Text style={[styles.brandText, { color: colors.text }]}>CINEMA</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Action Controls */}
+        {/* Center & Right: Search Bar + Notifications + Avatar/Login */}
         <View style={styles.actions}>
-          <ThemeToggle />
+          <View style={[styles.searchBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
+            <Ionicons name="search-outline" size={14} color={colors.textSecondary} style={styles.searchIcon} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Tìm kiếm phim..."
+              placeholderTextColor={colors.textSecondary}
+              value={searchText}
+              onChangeText={(text) => {
+                setSearchText(text);
+                if (onSearch) onSearch(text);
+              }}
+              returnKeyType="search"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => Alert.alert('Thông báo', 'Bạn không có thông báo mới nào.')}
+            accessibilityLabel="Thông báo"
+          >
+            <Ionicons name="notifications-outline" size={20} color={colors.text} />
+          </TouchableOpacity>
 
           {isAuthenticated ? (
-            <>
-              <WalletHeaderBadge />
-              <TouchableOpacity
-                style={styles.iconBtn}
-                onPress={toggleChat}
-                accessibilityLabel="Hỗ trợ trực tuyến"
-              >
-                <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.text} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.avatarBtn,
-                  isVIP && styles.avatarBtnVIP,
-                ]}
-                onPress={handleAvatarPress}
-                activeOpacity={0.8}
-              >
-                {user?.avatarUrl ? (
-                  <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
-                ) : (
-                  <View style={[styles.avatarFallback, { backgroundColor: colors.ruby }]}>
-                    <Text style={styles.avatarInitial}>{user?.name?.charAt(0) || 'U'}</Text>
-                  </View>
-                )}
-                {isVIP && <View style={styles.vipDot} />}
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity
+              style={[
+                styles.avatarBtn,
+                isVIP && styles.avatarBtnVIP,
+              ]}
+              onPress={handleAvatarPress}
+              activeOpacity={0.8}
+            >
+              {user?.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatarFallback, { backgroundColor: colors.ruby }]}>
+                  <Text style={styles.avatarInitial}>{user?.name?.charAt(0) || 'U'}</Text>
+                </View>
+              )}
+              {isVIP && <View style={styles.vipDot} />}
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={[styles.loginBtn, { backgroundColor: colors.ruby }]}
+              style={[styles.loginBtn, { backgroundColor: '#10B981' }]}
               onPress={() => openAuthModal('login')}
             >
               <Text style={styles.loginBtnText}>Đăng nhập</Text>
@@ -121,6 +151,9 @@ export const Header: React.FC<HeaderProps> = ({ onProfilePress }) => {
           )}
         </View>
       </View>
+
+      {/* Explore Modal (triggered by grid icon) */}
+      <ExploreModal visible={isExploreOpen} onClose={() => setIsExploreOpen(false)} />
 
       {/* User Dropdown Popover */}
       {isAuthenticated && (
@@ -137,7 +170,7 @@ export const Header: React.FC<HeaderProps> = ({ onProfilePress }) => {
                   style={[
                     styles.dropdownMenu,
                     {
-                      top: Math.max(insets.top, 12) + 48,
+                      top: Math.max(insets.top, 10) + 48,
                       backgroundColor: isDark ? '#181B26' : '#FFFFFF',
                       borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)',
                       shadowColor: isDark ? '#000000' : '#64748B',
@@ -264,42 +297,69 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
+    gap: 8,
   },
-  brand: {
+  leftGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
+  gridBtn: {
+    padding: 6,
+  },
+  brand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   logoBadge: {
     backgroundColor: '#E50914',
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 4,
   },
   logoBadgeText: {
     color: '#FFFFFF',
     fontWeight: '900',
-    fontSize: 13,
+    fontSize: 12,
     letterSpacing: 0.5,
   },
   brandText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900',
-    letterSpacing: 1.5,
+    letterSpacing: 1,
   },
   actions: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'flex-end',
+    gap: 6,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 32,
+    borderRadius: 16,
+    paddingHorizontal: 8,
+    maxWidth: 160,
+  },
+  searchIcon: {
+    marginRight: 4,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 11,
+    padding: 0,
   },
   iconBtn: {
     padding: 6,
-    borderRadius: 20,
   },
   avatarBtn: {
     position: 'relative',
-    borderRadius: 18,
+    borderRadius: 16,
   },
   avatarBtnVIP: {
     borderWidth: 2,
@@ -307,42 +367,42 @@ const styles = StyleSheet.create({
     padding: 1,
   },
   avatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   avatarFallback: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitial: {
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 13,
   },
   vipDot: {
     position: 'absolute',
     top: -2,
     right: -2,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
     backgroundColor: '#F59E0B',
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
   },
   loginBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 6,
   },
   loginBtnText: {
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: 11,
   },
   // Modal & Dropdown Styles
   modalOverlay: {

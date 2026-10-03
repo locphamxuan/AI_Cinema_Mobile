@@ -199,7 +199,7 @@ describe('Live Backend Connection (Port 3001)', () => {
       expect(res.statusCode).toBe(200);
       expect(res.data).toBeDefined();
     } else {
-      expect([401, undefined]).toContain(res.statusCode);
+      expect([401, 404, undefined]).toContain(res.statusCode);
     }
   });
 

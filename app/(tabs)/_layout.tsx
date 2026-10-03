@@ -9,19 +9,24 @@ export default function TabLayout() {
   const { colors, isDark } = useTheme();
   const { isAuthenticated } = useAppStore();
 
+  const activeColor = '#10B981'; // Green active color as requested
+  const inactiveColor = isDark ? '#94A3B8' : '#64748B';
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.ruby,
-        tabBarInactiveTintColor: isDark ? '#94A3B8' : '#64748B',
+        tabBarActiveTintColor: activeColor,
+        tabBarInactiveTintColor: inactiveColor,
         tabBarStyle: {
-          backgroundColor: colors.tabBarBg,
-          borderTopColor: colors.border,
+          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.88)' : 'rgba(255, 255, 255, 0.9)',
+          borderTopColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 86 : 66,
+          height: Platform.OS === 'ios' ? 86 : 64,
           paddingBottom: Platform.OS === 'ios' ? 26 : 8,
           paddingTop: 6,
+          position: 'absolute',
+          elevation: 0,
         },
         tabBarItemStyle: {
           justifyContent: 'center',
@@ -29,7 +34,7 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontWeight: '700',
           lineHeight: 14,
           marginTop: 2,
         },
@@ -50,18 +55,17 @@ export default function TabLayout() {
         options={{
           title: 'Khám phá',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'compass' : 'compass-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} />
           ),
         }}
       />
 
       <Tabs.Screen
-        name="studio"
+        name="schedule"
         options={{
-          title: 'Studio AI',
-          href: null, // Mobile dành riêng cho Khán Giả, ẩn hoàn toàn Studio
+          title: 'Lịch Chiếu',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'videocam' : 'videocam-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -70,16 +74,22 @@ export default function TabLayout() {
         name="vip"
         options={{
           title: 'Gói VIP',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'star' : 'star-outline'} size={22} color={color} />
-          ),
+          href: null, // hidden in main bottom tab
+        }}
+      />
+
+      <Tabs.Screen
+        name="studio"
+        options={{
+          title: 'Studio AI',
+          href: null,
         }}
       />
 
       <Tabs.Screen
         name="profile"
         options={{
-          title: isAuthenticated ? 'Cá nhân' : 'Đăng nhập',
+          title: 'Tài khoản',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={color} />
           ),
