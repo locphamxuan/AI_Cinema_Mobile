@@ -10,7 +10,7 @@ import {
   NativeScrollEvent,
   useWindowDimensions,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Movie } from '../../types/movie';
 import { useTheme } from '../../theme';
@@ -33,11 +33,9 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   const BANNER_WIDTH = Math.min(windowWidth, 600) - 32;
 
   const { colors, isDark } = useTheme();
-  const { myList, toggleMyList } = useAppStore();
 
   const movieList = movies && movies.length > 0 ? movies : movie ? [movie] : [];
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isMuted, setIsMuted] = useState(true);
   const scrollRef = useRef<ScrollView>(null);
 
   // Auto-scroll every 5.5 seconds if multiple movies
@@ -53,7 +51,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
     }, 5500);
 
     return () => clearInterval(interval);
-  }, [movieList.length]);
+  }, [movieList.length, BANNER_WIDTH]);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
@@ -82,11 +80,14 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         snapToInterval={BANNER_WIDTH}
         contentContainerStyle={styles.scrollContainer}
       >
-        {movieList.map((item) => {
-          const isAdded = myList.includes(item.id);
-
+        {movieList.map((item, index) => {
           return (
-            <View key={item.id} style={[styles.slideItem, { width: BANNER_WIDTH }]}>
+            <TouchableOpacity
+              key={`${item.id}-${index}`}
+              style={[styles.slideItem, { width: BANNER_WIDTH }]}
+              activeOpacity={0.95}
+              onPress={() => onPlayPress?.(item)}
+            >
               <ImageBackground
                 source={{ uri: item.bannerUrl }}
                 style={styles.bannerImage}
@@ -100,17 +101,19 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 >
                   {/* Top Row: TOP 10 Flame Ribbon + Compliance Badge */}
                   <View style={styles.topRow}>
-                    {item.badge ? <LinearGradient
-                      colors={['#EF4444', '#F59E0B']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.top10Badge}
-                    >
-                      <Ionicons name="flame" size={11} color="#FFFFFF" style={{ marginRight: 3 }} />
-                      <Text style={styles.top10Text}>{item.badge}</Text>
-                    </LinearGradient> : null}
+                    {item.badge ? (
+                      <LinearGradient
+                        colors={['#EF4444', '#F59E0B']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.top10Badge}
+                      >
+                        <Ionicons name="flame" size={11} color="#FFFFFF" style={{ marginRight: 3 }} />
+                        <Text style={styles.top10Text}>{item.badge}</Text>
+                      </LinearGradient>
+                    ) : null}
 
-                    {item.aiCompliance.complianceArticle ? (
+                    {item.aiCompliance?.complianceArticle ? (
                       <View style={styles.complianceBadge}>
                         <MaterialCommunityIcons name="shield-check" size={12} color="#10B981" />
                         <Text style={styles.complianceText}>{item.aiCompliance.complianceArticle}</Text>
@@ -126,9 +129,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
 
                     {/* Metadata chips row */}
                     <View style={styles.badgeRow}>
-                      <Text style={styles.metaSubtitle}>
-                        {item.year || ''}
-                      </Text>
+                      <Text style={styles.metaSubtitle}>{item.year || ''}</Text>
 
                       {item.matchScore && (
                         <View style={[styles.badge, styles.matchBadge]}>
@@ -151,8 +152,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
 
                     {/* Genre Pills */}
                     <View style={styles.genreRow}>
-                      {item.genre.slice(0, 3).map((g) => (
-                        <View key={g} style={styles.genrePill}>
+                      {item.genre.slice(0, 3).map((g, gIdx) => (
+                        <View key={`${item.id}-${g}-${gIdx}`} style={styles.genrePill}>
                           <Text style={styles.genrePillText}>{g}</Text>
                         </View>
                       ))}
@@ -162,72 +163,10 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                     <Text style={styles.description} numberOfLines={2}>
                       {item.description}
                     </Text>
-
-                    {/* CTA Action Buttons */}
-                    <View style={styles.btnRow}>
-                      {/* Primary Ruby Red Xem Ngay Button with Gradient */}
-                      <TouchableOpacity
-                        activeOpacity={0.88}
-                        onPress={() => onPlayPress?.(item)}
-                      >
-                        <LinearGradient
-                          colors={['#E50914', '#B91C1C']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.playBtn}
-                        >
-                          <Ionicons name="play" size={15} color="#FFFFFF" />
-                          <Text style={styles.playBtnText}>Xem Ngay</Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-
-                      {/* My List Bookmark Button */}
-                      <TouchableOpacity
-                        activeOpacity={0.85}
-                        style={[
-                          styles.actionIconBtn,
-                          isAdded && styles.actionIconBtnActive,
-                        ]}
-                        onPress={() => toggleMyList(item.id)}
-                      >
-                        <Ionicons
-                          name={isAdded ? 'checkmark' : 'add'}
-                          size={17}
-                          color="#FFFFFF"
-                        />
-                        <Text style={styles.actionBtnText}>
-                          {isAdded ? 'Đã thêm' : 'Danh sách'}
-                        </Text>
-                      </TouchableOpacity>
-
-                      {/* Sound Mute Toggle Button */}
-                      <TouchableOpacity
-                        activeOpacity={0.85}
-                        style={styles.soundBtn}
-                        onPress={() => setIsMuted(!isMuted)}
-                      >
-                        <Feather
-                          name={isMuted ? 'volume-x' : 'volume-2'}
-                          size={16}
-                          color="#FFFFFF"
-                        />
-                      </TouchableOpacity>
-
-                      {/* Details Button */}
-                      {onDetailPress && (
-                        <TouchableOpacity
-                          activeOpacity={0.85}
-                          style={styles.soundBtn}
-                          onPress={() => onDetailPress(item)}
-                        >
-                          <Ionicons name="information-circle-outline" size={18} color="#FFFFFF" />
-                        </TouchableOpacity>
-                      )}
-                    </View>
                   </View>
                 </LinearGradient>
               </ImageBackground>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </ScrollView>
@@ -239,7 +178,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             const isActive = idx === currentIndex;
             return (
               <TouchableOpacity
-                key={m.id}
+                key={`${m.id}-${idx}`}
                 onPress={() => goToSlide(idx)}
                 style={[
                   styles.paginationDot,
@@ -394,61 +333,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 15.5,
   },
-  btnRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-  },
-  playBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8.5,
-    borderRadius: 24,
-    gap: 5,
-    shadowColor: '#E50914',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  playBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 0.2,
-  },
-  actionIconBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 24,
-    gap: 4,
-  },
-  actionIconBtnActive: {
-    backgroundColor: 'rgba(229, 9, 20, 0.25)',
-    borderColor: '#E50914',
-  },
-  actionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  soundBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   paginationContainer: {
     position: 'absolute',
     bottom: 24,
@@ -469,7 +353,7 @@ const styles = StyleSheet.create({
   },
   paginationDotActive: {
     width: 20,
-    backgroundColor: '#E50914',
+    backgroundColor: '#10B981',
   },
   paginationDotInactive: {
     width: 5,

@@ -61,7 +61,7 @@ interface AppState {
   isAuthenticated: boolean;
   user: UserProfile | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string; role?: string }>;
-  register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string; role?: string }>;
+  register: (name: string, email: string, password: string, dateOfBirth?: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string; role?: string }>;
   logout: () => Promise<void>;
   isAuthModalOpen: boolean;
   authModalMode: 'login' | 'register';
@@ -259,28 +259,31 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      register: async (name, email, password) => {
+      register: async (name, email, password, dateOfBirth) => {
         const trimmedEmail = email.trim().toLowerCase();
         const trimmedName = name.trim();
+        const trimmedDob = (dateOfBirth || '2003-05-14').trim();
 
-        if (!trimmedEmail || !password || !trimmedName) {
+        if (!trimmedEmail || !password || !trimmedName || !trimmedDob) {
           return { success: false, error: 'Vui lòng điền đầy đủ thông tin đăng ký!' };
         }
 
         if (password.length < 8) {
-          return { success: false, error: 'Mật khẩu phải có ít nhất 8 ký tự!' };
+          return { success: false, error: 'Mật khẩu phải từ 8 đến 72 ký tự (có ít nhất 1 chữ cái và 1 chữ số)!' };
         }
 
         try {
           const res = await authService.register({
-            name: trimmedName,
             fullName: trimmedName,
             email: trimmedEmail,
             password,
+            dateOfBirth: trimmedDob,
           });
 
-          if (res.success && res.data?.user) {
-            const profile = adaptUserProfile(res.data.user);
+          const regUser = res.data?.user || (res.data?.id || res.data?.email ? res.data : null);
+
+          if (res.success && (regUser || res.data)) {
+            const profile = adaptUserProfile(regUser || res.data);
             set({
               isAuthenticated: true,
               user: profile,

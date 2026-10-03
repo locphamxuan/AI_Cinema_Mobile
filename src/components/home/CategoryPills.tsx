@@ -46,7 +46,7 @@ export const CategoryPills: React.FC<CategoryPillsProps> = ({
             >
               {isSelected ? (
                 <LinearGradient
-                  colors={['#E50914', '#B91C1C']}
+                  colors={['#10B981', '#059669']} // Green active pill gradient
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={[styles.pill, styles.pillActive]}
@@ -63,8 +63,8 @@ export const CategoryPills: React.FC<CategoryPillsProps> = ({
                   style={[
                     styles.pill,
                     {
-                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9',
-                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
                     },
                   ]}
                 >
@@ -102,15 +102,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   pillActive: {
-    shadowColor: '#E50914',
+    shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.35,
     shadowRadius: 4,
     elevation: 3,
-    borderColor: '#E50914',
-  },
-  icon: {
-    marginRight: 0,
+    borderColor: '#10B981',
   },
   pillText: {
     fontSize: 12,

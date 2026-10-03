@@ -25,11 +25,11 @@ export interface LoginRequestDto {
 }
 
 export interface RegisterRequestDto {
-  name: string;
-  fullName?: string;
+  name?: string;
+  fullName: string;
   email: string;
   password?: string;
-  role?: string;
+  dateOfBirth?: string;
 }
 
 export interface BEUserDto {
