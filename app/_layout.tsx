@@ -42,7 +42,7 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <ThemeProvider initialTheme="light">
+      <ThemeProvider initialTheme="dark">
         <RootLayoutContent />
       </ThemeProvider>
     </SafeAreaProvider>

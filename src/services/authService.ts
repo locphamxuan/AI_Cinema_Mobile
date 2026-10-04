@@ -82,41 +82,7 @@ class AuthService {
         }
       );
 
-      const token = res.data?.accessToken || res.data?.token;
-      const user = res.data?.user || (res.data?.id || res.data?.email ? res.data : null);
-
       if (res.success) {
-        if (token) {
-          await storage.set(STORAGE_KEYS.AUTH_TOKEN, token);
-        }
-        if (user) {
-          await storage.set(STORAGE_KEYS.USER_DATA, user);
-        }
-
-        if (token || user) {
-          return {
-            ...res,
-            data: {
-              ...res.data,
-              accessToken: token,
-              token,
-              user: user || (res.data as any),
-            },
-          };
-        }
-
-        // 2. Tự động đăng nhập để lấy token thật từ Backend nếu register chưa trả về token
-        if (dto.password) {
-          try {
-            const loginRes = await this.login({ email: trimmedEmail, password: dto.password });
-            if (loginRes.success && loginRes.data) {
-              return loginRes;
-            }
-          } catch {
-            // Bỏ qua lỗi login phụ nếu có
-          }
-        }
-
         return res;
       }
 

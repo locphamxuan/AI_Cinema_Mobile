@@ -32,6 +32,7 @@ export const AuthModal: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('2003-05-14');
   const [rememberMe, setRememberMe] = useState(true);
@@ -138,8 +139,14 @@ export const AuthModal: React.FC = () => {
         setError(result.error || 'Đăng nhập không thành công');
       }
     } else {
-      if (!name.trim() || !email.trim() || !password || !dateOfBirth.trim()) {
-        setError('Vui lòng điền đầy đủ họ tên, email, mật khẩu và ngày sinh!');
+      if (!name.trim() || !email.trim() || !password || !confirmPassword || !dateOfBirth.trim()) {
+        setError('Vui lòng điền đầy đủ thông tin, bao gồm nhập lại mật khẩu và ngày sinh!');
+        setLoading(false);
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError('Mật khẩu nhập lại không khớp!');
         setLoading(false);
         return;
       }
@@ -152,27 +159,19 @@ export const AuthModal: React.FC = () => {
 
       const result = await register(name, email, password, dateOfBirth);
       if (result.success) {
-        try {
-          if (rememberMe) {
-            await Promise.all([
-              storage.set(STORAGE_KEYS.REMEMBERED_EMAIL, email.trim()),
-              storage.set(STORAGE_KEYS.REMEMBERED_PASSWORD, password),
-              storage.set(STORAGE_KEYS.REMEMBER_ME, 'true'),
-            ]);
-          } else {
-            await Promise.all([
-              storage.remove(STORAGE_KEYS.REMEMBERED_EMAIL),
-              storage.remove(STORAGE_KEYS.REMEMBERED_PASSWORD),
-              storage.remove(STORAGE_KEYS.REMEMBER_ME),
-            ]);
-          }
-        } catch (e) {
-          console.error('Failed to update remembered credentials:', e);
-        }
-
-        if (result.redirectUrl) {
-          router.replace(result.redirectUrl as any);
-        }
+        Alert.alert(
+          'Đăng ký thành công!',
+          'Tài khoản của bạn đã được tạo thành công. Vui lòng đăng nhập.',
+          [
+            {
+              text: 'Đăng nhập ngay',
+              onPress: () => {
+                openAuthModal('login', email.trim());
+              },
+            },
+          ],
+          { cancelable: false }
+        );
       } else {
         setError(result.error || 'Đăng ký không thành công');
       }
@@ -408,6 +407,30 @@ export const AuthModal: React.FC = () => {
                 </Text>
               )}
             </View>
+
+            {!isLogin && (
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Nhập lại mật khẩu</Text>
+                <View style={styles.passwordWrapper}>
+                  <TextInput
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Nhập lại mật khẩu của bạn"
+                    placeholderTextColor={colors.textMuted}
+                    secureTextEntry={!showPassword}
+                    style={[
+                      styles.input,
+                      styles.passwordInput,
+                      {
+                        backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                        borderColor: colors.border,
+                        color: colors.text,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+            )}
 
             {/* Remember Me Checkbox & Forgot Password */}
             <View style={styles.rememberRow}>
