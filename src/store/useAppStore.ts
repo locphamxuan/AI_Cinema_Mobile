@@ -277,19 +277,8 @@ export const useAppStore = create<AppState>()(
             dateOfBirth: trimmedDob,
           });
 
-          const regUser = res.data?.user || (res.data?.id || res.data?.email ? res.data : null);
-
-          if (res.success && (regUser || res.data)) {
-            const profile = adaptUserProfile(regUser || res.data);
-            set({
-              isAuthenticated: true,
-              user: profile,
-              isVIPMode: false,
-              isAuthModalOpen: false,
-              subscription: emptySubscription,
-            });
-
-            return { success: true, redirectUrl: '/', role: 'user' };
+          if (res.success) {
+            return { success: true, email: trimmedEmail };
           }
 
           return {
