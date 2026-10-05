@@ -342,6 +342,59 @@ describe('apiClient success bodies', () => {
   });
 });
 
+describe('session tokens', () => {
+  const jsonResponse = (status: number, body: unknown) =>
+    ({ ok: status < 400, status, text: async () => JSON.stringify(body), json: async () => body }) as Response;
+
+  afterEach(async () => {
+    jest.restoreAllMocks();
+    await apiClient.clearSession();
+  });
+
+  it('refreshes an expired access token once and retries the request', async () => {
+    await apiClient.saveSession({ accessToken: 'old-access', refreshToken: 'r'.repeat(30) });
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(jsonResponse(401, { error: { message: 'Token expired' } }))
+      .mockResolvedValueOnce(jsonResponse(200, { accessToken: 'new-access', refreshToken: 'n'.repeat(30) }))
+      .mockResolvedValueOnce(jsonResponse(200, { id: 'u1', email: 'a@b.c', fullName: 'A', role: 'MEMBER' }));
+
+    const res = await authService.getProfile();
+
+    expect(res.success).toBe(true);
+    expect(res.data.name).toBe('A');
+    expect(String(fetchMock.mock.calls[1][0])).toContain('/auth/refresh');
+    const retryHeaders = fetchMock.mock.calls[2][1]?.headers as Record<string, string>;
+    expect(retryHeaders.Authorization).toBe('Bearer new-access');
+  });
+
+  it('reports an expired session when the refresh token is rejected', async () => {
+    await apiClient.saveSession({ accessToken: 'old-access', refreshToken: 'r'.repeat(30) });
+    const expired = jest.fn();
+    apiClient.onSessionExpired(expired);
+    jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(jsonResponse(401, {}))
+      .mockResolvedValueOnce(jsonResponse(401, { error: { message: 'Invalid refresh token' } }));
+
+    const res = await authService.getProfile();
+
+    expect(res.success).toBe(false);
+    expect(res.statusCode).toBe(401);
+    expect(expired).toHaveBeenCalledTimes(1);
+  });
+
+  it('logout revokes the stored refresh token', async () => {
+    await apiClient.saveSession({ accessToken: 'a', refreshToken: 'r'.repeat(30) });
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, status: 204, text: async () => '' } as Response);
+
+    await authService.logout();
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/auth/logout');
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ refreshToken: 'r'.repeat(30) });
+  });
+});
+
 describe('extractErrorMessage', () => {
   it('prefers details, then error.message, then message', () => {
     expect(extractErrorMessage({ error: { message: 'Conflict', details: ['a', 'b'] } })).toBe('a, b');

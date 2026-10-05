@@ -49,6 +49,17 @@ const createEmptyCheckInStreak = (): CheckInStreak => ({
   todayClaimed: false,
 });
 
+/** Everything tied to the signed-in account, reset on logout or when the session expires. */
+const signedOutState = () => ({
+  isAuthenticated: false,
+  user: null,
+  isVIPMode: false,
+  wallet: emptyWallet,
+  checkInStreak: createEmptyCheckInStreak(),
+  subscription: emptySubscription,
+  transactions: [] as Transaction[],
+});
+
 interface AppState {
   // Movies Data & Loading
   movies: Movie[];
@@ -148,7 +159,17 @@ export const useAppStore = create<AppState>()(
             ? moviesRes.data
             : [];
           set({ movies: rawList, currentMovie: rawList[0] || null, isLoadingMovies: false });
-          if (get().isAuthenticated) await get().loadAccountData();
+          if (get().isAuthenticated) {
+            // The persisted "signed in" flag can outlive the session; confirm it with the backend.
+            const profileRes = await authService.getProfile();
+            if (profileRes.success) {
+              set((s) => ({ user: s.user ? { ...s.user, ...profileRes.data } : profileRes.data }));
+              await get().loadAccountData();
+            } else if (profileRes.statusCode === 401) {
+              await apiClient.clearSession();
+              set(signedOutState());
+            }
+          }
         } catch (e) {
           set({ isLoadingMovies: false });
         }
@@ -294,17 +315,8 @@ export const useAppStore = create<AppState>()(
       },
 
       logout: async () => {
-        try {
-          await authService.logout();
-        } catch (e) {
-          console.warn('Logout error:', e);
-        }
-        set({
-          isAuthenticated: false,
-          user: null,
-          isVIPMode: false,
-          subscription: emptySubscription,
-        });
+        await authService.logout();
+        set(signedOutState());
       },
 
       // ===== THEME (Default Pure White Light Mode) =====
@@ -575,3 +587,6 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+
+// A refresh token the backend rejects means the session is over on every screen.
+apiClient.onSessionExpired(() => useAppStore.setState(signedOutState()));
