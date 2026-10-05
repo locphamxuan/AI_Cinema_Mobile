@@ -1,4 +1,4 @@
-import type { Movie, Episode, EpisodeVersion, AIComplianceInfo } from '../types/movie';
+import type { Movie, Episode, AIComplianceInfo } from '../types/movie';
 import type { WalletState, CheckInStreak } from '../types/wallet';
 import type { Project, ProductionEpisode, Scene } from '../types/production';
 import type { UserProfile } from '../types/auth';
@@ -86,24 +86,6 @@ export function formatDuration(totalSeconds: unknown): string {
 }
 
 export function adaptApiEpisodeToEpisode(api: any, defaultIndex = 1): Episode {
-  const versions: EpisodeVersion[] = Array.isArray(api.versions) && api.versions.length > 0
-    ? api.versions.map((v: any, vIdx: number) => ({
-        id: v.id || `v-${api.id}-${vIdx}`,
-          versionNumber: v.versionNumber || '',
-          versionTitle: v.versionTitle || '',
-        releaseDate: v.releaseDate || v.createdAt || new Date().toISOString(),
-          author: v.author || '',
-          aiModel: v.aiModel || '',
-        status: v.status || 'published',
-        statusLabel: v.status === 'archived' ? 'Đã lưu trữ' : 'Đang phát hành',
-        isCurrent: vIdx === 0,
-          moderationScore: Number(v.moderationScore) || 0,
-          changelog: Array.isArray(v.changelog) ? v.changelog : [],
-          hlsUrl: v.videoUrl || v.hlsUrl || '',
-          duration: v.duration || api.duration || '',
-      }))
-    : [];
-
   return {
     id: api.id || '',
     seasonNumber: Number(api.seasonNumber) || 1,
@@ -117,11 +99,8 @@ export function adaptApiEpisodeToEpisode(api: any, defaultIndex = 1): Episode {
     availability: api.availability === 'UNDER_REVISION' ? 'UNDER_REVISION' : 'AVAILABLE',
     notice: api.notice || null,
     aiLabel: api.aiLabel?.labelText || null,
-    isPreview: Boolean(api.isPreview),
     isUnlocked: Boolean(api.isUnlocked),
     synopsis: api.description || api.synopsis || '',
-    currentVersion: versions[0]?.versionNumber,
-    versions,
   };
 }
 

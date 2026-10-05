@@ -29,7 +29,6 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 describe('API Routes and Config', () => {
   it('should have proper API routes configured', () => {
     expect(API_ROUTES.AUTH.LOGIN).toBe('/auth/login');
-    expect(API_ROUTES.MOVIES.EPISODE_DETAIL('e1')).toBe('/episodes/e1');
     expect(API_ROUTES.MOVIES.LIST).toBe('/movies');
     expect(API_ROUTES.WALLET.INFO).toBe('/wallet');
     expect(API_ROUTES.WALLET.CHECK_IN).toBe('/wallet/check-in');

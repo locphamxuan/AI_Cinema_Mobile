@@ -54,18 +54,6 @@ class MovieService {
       return { ...res, success: false, data: [] };
     });
   }
-
-  async getEpisodeDetail(id: string): Promise<ApiResponse<Episode>> {
-    return apiClient.get<Episode>(API_ROUTES.MOVIES.EPISODE_DETAIL(id)).then((res) => {
-      if (res.success && res.data) {
-        return {
-          ...res,
-          data: adaptApiEpisodeToEpisode(res.data),
-        };
-      }
-      return res;
-    });
-  }
 }
 
 export const movieService = new MovieService();

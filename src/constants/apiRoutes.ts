@@ -16,7 +16,6 @@ export const API_ROUTES = {
     LIST: '/movies',
     DETAIL: (id: string) => `/movies/${id}`,
     EPISODES: (movieId: string) => `/movies/${movieId}/episodes`,
-    EPISODE_DETAIL: (id: string) => `/episodes/${id}`,
   },
 
   // Wallet & Payments
@@ -61,7 +60,6 @@ export const API_ROUTES = {
   // Chat & AI Support
   CHAT: {
     SEND_MESSAGE: '/chat/message',
-    HISTORY: '/chat/history',
     TICKET: '/chat/ticket',
   },
 } as const;

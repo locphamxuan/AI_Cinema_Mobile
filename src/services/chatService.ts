@@ -8,10 +8,6 @@ class ChatService {
     return apiClient.post<ChatMessage>(API_ROUTES.CHAT.SEND_MESSAGE, { message: content });
   }
 
-  async getHistory(): Promise<ApiResponse<ChatMessage[]>> {
-    return apiClient.get<ChatMessage[]>(API_ROUTES.CHAT.HISTORY);
-  }
-
   async createTicket(messages: ChatMessage[]): Promise<ApiResponse<SupportTicket>> {
     return apiClient.post<SupportTicket>(API_ROUTES.CHAT.TICKET, { messages });
   }
