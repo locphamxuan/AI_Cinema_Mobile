@@ -276,6 +276,31 @@ describe('Live Backend Connection (Port 3001)', () => {
   });
 });
 
+describe('apiClient success bodies', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('treats 204 No Content as success with null data', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 204,
+      text: async () => '',
+    } as Response);
+    const res = await apiClient.post('/auth/logout', { refreshToken: 'x'.repeat(20) });
+    expect(res.success).toBe(true);
+    expect(res.data).toBeNull();
+  });
+
+  it('unwraps the paginated data array', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ data: [{ id: 'm1' }], meta: { totalItems: 1 } }),
+    } as Response);
+    const res = await apiClient.get('/movies');
+    expect(res.data).toEqual([{ id: 'm1' }]);
+  });
+});
+
 describe('extractErrorMessage', () => {
   it('prefers details, then error.message, then message', () => {
     expect(extractErrorMessage({ error: { message: 'Conflict', details: ['a', 'b'] } })).toBe('a, b');

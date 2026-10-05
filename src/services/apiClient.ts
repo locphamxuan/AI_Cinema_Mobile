@@ -120,7 +120,9 @@ class ApiClient {
         };
       }
 
-      const data = await response.json();
+      // 204 No Content (e.g. logout) has no body to parse.
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : null;
       console.log(`[API Success] ${url}`, data);
       return {
         success: true,
