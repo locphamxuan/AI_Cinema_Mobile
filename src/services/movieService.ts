@@ -5,8 +5,8 @@ import type { ApiResponse } from '../types/api';
 import type { Movie, Episode } from '../types/movie';
 
 class MovieService {
-  async listMovies(params?: { category?: string; query?: string; search?: string; genre?: string; limit?: number }): Promise<ApiResponse<Movie[]>> {
-    const searchVal = params?.search || params?.query;
+  async listMovies(params?: { search?: string; genre?: string; limit?: number }): Promise<ApiResponse<Movie[]>> {
+    const searchVal = params?.search;
     const limit = params?.limit || 100;
 
     return apiClient.get<Movie[]>(API_ROUTES.MOVIES.LIST, {
@@ -36,42 +36,6 @@ class MovieService {
         return {
           ...res,
           data: adaptApiMovieToMovie(res.data),
-        };
-      }
-      return res;
-    });
-  }
-
-  async getFeaturedMovie(): Promise<ApiResponse<Movie>> {
-    return apiClient.get<Movie>(API_ROUTES.MOVIES.FEATURED).then((res) => {
-      if (res.success && res.data) {
-        return {
-          ...res,
-          data: adaptApiMovieToMovie(res.data),
-        };
-      }
-      return res;
-    });
-  }
-
-  async getPopularMovies(): Promise<ApiResponse<Movie[]>> {
-    return apiClient.get<Movie[]>(API_ROUTES.MOVIES.POPULAR).then((res) => {
-      if (res.success && Array.isArray(res.data)) {
-        return {
-          ...res,
-          data: res.data.map(adaptApiMovieToMovie),
-        };
-      }
-      return res;
-    });
-  }
-
-  async getNewReleases(): Promise<ApiResponse<Movie[]>> {
-    return apiClient.get<Movie[]>(API_ROUTES.MOVIES.NEW_RELEASES).then((res) => {
-      if (res.success && Array.isArray(res.data)) {
-        return {
-          ...res,
-          data: res.data.map(adaptApiMovieToMovie),
         };
       }
       return res;

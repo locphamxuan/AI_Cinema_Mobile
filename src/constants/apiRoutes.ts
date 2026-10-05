@@ -15,11 +15,6 @@ export const API_ROUTES = {
   MOVIES: {
     LIST: '/movies',
     DETAIL: (id: string) => `/movies/${id}`,
-    BY_CATEGORY: (category: string) => `/movies/category/${category}`,
-    SEARCH: '/movies/search',
-    FEATURED: '/movies/featured',
-    POPULAR: '/movies/popular',
-    NEW_RELEASES: '/movies/new-releases',
     EPISODES: (movieId: string) => `/movies/${movieId}/episodes`,
     EPISODE_DETAIL: (id: string) => `/episodes/${id}`,
   },
