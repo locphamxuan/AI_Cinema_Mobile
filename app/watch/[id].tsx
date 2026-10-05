@@ -40,26 +40,39 @@ export default function WatchScreen() {
   const [unlockModalOpen, setUnlockModalOpen] = useState(false);
   const [targetUnlockEp, setTargetUnlockEp] = useState<Episode | null>(null);
 
+  // Movie list/detail responses carry no episodes, so they are always fetched separately.
   useEffect(() => {
-    if (!foundMovie && id) {
-      setLoading(true);
-      movieService.getMovieDetail(id).then((res) => {
-        if (res.success && res.data) {
-          setMovie(res.data);
-          setCurrentMovie(res.data);
-          setActiveEpisode(res.data.episodes[0] || null);
-        }
-        setLoading(false);
-      });
-    } else if (foundMovie) {
-      setMovie(foundMovie);
-      setCurrentMovie(foundMovie);
-      setActiveEpisode(foundMovie.episodes[0] || null);
+    if (!id) return;
+    let cancelled = false;
+    const { movies: listed, currentMovie: selected } = useAppStore.getState();
+    const known = listed.find((item) => item.id === id) || (selected?.id === id ? selected : null);
+    setLoading(!known);
+
+    Promise.all([
+      known ? Promise.resolve(known) : movieService.getMovieDetail(id).then((res) => (res.success ? res.data : null)),
+      movieService.getEpisodes(id),
+    ]).then(([base, episodesRes]) => {
+      if (cancelled) return;
+      if (base) {
+        const episodes = episodesRes.data;
+        const loaded: Movie = { ...base, episodes, totalEpisodes: episodes.length || base.totalEpisodes };
+        setMovie(loaded);
+        setCurrentMovie(loaded);
+        setActiveEpisode(episodes[0] || null);
+      }
       setLoading(false);
-    }
-  }, [id, foundMovie, setCurrentMovie]);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, setCurrentMovie]);
 
   const handleSelectEpisode = (ep: Episode) => {
+    if (ep.availability === 'UNDER_REVISION') {
+      Alert.alert('Tập đang bảo trì', ep.notice || 'Tập phim đang được chỉnh sửa, vui lòng quay lại sau.');
+      return;
+    }
     if (ep.isFree || ep.isUnlocked) {
       setActiveEpisode(ep);
     } else {
@@ -268,7 +281,8 @@ export default function WatchScreen() {
           <View style={styles.episodeGrid}>
             {movie.episodes.map((ep) => {
               const isCurrent = ep.id === activeEpisode?.id;
-              const isLocked = !ep.isFree && !ep.isUnlocked;
+              const isUnderRevision = ep.availability === 'UNDER_REVISION';
+              const isLocked = !isUnderRevision && !ep.isFree && !ep.isUnlocked;
 
               return (
                 <TouchableOpacity
@@ -278,9 +292,9 @@ export default function WatchScreen() {
                   onPress={() => handleSelectEpisode(ep)}
                 >
                   <Ionicons
-                    name={isLocked ? 'lock-closed' : 'play'}
+                    name={isUnderRevision ? 'construct' : isLocked ? 'lock-closed' : 'play'}
                     size={12}
-                    color={isLocked ? '#F59E0B' : isCurrent ? '#10B981' : '#FFFFFF'}
+                    color={isUnderRevision ? '#94A3B8' : isLocked ? '#F59E0B' : isCurrent ? '#10B981' : '#FFFFFF'}
                   />
                   <Text style={[styles.epGridButtonText, isCurrent && styles.epGridButtonTextActive]} numberOfLines={1}>
                     Tập {ep.episodeNumber}
@@ -290,6 +304,23 @@ export default function WatchScreen() {
               );
             })}
           </View>
+
+          {movie.episodes.length === 0 && (
+            <Text style={styles.episodeInfoText}>Phim chưa có tập nào được phát hành.</Text>
+          )}
+
+          {activeEpisode && (
+            <View style={styles.episodeInfo}>
+              <View style={styles.aiLabelRow}>
+                <MaterialCommunityIcons name="robot-outline" size={14} color="#10B981" />
+                <Text style={styles.aiLabelText}>{activeEpisode.aiLabel || 'Nội dung được tạo bởi AI'}</Text>
+              </View>
+              {activeEpisode.duration ? (
+                <Text style={styles.episodeInfoText}>Thời lượng: {activeEpisode.duration}</Text>
+              ) : null}
+              {activeEpisode.notice ? <Text style={styles.episodeNoticeText}>{activeEpisode.notice}</Text> : null}
+            </View>
+          )}
         </View>
 
         {/* Comments Section (as seen in image 4) */}
@@ -652,6 +683,28 @@ const styles = StyleSheet.create({
   },
   epGridButtonTextActive: {
     color: '#10B981',
+  },
+  episodeInfo: {
+    marginTop: 14,
+    gap: 6,
+  },
+  aiLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  aiLabelText: {
+    color: '#10B981',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  episodeInfoText: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  episodeNoticeText: {
+    color: '#F59E0B',
+    fontSize: 12,
   },
   coinCostTag: {
     color: '#F59E0B',

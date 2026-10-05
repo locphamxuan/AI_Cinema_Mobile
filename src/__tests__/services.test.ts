@@ -6,6 +6,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 import {
   adaptApiMovieToMovie,
   adaptApiEpisodeToEpisode,
+  formatDuration,
   adaptApiWalletToWallet,
   adaptApiCheckInToStreak,
   adaptApiProjectToProject,
@@ -27,6 +28,7 @@ import { API_CONFIG } from '../constants/config';
 describe('API Routes and Config', () => {
   it('should have proper API routes configured', () => {
     expect(API_ROUTES.AUTH.LOGIN).toBe('/auth/login');
+    expect(API_ROUTES.MOVIES.EPISODE_DETAIL('e1')).toBe('/episodes/e1');
     expect(API_ROUTES.MOVIES.LIST).toBe('/movies');
     expect(API_ROUTES.WALLET.INFO).toBe('/wallet');
     expect(API_ROUTES.WALLET.CHECK_IN).toBe('/wallet/check-in');
@@ -85,6 +87,45 @@ describe('API Adapters', () => {
     expect(movie.year).toBe(2026);
     expect(movie.episodes).toHaveLength(1);
     expect(movie.episodes[0].isFree).toBe(true);
+  });
+
+  it('adaptApiEpisodeToEpisode maps the backend catalog episode', () => {
+    const ep = adaptApiEpisodeToEpisode({
+      id: 'ep-1',
+      seasonNumber: 2,
+      episodeNumber: 3,
+      title: 'Dạo phố Tokyo',
+      availability: 'UNDER_REVISION',
+      notice: 'Đang bảo trì',
+      isFreeStarter: true,
+      coinPrice: 3,
+      durationSeconds: 3725,
+      aiLabel: { labelType: 'AI_GENERATED', labelText: 'Phim được tạo bằng AI', displayLocation: null },
+    });
+    expect(ep.seasonNumber).toBe(2);
+    expect(ep.isFree).toBe(true);
+    expect(ep.price).toBe(3);
+    expect(ep.duration).toBe('1:02:05');
+    expect(ep.availability).toBe('UNDER_REVISION');
+    expect(ep.notice).toBe('Đang bảo trì');
+    expect(ep.aiLabel).toBe('Phim được tạo bằng AI');
+  });
+
+  it('formatDuration handles short and missing lengths', () => {
+    expect(formatDuration(60)).toBe('1:00');
+    expect(formatDuration(null)).toBe('');
+  });
+
+  it('movieService.getEpisodes calls the movie episodes endpoint', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify([{ id: 'ep-1', episodeNumber: 1, coinPrice: 2 }]),
+    } as Response);
+    const res = await movieService.getEpisodes('mv-1');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/movies/mv-1/episodes');
+    expect(res.data[0].price).toBe(2);
+    jest.restoreAllMocks();
   });
 
   it('adaptApiWalletToWallet maps coins properly', () => {

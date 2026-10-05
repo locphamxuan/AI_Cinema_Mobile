@@ -65,13 +65,24 @@ export function adaptApiMovieToMovie(api: any): Movie {
     year: Number(api.releaseYear || api.year) || 0,
     episodes,
     aiCompliance,
-    totalEpisodes: Number(api.totalEpisodes) || episodes.length,
+    totalEpisodes: Number(api.totalEpisodes ?? api.episodeCount) || episodes.length,
     matchScore: api.matchScore,
     quality: api.quality || '',
     audioQuality: api.audioQuality || '',
     ageRating: api.ageRating || '',
     badge: api.badge || '',
   };
+}
+
+/** 3725 -> "1:02:05", 60 -> "1:00"; empty when the length is unknown. */
+export function formatDuration(totalSeconds: unknown): string {
+  const seconds = Number(totalSeconds);
+  if (!Number.isFinite(seconds) || seconds <= 0) return '';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
 export function adaptApiEpisodeToEpisode(api: any, defaultIndex = 1): Episode {
@@ -95,13 +106,17 @@ export function adaptApiEpisodeToEpisode(api: any, defaultIndex = 1): Episode {
 
   return {
     id: api.id || '',
+    seasonNumber: Number(api.seasonNumber) || 1,
     episodeNumber: api.episodeNumber || defaultIndex,
     title: api.title || '',
-    duration: api.duration || '',
+    duration: formatDuration(api.durationSeconds) || api.duration || '',
     hlsUrl: api.videoUrl || api.hlsUrl || '',
     thumbnailUrl: api.thumbnailUrl || '',
-    price: Number(api.tokenCost ?? api.price) || 0,
-    isFree: Boolean(api.isFree),
+    price: Number(api.coinPrice ?? api.price) || 0,
+    isFree: Boolean(api.isFreeStarter ?? api.isFree),
+    availability: api.availability === 'UNDER_REVISION' ? 'UNDER_REVISION' : 'AVAILABLE',
+    notice: api.notice || null,
+    aiLabel: api.aiLabel?.labelText || null,
     isPreview: Boolean(api.isPreview),
     isUnlocked: Boolean(api.isUnlocked),
     synopsis: api.description || api.synopsis || '',

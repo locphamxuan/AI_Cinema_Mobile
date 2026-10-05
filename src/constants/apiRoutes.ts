@@ -20,7 +20,8 @@ export const API_ROUTES = {
     FEATURED: '/movies/featured',
     POPULAR: '/movies/popular',
     NEW_RELEASES: '/movies/new-releases',
-    EPISODE_DETAIL: (id: string) => `/catalog/episodes/${id}`,
+    EPISODES: (movieId: string) => `/movies/${movieId}/episodes`,
+    EPISODE_DETAIL: (id: string) => `/episodes/${id}`,
   },
 
   // Wallet & Payments

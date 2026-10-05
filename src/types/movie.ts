@@ -26,15 +26,25 @@ export interface EpisodeVersion {
   duration: string;
 }
 
+export type EpisodeAvailability = 'AVAILABLE' | 'UNDER_REVISION';
+
 export interface Episode {
   id: string;
+  seasonNumber: number;
   episodeNumber: number;
   title: string;
   duration: string;
   hlsUrl: string;
   thumbnailUrl: string;
+  /** Coin price of the episode (BE `coinPrice`). */
   price: number;
+  /** Free-starter episode (BE `isFreeStarter`, BR-03). */
   isFree: boolean;
+  /** UNDER_REVISION = taken down for fixing; shows `notice` and cannot be played (BR-56). */
+  availability: EpisodeAvailability;
+  notice: string | null;
+  /** AI content label text that must be shown with the episode (BR-10). */
+  aiLabel: string | null;
   isPreview: boolean;
   isUnlocked: boolean;
   synopsis: string;

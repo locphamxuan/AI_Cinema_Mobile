@@ -78,6 +78,19 @@ class MovieService {
     });
   }
 
+  /** Released episodes of a movie; movie list/detail responses do not include them. */
+  async getEpisodes(movieId: string): Promise<ApiResponse<Episode[]>> {
+    return apiClient.get<Episode[]>(API_ROUTES.MOVIES.EPISODES(movieId)).then((res) => {
+      if (res.success && Array.isArray(res.data)) {
+        return {
+          ...res,
+          data: res.data.map((ep, index) => adaptApiEpisodeToEpisode(ep, index + 1)),
+        };
+      }
+      return { ...res, success: false, data: [] };
+    });
+  }
+
   async getEpisodeDetail(id: string): Promise<ApiResponse<Episode>> {
     return apiClient.get<Episode>(API_ROUTES.MOVIES.EPISODE_DETAIL(id)).then((res) => {
       if (res.success && res.data) {
