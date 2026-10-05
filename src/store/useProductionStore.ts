@@ -94,7 +94,7 @@ export const useProductionStore = create<ProductionStoreState>((set, get) => ({
         return;
       }
       set({ projects: [], activeProjectId: '', isLoadingProjects: false });
-    } catch (e) {
+    } catch {
       set({ projects: [], activeProjectId: '', isLoadingProjects: false });
     }
   },

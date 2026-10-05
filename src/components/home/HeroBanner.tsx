@@ -13,8 +13,6 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Movie } from '../../types/movie';
-import { useTheme } from '../../theme';
-import { useAppStore } from '../../store/useAppStore';
 
 interface HeroBannerProps {
   movie?: Movie;
@@ -32,7 +30,6 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   const { width: windowWidth } = useWindowDimensions();
   const BANNER_WIDTH = Math.min(windowWidth, 600) - 32;
 
-  const { colors, isDark } = useTheme();
 
   const movieList = movies && movies.length > 0 ? movies : movie ? [movie] : [];
   const [currentIndex, setCurrentIndex] = useState(0);

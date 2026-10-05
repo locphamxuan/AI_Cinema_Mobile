@@ -8,23 +8,9 @@ export interface ChatMessage {
   timestamp: string;
 }
 
-export interface QuickReply {
-  id: string;
-  text: string;
-  payload: string;
-}
-
 export interface SupportTicket {
   id: string;
   summary: string;
   userMessages: string[];
   createdAt: string;
-}
-
-export interface ChatState {
-  messages: ChatMessage[];
-  phase: ChatPhase;
-  isOpen: boolean;
-  ticket: SupportTicket | null;
-  estimatedWaitMinutes: number;
 }

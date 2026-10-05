@@ -7,7 +7,7 @@ export const API_ROUTES = {
   AUTH: {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
-    PROFILE: '/auth/profile',
+    PROFILE: '/auth/me',
     LOGOUT: '/auth/logout',
   },
 
@@ -15,12 +15,7 @@ export const API_ROUTES = {
   MOVIES: {
     LIST: '/movies',
     DETAIL: (id: string) => `/movies/${id}`,
-    BY_CATEGORY: (category: string) => `/movies/category/${category}`,
-    SEARCH: '/movies/search',
-    FEATURED: '/movies/featured',
-    POPULAR: '/movies/popular',
-    NEW_RELEASES: '/movies/new-releases',
-    EPISODE_DETAIL: (id: string) => `/catalog/episodes/${id}`,
+    EPISODES: (movieId: string) => `/movies/${movieId}/episodes`,
   },
 
   // Wallet & Payments
@@ -65,7 +60,6 @@ export const API_ROUTES = {
   // Chat & AI Support
   CHAT: {
     SEND_MESSAGE: '/chat/message',
-    HISTORY: '/chat/history',
     TICKET: '/chat/ticket',
   },
 } as const;

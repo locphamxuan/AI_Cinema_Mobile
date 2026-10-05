@@ -1,4 +1,4 @@
-import type { Movie, Episode, EpisodeVersion, AIComplianceInfo } from '../types/movie';
+import type { Movie, Episode, AIComplianceInfo } from '../types/movie';
 import type { WalletState, CheckInStreak } from '../types/wallet';
 import type { Project, ProductionEpisode, Scene } from '../types/production';
 import type { UserProfile } from '../types/auth';
@@ -65,7 +65,7 @@ export function adaptApiMovieToMovie(api: any): Movie {
     year: Number(api.releaseYear || api.year) || 0,
     episodes,
     aiCompliance,
-    totalEpisodes: Number(api.totalEpisodes) || episodes.length,
+    totalEpisodes: Number(api.totalEpisodes ?? api.episodeCount) || episodes.length,
     matchScore: api.matchScore,
     quality: api.quality || '',
     audioQuality: api.audioQuality || '',
@@ -74,39 +74,33 @@ export function adaptApiMovieToMovie(api: any): Movie {
   };
 }
 
-export function adaptApiEpisodeToEpisode(api: any, defaultIndex = 1): Episode {
-  const versions: EpisodeVersion[] = Array.isArray(api.versions) && api.versions.length > 0
-    ? api.versions.map((v: any, vIdx: number) => ({
-        id: v.id || `v-${api.id}-${vIdx}`,
-          versionNumber: v.versionNumber || '',
-          versionTitle: v.versionTitle || '',
-        releaseDate: v.releaseDate || v.createdAt || new Date().toISOString(),
-          author: v.author || '',
-          aiModel: v.aiModel || '',
-        status: v.status || 'published',
-        statusLabel: v.status === 'archived' ? 'Đã lưu trữ' : 'Đang phát hành',
-        isCurrent: vIdx === 0,
-          moderationScore: Number(v.moderationScore) || 0,
-          changelog: Array.isArray(v.changelog) ? v.changelog : [],
-          hlsUrl: v.videoUrl || v.hlsUrl || '',
-          duration: v.duration || api.duration || '',
-      }))
-    : [];
+/** 3725 -> "1:02:05", 60 -> "1:00"; empty when the length is unknown. */
+export function formatDuration(totalSeconds: unknown): string {
+  const seconds = Number(totalSeconds);
+  if (!Number.isFinite(seconds) || seconds <= 0) return '';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
 
+export function adaptApiEpisodeToEpisode(api: any, defaultIndex = 1): Episode {
   return {
     id: api.id || '',
+    seasonNumber: Number(api.seasonNumber) || 1,
     episodeNumber: api.episodeNumber || defaultIndex,
     title: api.title || '',
-    duration: api.duration || '',
+    duration: formatDuration(api.durationSeconds) || api.duration || '',
     hlsUrl: api.videoUrl || api.hlsUrl || '',
     thumbnailUrl: api.thumbnailUrl || '',
-    price: Number(api.tokenCost ?? api.price) || 0,
-    isFree: Boolean(api.isFree),
-    isPreview: Boolean(api.isPreview),
+    price: Number(api.coinPrice ?? api.price) || 0,
+    isFree: Boolean(api.isFreeStarter ?? api.isFree),
+    availability: api.availability === 'UNDER_REVISION' ? 'UNDER_REVISION' : 'AVAILABLE',
+    notice: api.notice || null,
+    aiLabel: api.aiLabel?.labelText || null,
     isUnlocked: Boolean(api.isUnlocked),
     synopsis: api.description || api.synopsis || '',
-    currentVersion: versions[0]?.versionNumber,
-    versions,
   };
 }
 
