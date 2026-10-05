@@ -20,7 +20,7 @@ import {
   productionService,
   chatService,
 } from '../services';
-import { apiClient } from '../services/apiClient';
+import { apiClient, extractErrorMessage } from '../services/apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
 import { API_CONFIG } from '../constants/config';
 
@@ -254,5 +254,33 @@ describe('Live Backend Connection (Port 3001)', () => {
     expect(res.statusCode).toBe(409);
     expect(res.message).toMatch(/(email already|exists|tồn tại)/i);
     jest.restoreAllMocks();
+  });
+
+  it('authService.register surfaces validation details from the backend error envelope', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({
+        error: { code: 'BAD_REQUEST', message: 'The request is invalid', details: ['email must be an email'] },
+      }),
+    } as Response);
+    const res = await authService.register({
+      name: 'Test Invalid',
+      email: 'not-an-email',
+      password: 'password123',
+    });
+    expect(res.success).toBe(false);
+    expect(res.statusCode).toBe(400);
+    expect(res.message).toBe('email must be an email');
+    jest.restoreAllMocks();
+  });
+});
+
+describe('extractErrorMessage', () => {
+  it('prefers details, then error.message, then message', () => {
+    expect(extractErrorMessage({ error: { message: 'Conflict', details: ['a', 'b'] } })).toBe('a, b');
+    expect(extractErrorMessage({ error: { message: 'Email already exists' } })).toBe('Email already exists');
+    expect(extractErrorMessage({ message: ['x', 'y'] })).toBe('x, y');
+    expect(extractErrorMessage(null)).toBeUndefined();
   });
 });

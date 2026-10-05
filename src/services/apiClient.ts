@@ -8,6 +8,18 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
   timeoutMs?: number;
 }
 
+const joinMessage = (value: unknown): string | undefined => {
+  if (Array.isArray(value)) return value.length ? value.join(', ') : undefined;
+  return typeof value === 'string' && value ? value : undefined;
+};
+
+/**
+ * The backend wraps errors as `{ error: { code, message, details[] } }`; validation details
+ * are more useful to the user than the generic message. Plain `{ message }` is still accepted.
+ */
+export const extractErrorMessage = (body: any): string | undefined =>
+  joinMessage(body?.error?.details) ?? joinMessage(body?.error?.message) ?? joinMessage(body?.message);
+
 class ApiClient {
   private baseUrl: string;
 
@@ -95,9 +107,7 @@ class ApiClient {
         try {
           const errJson = await response.json();
           console.error(`[API Error Response] ${response.status} ${url}:`, errJson);
-          if (errJson?.message) {
-            errorMessage = Array.isArray(errJson.message) ? errJson.message.join(', ') : errJson.message;
-          }
+          errorMessage = extractErrorMessage(errJson) || errorMessage;
         } catch (e) {
           console.error(`[API Error Non-JSON] ${response.status} ${url}:`, e);
         }
@@ -119,11 +129,12 @@ class ApiClient {
       };
     } catch (err: any) {
       clearTimeout(timeoutId);
-      console.error(`[API Network Exception] ${url}:`, err);
+      const isTimeout = err?.name === 'AbortError';
+      console.error(`[API ${isTimeout ? 'Timeout' : 'Network Exception'}] ${url}:`, err);
       return {
         success: false,
         data: null as unknown as T,
-        message: err?.name === 'AbortError' ? 'Yêu cầu kết nối quá thời gian quy định (Timeout)' : (err?.message || 'Lỗi kết nối mạng máy chủ'),
+        message: isTimeout ? 'Yêu cầu kết nối quá thời gian quy định (Timeout)' : (err?.message || 'Lỗi kết nối mạng máy chủ'),
       };
     }
   }
