@@ -106,7 +106,7 @@ export default function WatchScreen() {
     return (
       <View style={[styles.container, { backgroundColor: '#000000', justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
         <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-        <Text style={[styles.title, { color: '#FFFFFF', marginTop: 12 }]}>Không tìm thấy phim</Text>
+        <Text style={[styles.movieTitle, { marginTop: 12 }]}>Không tìm thấy phim</Text>
         <TouchableOpacity
           style={styles.backBtnFallback}
           onPress={() => router.back()}
