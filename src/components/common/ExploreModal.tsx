@@ -6,9 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Dimensions,
 } from 'react-native';
-import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme';
 
@@ -32,7 +31,7 @@ const EXPLORE_CATEGORIES = [
 
 export const ExploreModal: React.FC<ExploreModalProps> = ({ visible, onClose }) => {
   const router = useRouter();
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
 
   const handleCategoryPress = (route: string) => {
     onClose();

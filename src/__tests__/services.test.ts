@@ -1,8 +1,3 @@
-// Mock AsyncStorage for headless test execution
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
-);
-
 import {
   adaptApiMovieToMovie,
   adaptApiEpisodeToEpisode,
@@ -12,7 +7,7 @@ import {
   adaptApiProjectToProject,
   adaptUserProfile,
 } from '../lib/apiAdapter';
-import { getTodayDayIndex, getTodayDateString, VN_DAY_LABELS } from '../utils/date';
+import { getTodayDayIndex, VN_DAY_LABELS } from '../utils/date';
 import {
   authService,
   movieService,
@@ -25,6 +20,11 @@ import { apiClient, extractErrorMessage } from '../services/apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
 import { API_CONFIG } from '../constants/config';
 import { storage, STORAGE_KEYS } from '../lib/storage';
+
+// Mock AsyncStorage for headless test execution
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
 
 describe('API Routes and Config', () => {
   it('should have proper API routes configured', () => {
@@ -246,7 +246,7 @@ describe('Live Backend Connection (Port 3001)', () => {
   });
 
   it('successfully handles real genres list from live NestJS BE', async () => {
-    const res = await apiClient.get<Array<{ id: string; name: string }>>('/genres');
+    const res = await apiClient.get<{ id: string; name: string }[]>('/genres');
     if (res.success) {
       expect(res.statusCode).toBe(200);
       expect(Array.isArray(res.data)).toBe(true);

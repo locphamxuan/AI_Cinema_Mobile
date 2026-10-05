@@ -10,10 +10,8 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
 import { movieService } from '../../src/services';
 import { Movie, Episode } from '../../src/types/movie';
@@ -24,8 +22,6 @@ import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeMod
 export default function WatchScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { colors, isDark } = useTheme();
   const { currentMovie, setCurrentMovie, openAuthModal, isAuthenticated, movies, myList, toggleMyList, user } = useAppStore();
 
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);

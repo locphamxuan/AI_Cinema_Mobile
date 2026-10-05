@@ -17,12 +17,7 @@ import {
   chatService,
 } from '../services';
 import { apiClient } from '../services/apiClient';
-import {
-  adaptApiMovieToMovie,
-  adaptApiWalletToWallet,
-  adaptApiCheckInToStreak,
-  adaptUserProfile,
-} from '../lib/apiAdapter';
+import { adaptUserProfile } from '../lib/apiAdapter';
 import { getTodayDayIndex } from '../utils/date';
 
 export const emptySubscription: UserSubscription = {
@@ -170,7 +165,7 @@ export const useAppStore = create<AppState>()(
               set(signedOutState());
             }
           }
-        } catch (e) {
+        } catch {
           set({ isLoadingMovies: false });
         }
       },
@@ -211,7 +206,7 @@ export const useAppStore = create<AppState>()(
             }
           }
           set({ movies: [], isLoadingMovies: false });
-        } catch (e) {
+        } catch {
           set({ movies: [], isLoadingMovies: false });
         }
       },

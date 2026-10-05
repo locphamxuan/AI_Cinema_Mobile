@@ -20,7 +20,7 @@ export const MovieRow: React.FC<MovieRowProps> = ({
   onSeeAllPress,
   iconName,
 }) => {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   return (
     <View style={styles.container}>
