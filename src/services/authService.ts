@@ -8,19 +8,14 @@ import type { UserProfile } from '../types/auth';
 // Auth calls answer 401 for bad credentials; that must not trigger a token refresh.
 const AUTH_CALL = { skipAuthRefresh: true } as const;
 
+// The mobile app is for viewers only (BE `UserRole.MEMBER`).
+const MEMBER_ROLE = 'MEMBER';
+const STAFF_ON_MOBILE_MESSAGE =
+  'Tài khoản Sản xuất, Kiểm duyệt và Quản trị chỉ hỗ trợ trên phiên bản Web Studio máy tính. Ứng dụng di động chỉ dành riêng cho Khán giả!';
+
 class AuthService {
   async login(dto: LoginRequestDto): Promise<ApiResponse<AuthResponseDto>> {
     const trimmedEmail = dto.email.trim().toLowerCase();
-
-    // 1. Chặn Maker / Checker trên Mobile - chỉ hỗ trợ trên Web Studio
-    if (trimmedEmail === 'creator@gmail.com' || trimmedEmail === 'reviewer@gmail.com') {
-      return {
-        success: false,
-        data: null as unknown as AuthResponseDto,
-        message: 'Tài khoản Sản xuất & Kiểm duyệt (Maker/Checker) chỉ hỗ trợ trên phiên bản Web Studio máy tính. Ứng dụng di động chỉ dành riêng cho Khán giả!',
-        statusCode: 403,
-      };
-    }
 
     // Kết nối trực tiếp tới Backend NestJS (/api/auth/login)
     const res = await apiClient.post<AuthResponseDto>(
@@ -31,6 +26,19 @@ class AuthService {
 
     const token = res.data?.accessToken || res.data?.token;
     const user = res.data?.user;
+
+    if (res.success && token && user && user.role !== MEMBER_ROLE) {
+      // Creator, Reviewer, Staff and Admin work on the web portal; end the session just opened.
+      if (res.data.refreshToken) {
+        await apiClient.post(API_ROUTES.AUTH.LOGOUT, { refreshToken: res.data.refreshToken }, AUTH_CALL);
+      }
+      return {
+        success: false,
+        data: null as unknown as AuthResponseDto,
+        message: STAFF_ON_MOBILE_MESSAGE,
+        statusCode: 403,
+      };
+    }
 
     if (res.success && token && user) {
       await apiClient.saveSession({ accessToken: token, refreshToken: res.data.refreshToken });

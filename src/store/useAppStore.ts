@@ -231,14 +231,6 @@ export const useAppStore = create<AppState>()(
       login: async (email, password) => {
         const trimmedEmail = email.trim().toLowerCase();
 
-        // 1. Chặn tài khoản Maker / Checker trên Mobile - chỉ hỗ trợ trên Web Studio
-        if (trimmedEmail === 'creator@gmail.com' || trimmedEmail === 'reviewer@gmail.com') {
-          return {
-            success: false,
-            error: 'Tài khoản Sản xuất & Kiểm duyệt (Maker/Checker) chỉ hỗ trợ trên phiên bản Web Studio máy tính. Ứng dụng di động chỉ dành riêng cho Khán giả!',
-          };
-        }
-
         try {
           const res = await authService.login({ email: trimmedEmail, password });
           if (res.success && res.data?.user) {

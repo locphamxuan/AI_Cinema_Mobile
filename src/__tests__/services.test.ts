@@ -24,6 +24,7 @@ import {
 import { apiClient, extractErrorMessage } from '../services/apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
 import { API_CONFIG } from '../constants/config';
+import { storage, STORAGE_KEYS } from '../lib/storage';
 
 describe('API Routes and Config', () => {
   it('should have proper API routes configured', () => {
@@ -267,11 +268,29 @@ describe('Live Backend Connection (Port 3001)', () => {
     }
   });
 
-  it('authService.login blocks Maker and Checker accounts on Mobile', async () => {
-    const res = await authService.login({ email: 'creator@gmail.com', password: 'password123' });
+  it('authService.login rejects staff roles and revokes their session', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            accessToken: 'access',
+            refreshToken: 'r'.repeat(30),
+            user: { id: 'u1', email: 'creator01@aicinema.com', fullName: 'Creator', role: 'CONTENT_CREATOR' },
+          }),
+      } as Response)
+      .mockResolvedValueOnce({ ok: true, status: 204, text: async () => '' } as Response);
+
+    const res = await authService.login({ email: 'creator01@aicinema.com', password: 'Aicinema@123' });
+
     expect(res.success).toBe(false);
     expect(res.statusCode).toBe(403);
-    expect(res.message).toContain('Maker/Checker');
+    expect(res.message).toContain('Web Studio');
+    expect(String(fetchMock.mock.calls[1][0])).toContain('/auth/logout');
+    expect(await storage.getString(STORAGE_KEYS.AUTH_TOKEN, '')).toBe('');
+    jest.restoreAllMocks();
   });
 
   it('authService.login returns 401 with real BE error for wrong password', async () => {
