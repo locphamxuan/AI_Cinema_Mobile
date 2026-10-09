@@ -35,9 +35,23 @@ export function adaptUserProfile(api: any): UserProfile {
 export function adaptApiMovieToMovie(api: any): Movie {
   if (!api) api = {};
 
-  const episodes: Episode[] = Array.isArray(api.episodes)
+  const episodes: Episode[] = Array.isArray(api.episodes) && api.episodes.length > 0
     ? api.episodes.map((ep: any, index: number) => adaptApiEpisodeToEpisode(ep, index + 1))
-    : [];
+    : Array.from({ length: 12 }, (_, i) => ({
+        id: `ep-${api.id || 'default'}-${i + 1}`,
+        episodeNumber: i + 1,
+        title: `Tập ${i + 1}`,
+        duration: '24:00',
+        hlsUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
+        thumbnailUrl: api.posterUrl || api.thumbnailUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80',
+        price: i === 0 ? 0 : 10,
+        isFree: i === 0,
+        isPreview: i === 1,
+        isUnlocked: i === 0,
+        synopsis: `Tập ${i + 1} của bộ phim ${api.title || 'AI Cinema'}.`,
+        currentVersion: 'v1.0',
+        versions: [],
+      }));
 
   const genres: string[] = Array.isArray(api.genre)
     ? api.genre

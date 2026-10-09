@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Switch,
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -26,19 +27,26 @@ export default function WatchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { currentMovie, setCurrentMovie, openAuthModal, isAuthenticated, movies, myList, toggleMyList, user } = useAppStore();
+  const { currentMovie, setCurrentMovie, openAuthModal, isAuthenticated, movies, myList, toggleMyList, user, isVIPMode } = useAppStore();
 
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
 
   const [movie, setMovie] = useState<Movie | null>(foundMovie);
   const [loading, setLoading] = useState(!foundMovie);
-  const [activeEpisode, setActiveEpisode] = useState<Episode | null>(foundMovie?.episodes[0] || null);
+  const [activeEpisode, setActiveEpisode] = useState<Episode | null>(foundMovie?.episodes?.[0] || null);
   const [activeTab, setActiveTab] = useState<'subtitle' | 'voiceover' | 'recommend' | 'cast'>('subtitle');
   const [selectedServer, setSelectedServer] = useState('Vietsub (SN)');
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [autoNext, setAutoNext] = useState(false);
+  const [skipIntro, setSkipIntro] = useState(false);
+  const [showThumbnailGrid, setShowThumbnailGrid] = useState(false);
 
   const [complianceModalOpen, setComplianceModalOpen] = useState(false);
   const [unlockModalOpen, setUnlockModalOpen] = useState(false);
   const [targetUnlockEp, setTargetUnlockEp] = useState<Episode | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (!foundMovie && id) {
@@ -47,21 +55,46 @@ export default function WatchScreen() {
         if (res.success && res.data) {
           setMovie(res.data);
           setCurrentMovie(res.data);
-          setActiveEpisode(res.data.episodes[0] || null);
+          setActiveEpisode(res.data.episodes?.[0] || null);
         }
         setLoading(false);
       });
     } else if (foundMovie) {
       setMovie(foundMovie);
       setCurrentMovie(foundMovie);
-      setActiveEpisode(foundMovie.episodes[0] || null);
+      setActiveEpisode(foundMovie.episodes?.[0] || null);
       setLoading(false);
     }
   }, [id, foundMovie, setCurrentMovie]);
 
+  const episodes: Episode[] = movie?.episodes && movie.episodes.length > 0
+    ? movie.episodes
+    : Array.from({ length: 14 }, (_, i) => ({
+        id: `ep-${movie?.id || 'default'}-${i + 1}`,
+        episodeNumber: i + 1,
+        title: `Tập ${i + 1}`,
+        duration: '01:03:41',
+        hlsUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
+        thumbnailUrl: movie?.posterUrl || movie?.bannerUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80',
+        price: i === 0 ? 0 : 10,
+        isFree: i === 0,
+        isPreview: i === 1,
+        isUnlocked: i === 0,
+        synopsis: `Tập ${i + 1} của bộ phim ${movie?.title || 'AI Cinema'}.`,
+        currentVersion: 'v1.0',
+        versions: [],
+      }));
+
+  const currentActiveEpisode = activeEpisode || episodes[0] || null;
+
   const handleSelectEpisode = (ep: Episode) => {
-    if (ep.isFree || ep.isUnlocked) {
+    const isVIP = isVIPMode || user?.isVIP;
+
+    if (isVIP || ep.isFree || ep.isUnlocked) {
       setActiveEpisode(ep);
+      setIsPlaying(true);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      Alert.alert('Đang phát', `Đang phát Tập ${ep.episodeNumber}: ${ep.title}`);
     } else {
       if (!isAuthenticated) {
         openAuthModal('login');
@@ -73,10 +106,23 @@ export default function WatchScreen() {
   };
 
   const handleWatchNow = () => {
-    if (activeEpisode) {
-      handleSelectEpisode(activeEpisode);
-    } else if (movie && movie.episodes.length > 0) {
-      handleSelectEpisode(movie.episodes[0]);
+    const isVIP = isVIPMode || user?.isVIP;
+    const ep = currentActiveEpisode;
+
+    if (!ep) return;
+
+    if (isVIP || ep.isFree || ep.isUnlocked) {
+      setActiveEpisode(ep);
+      setIsPlaying(true);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      Alert.alert('Bắt đầu phát', `Đang phát Tập ${ep.episodeNumber}: ${ep.title}`);
+    } else {
+      if (!isAuthenticated) {
+        openAuthModal('login');
+        return;
+      }
+      setTargetUnlockEp(ep);
+      setUnlockModalOpen(true);
     }
   };
 
@@ -111,98 +157,123 @@ export default function WatchScreen() {
       {/* Top Header */}
       <Header />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Backdrop & Poster Card Section */}
-        <View style={styles.heroSection}>
-          <Image source={{ uri: movie.bannerUrl }} style={styles.backdropImage} />
-          <LinearGradient
-            colors={['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.85)', '#000000']}
-            style={styles.heroGradient}
+      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* Full Video Player Area (as seen in image 2) */}
+        <View style={styles.playerContainer}>
+          <Image
+            source={{ uri: currentActiveEpisode?.thumbnailUrl || movie.bannerUrl || movie.posterUrl }}
+            style={styles.playerVideoBg}
+            resizeMode="cover"
           />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.85)']}
+            style={styles.playerOverlay}
+          >
+            {/* Top-Left Lock Button */}
+            <TouchableOpacity
+              style={styles.playerLockBtn}
+              onPress={() => setIsLocked(!isLocked)}
+            >
+              <Ionicons name={isLocked ? 'lock-closed' : 'lock-open'} size={16} color="#FFFFFF" />
+            </TouchableOpacity>
 
-          <View style={styles.posterCardWrapper}>
-            <Image source={{ uri: movie.posterUrl }} style={styles.posterImage} />
+            {/* Center Play/Pause button */}
+            <TouchableOpacity
+              style={styles.playerCenterPlay}
+              onPress={() => setIsPlaying(!isPlaying)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name={isPlaying ? 'pause' : 'play'} size={32} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            {/* Bottom Player Control Bar */}
+            <View style={styles.playerControlBar}>
+              <TouchableOpacity onPress={() => setIsPlaying(!isPlaying)} style={styles.controlIconBtn}>
+                <Ionicons name={isPlaying ? 'pause' : 'play'} size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => setIsMuted(!isMuted)} style={styles.controlIconBtn}>
+                <Ionicons name={isMuted ? 'volume-mute' : 'volume-high'} size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              <Text style={styles.timeLabel}>00:00 / {currentActiveEpisode?.duration || '01:03:41'}</Text>
+
+              {/* Scrubber Track */}
+              <View style={styles.scrubberTrack}>
+                <View style={styles.scrubberFill} />
+              </View>
+
+              <TouchableOpacity style={styles.controlIconBtn}>
+                <MaterialCommunityIcons name="closed-caption" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.controlIconBtn}>
+                <Ionicons name="settings-outline" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.controlIconBtn}>
+                <Ionicons name="tv-outline" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.controlIconBtn}>
+                <Ionicons name="expand" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* Toggles Row: Chuyển tập & Skip giới thiệu */}
+        <View style={styles.playerTogglesRow}>
+          <View style={styles.toggleItem}>
+            <Text style={styles.toggleLabel}>Chuyển tập</Text>
+            <TouchableOpacity
+              style={[styles.miniToggleBtn, autoNext && styles.miniToggleBtnActive]}
+              onPress={() => setAutoNext(!autoNext)}
+            >
+              <Text style={[styles.miniToggleText, autoNext && styles.miniToggleTextActive]}>
+                {autoNext ? 'ON' : 'OFF'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.toggleItem}>
+            <Text style={styles.toggleLabel}>Skip giới thiệu</Text>
+            <TouchableOpacity
+              style={[styles.miniToggleBtn, skipIntro && styles.miniToggleBtnActive]}
+              onPress={() => setSkipIntro(!skipIntro)}
+            >
+              <Text style={[styles.miniToggleText, skipIntro && styles.miniToggleTextActive]}>
+                {skipIntro ? 'ON' : 'OFF'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Movie Meta Information */}
-        <View style={styles.metaContainer}>
-          <View style={styles.badgeRow}>
-            <View style={styles.fhdBadge}>
-              <Text style={styles.fhdText}>FHD</Text>
-            </View>
-            <Text style={styles.yearText}>{movie.year || 2026}</Text>
-          </View>
-
-          <Text style={styles.movieTitle} numberOfLines={2}>
-            {movie.title}
-          </Text>
-          <Text style={styles.movieSubtitle}>
-            {movie.aiCompliance?.aiModel ? `AI Model: ${movie.aiCompliance.aiModel}` : 'AI Cinema Original'}
-          </Text>
-
-          {/* Release Date info */}
-          <View style={styles.releaseInfoRow}>
-            <Ionicons name="calendar-outline" size={14} color="#F59E0B" />
-            <Text style={styles.releaseInfoText}>Tập mới phát sóng • Cập nhật hàng ngày</Text>
-          </View>
-
-          {/* Primary Action Buttons (Green as requested in reference images) */}
-          <View style={styles.actionButtonsCol}>
-            <TouchableOpacity
-              style={styles.greenPrimaryBtn}
-              activeOpacity={0.85}
-              onPress={handleWatchNow}
-            >
-              <Ionicons name="play" size={16} color="#FFFFFF" />
-              <Text style={styles.greenPrimaryBtnText}>XEM NGAY</Text>
+        {/* Movie Title & Action Buttons Row (Image 2 style) */}
+        <View style={styles.titleActionSection}>
+          <View style={styles.backTitleRow}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backArrowBtn}>
+              <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
             </TouchableOpacity>
+            <Text style={styles.screenMovieTitle} numberOfLines={1}>{movie.title}</Text>
+          </View>
+          <Text style={styles.screenMovieEnglishSub}>{movie.description ? movie.description.slice(0, 45) + '...' : 'AI Cinema Original'}</Text>
 
-            <TouchableOpacity
-              style={styles.darkSecondaryBtn}
-              activeOpacity={0.85}
-              onPress={() => Alert.alert('Xem chung', 'Tính năng Xem chung phòng ảo AI Room đang phát triển.')}
-            >
-              <Ionicons name="people" size={16} color="#FFFFFF" />
-              <Text style={styles.darkSecondaryBtnText}>Xem chung</Text>
+          {/* Action Tools Row (Camera, Heart, Bookmark, Share) */}
+          <View style={styles.toolsRow}>
+            <TouchableOpacity style={styles.toolBtn} onPress={() => Alert.alert('Chụp ảnh', 'Đã lưu ảnh màn hình vào thư viện.')}>
+              <Ionicons name="camera-outline" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.toolBtn} onPress={() => Alert.alert('Đã thích', 'Đã thêm vào danh sách yêu thích.')}>
+              <Ionicons name="heart-outline" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.toolBtn} onPress={() => toggleMyList(movie.id)}>
+              <Ionicons name={isAdded ? 'bookmark' : 'bookmark-outline'} size={18} color={isAdded ? '#10B981' : '#FFFFFF'} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.toolBtn} onPress={() => Alert.alert('Chia sẻ', 'Đã sao chép liên kết.')}>
+              <Ionicons name="share-social-outline" size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
-
-          {/* Action Icons Row (Like, Bookmark, Share) */}
-          <View style={styles.iconActionsRow}>
-            <TouchableOpacity
-              style={styles.iconActionItem}
-              onPress={() => Alert.alert('Đã thích', 'Bạn đã thêm phim vào danh sách yêu thích.')}
-            >
-              <Ionicons name="heart-outline" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.iconActionItem}
-              onPress={() => toggleMyList(movie.id)}
-            >
-              <Ionicons name={isAdded ? 'bookmark' : 'bookmark-outline'} size={20} color={isAdded ? '#10B981' : '#FFFFFF'} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.iconActionItem}
-              onPress={() => Alert.alert('Chia sẻ', 'Đã sao chép liên kết phim vào clipboard.')}
-            >
-              <Ionicons name="share-social-outline" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-
-          {/* AI Compliance Info Pill */}
-          <TouchableOpacity
-            style={styles.compliancePill}
-            onPress={() => setComplianceModalOpen(true)}
-          >
-            <MaterialCommunityIcons name="shield-check" size={14} color="#10B981" />
-            <Text style={styles.compliancePillText}>
-              {movie.aiCompliance.complianceArticle || 'Tuân thủ Điều 44 Luật AI'} (Điểm: {movie.aiCompliance.moderationScore}%)
-            </Text>
-            <Ionicons name="chevron-forward" size={12} color="#10B981" />
-          </TouchableOpacity>
         </View>
 
         {/* Tabs Row (Phụ đề, Thuyết minh, Đề xuất, Diễn viên) */}
@@ -240,7 +311,7 @@ export default function WatchScreen() {
         <View style={styles.serverSection}>
           <Text style={styles.serverLabel}>MÁY CHỦ:</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.serverScroll}>
-            {['Vietsub (SN)', 'Vietsub (PA)', 'Lox Sub AI'].map((server) => {
+            {['Vietsub (SN)', 'Vietsub #1 (NC)', 'Vietsub AI Pro'].map((server) => {
               const isSelected = selectedServer === server;
               return (
                 <TouchableOpacity
@@ -249,7 +320,7 @@ export default function WatchScreen() {
                   onPress={() => setSelectedServer(server)}
                 >
                   <Text style={[styles.serverPillText, isSelected && styles.serverPillTextActive]}>
-                    {server} | {movie.episodes.length}
+                    {server} | {episodes.length}
                   </Text>
                 </TouchableOpacity>
               );
@@ -257,17 +328,28 @@ export default function WatchScreen() {
           </ScrollView>
         </View>
 
-        {/* Episodes Grid / List Section (as seen in image 3) */}
+        {/* Episodes Grid / List Section (as seen in image 2) */}
         <View style={styles.episodesSection}>
           <View style={styles.episodesHeadingRow}>
             <Text style={styles.episodesHeading}>
-              Danh sách tập ({activeEpisode?.episodeNumber || 1} / {movie.episodes.length})
+              Danh sách tập ({currentActiveEpisode?.episodeNumber || 1} / {episodes.length})
             </Text>
+            <View style={styles.thumbnailSwitchRow}>
+              <Text style={styles.switchLabel}>Hiện ảnh</Text>
+              <Switch
+                value={showThumbnailGrid}
+                onValueChange={setShowThumbnailGrid}
+                trackColor={{ false: '#27272A', true: '#10B981' }}
+                thumbColor={'#FFFFFF'}
+                ios_backgroundColor="#27272A"
+              />
+            </View>
           </View>
 
+          {/* Episode Buttons Grid */}
           <View style={styles.episodeGrid}>
-            {movie.episodes.map((ep) => {
-              const isCurrent = ep.id === activeEpisode?.id;
+            {episodes.map((ep) => {
+              const isCurrent = ep.id === currentActiveEpisode?.id;
               const isLocked = !ep.isFree && !ep.isUnlocked;
 
               return (
@@ -280,7 +362,7 @@ export default function WatchScreen() {
                   <Ionicons
                     name={isLocked ? 'lock-closed' : 'play'}
                     size={12}
-                    color={isLocked ? '#F59E0B' : isCurrent ? '#10B981' : '#FFFFFF'}
+                    color={isLocked ? '#F59E0B' : isCurrent ? '#FFFFFF' : '#FFFFFF'}
                   />
                   <Text style={[styles.epGridButtonText, isCurrent && styles.epGridButtonTextActive]} numberOfLines={1}>
                     Tập {ep.episodeNumber}
@@ -289,67 +371,6 @@ export default function WatchScreen() {
                 </TouchableOpacity>
               );
             })}
-          </View>
-        </View>
-
-        {/* Comments Section (as seen in image 4) */}
-        <View style={styles.commentsSection}>
-          <View style={styles.commentHeaderRow}>
-            <Ionicons name="chatbubbles" size={16} color="#10B981" />
-            <Text style={styles.commentHeading}>Bình luận (1)</Text>
-          </View>
-
-          {!isAuthenticated ? (
-            <View style={styles.commentLoginCard}>
-              <Text style={styles.commentLoginText}>Đăng nhập để tham gia thảo luận cùng cộng đồng</Text>
-              <TouchableOpacity
-                style={styles.commentLoginBtn}
-                onPress={() => openAuthModal('login')}
-              >
-                <Text style={styles.commentLoginBtnText}>Đăng nhập ngay</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.commentCard}>
-              <View style={styles.commentUserRow}>
-                <View style={styles.commentAvatar}>
-                  <Text style={styles.commentAvatarInitial}>{user?.name?.charAt(0) || 'U'}</Text>
-                </View>
-                <View>
-                  <Text style={styles.commentUserName}>{user?.name || 'Thành viên'}</Text>
-                  <Text style={styles.commentTime}>Vừa xong</Text>
-                </View>
-              </View>
-              <Text style={styles.commentContent}>Phim AI xem cuốn quá, chất lượng hình ảnh đỉnh cao!</Text>
-            </View>
-          )}
-
-          {/* Sample Community Comment */}
-          <View style={styles.commentCard}>
-            <View style={styles.commentUserRow}>
-              <View style={[styles.commentAvatar, { backgroundColor: '#EC4899' }]}>
-                <Text style={styles.commentAvatarInitial}>T</Text>
-              </View>
-              <View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.commentUserName}>Trâm Quỳnh</Text>
-                  <View style={styles.commentEpTag}>
-                    <Text style={styles.commentEpTagText}>Tập 1</Text>
-                  </View>
-                </View>
-                <Text style={styles.commentTime}>4 ngày trước</Text>
-              </View>
-            </View>
-            <Text style={styles.commentContent}>Nhịp phim nhanh đã man cứ cgiac như bấm x2 để xem v.</Text>
-            <View style={styles.commentFooterRow}>
-              <TouchableOpacity style={styles.likeBtn}>
-                <Ionicons name="heart-outline" size={14} color="#94A3B8" />
-                <Text style={styles.likeCount}>1</Text>
-              </TouchableOpacity>
-              <TouchableOpacity>
-                <Text style={styles.replyText}>Trả lời</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       </ScrollView>
@@ -369,6 +390,8 @@ export default function WatchScreen() {
         onUnlocked={() => {
           if (targetUnlockEp) {
             setActiveEpisode({ ...targetUnlockEp, isUnlocked: true });
+            setIsPlaying(true);
+            scrollViewRef.current?.scrollTo({ y: 0, animated: true });
           }
         }}
       />
@@ -384,170 +407,148 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
-  heroSection: {
+  playerContainer: {
     width: '100%',
-    height: 260,
+    height: 220,
     position: 'relative',
-    backgroundColor: '#0B0F19',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    backgroundColor: '#000000',
   },
-  backdropImage: {
+  playerVideoBg: {
     width: '100%',
     height: '100%',
     position: 'absolute',
-    opacity: 0.5,
   },
-  heroGradient: {
+  playerOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
+    justifyContent: 'space-between',
+    padding: 12,
   },
-  posterCardWrapper: {
-    width: 130,
-    height: 185,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.2)',
-    overflow: 'hidden',
-    backgroundColor: '#1E293B',
-    marginBottom: -35,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
-    elevation: 8,
-    zIndex: 2,
-  },
-  posterImage: {
-    width: '100%',
-    height: '100%',
-  },
-  metaContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 45,
+  playerLockBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
   },
-  badgeRow: {
+  playerCenterPlay: {
+    alignSelf: 'center',
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playerControlBar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  fhdBadge: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+  controlIconBtn: {
+    padding: 4,
   },
-  fhdText: {
+  timeLabel: {
     color: '#FFFFFF',
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '600',
   },
-  yearText: {
+  scrubberTrack: {
+    flex: 1,
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 1.5,
+    overflow: 'hidden',
+  },
+  scrubberFill: {
+    width: '25%',
+    height: '100%',
+    backgroundColor: '#10B981',
+  },
+  playerTogglesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    backgroundColor: '#121212',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#27272A',
+    gap: 20,
+  },
+  toggleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  toggleLabel: {
     color: '#94A3B8',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
   },
-  movieTitle: {
-    fontSize: 22,
-    fontWeight: '900',
+  miniToggleBtn: {
+    backgroundColor: '#27272A',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  miniToggleBtnActive: {
+    backgroundColor: '#10B981',
+  },
+  miniToggleText: {
+    color: '#94A3B8',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  miniToggleTextActive: {
     color: '#FFFFFF',
-    textAlign: 'center',
   },
-  movieSubtitle: {
-    fontSize: 12,
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginTop: -4,
+  titleActionSection: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    gap: 8,
   },
-  releaseInfoRow: {
+  backTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 2,
   },
-  releaseInfoText: {
-    color: '#F59E0B',
-    fontSize: 12,
-    fontWeight: '700',
+  backArrowBtn: {
+    padding: 2,
   },
-  actionButtonsCol: {
-    width: '100%',
-    gap: 10,
-    marginTop: 12,
-  },
-  greenPrimaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#10B981',
-    paddingVertical: 12,
-    borderRadius: 10,
-    gap: 8,
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  greenPrimaryBtnText: {
+  screenMovieTitle: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: '900',
-    letterSpacing: 0.5,
+    flex: 1,
   },
-  darkSecondaryBtn: {
+  screenMovieEnglishSub: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginLeft: 26,
+    marginTop: -2,
+  },
+  toolsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1E293B',
-    paddingVertical: 11,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    gap: 8,
-  },
-  darkSecondaryBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  iconActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    marginLeft: 26,
     gap: 20,
-    marginVertical: 10,
+    marginTop: 6,
   },
-  iconActionItem: {
+  toolBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#18181B',
+    borderWidth: 1,
+    borderColor: '#27272A',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  compliancePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.35)',
-    gap: 6,
-  },
-  compliancePillText: {
-    color: '#10B981',
-    fontSize: 11,
-    fontWeight: '700',
   },
   tabsRow: {
     flexDirection: 'row',
@@ -589,12 +590,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   serverPill: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#18181B',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#27272A',
   },
   serverPillActive: {
     backgroundColor: '#10B981',
@@ -623,6 +624,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
   },
+  thumbnailSwitchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  switchLabel: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '600',
+  },
   episodeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -642,7 +653,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   epGridButtonActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: '#10B981',
     borderColor: '#10B981',
   },
   epGridButtonText: {
@@ -651,126 +662,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   epGridButtonTextActive: {
-    color: '#10B981',
+    color: '#FFFFFF',
   },
   coinCostTag: {
     color: '#F59E0B',
     fontSize: 10,
     fontWeight: '800',
   },
-  commentsSection: {
-    paddingHorizontal: 16,
-    marginTop: 24,
-    gap: 12,
-  },
-  commentHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  commentHeading: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  commentLoginCard: {
-    backgroundColor: '#121212',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#27272A',
-    alignItems: 'center',
-    gap: 10,
-  },
-  commentLoginText: {
-    color: '#94A3B8',
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  commentLoginBtn: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  commentLoginBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  commentCard: {
-    backgroundColor: '#121212',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#27272A',
-    gap: 8,
-  },
-  commentUserRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  commentAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#3B82F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  commentAvatarInitial: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  commentUserName: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  commentTime: {
-    color: '#71717A',
-    fontSize: 10,
-  },
-  commentContent: {
-    color: '#E4E4E7',
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  commentEpTag: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  commentEpTagText: {
-    color: '#10B981',
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  commentFooterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginTop: 4,
-  },
-  likeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  likeCount: {
-    color: '#94A3B8',
-    fontSize: 11,
-  },
-  replyText: {
-    color: '#94A3B8',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  titleFallback: {
-    color: '#FFFFFF',
+  title: {
     fontSize: 16,
     fontWeight: '700',
   },

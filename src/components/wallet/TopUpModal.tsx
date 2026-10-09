@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Modal, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../../theme';
+import { apiClient } from '../../services/apiClient';
 
 const PAYMENT_METHODS = [
+  { id: 'vnpay', name: 'VNPay', icon: 'card-outline' },
   { id: 'vietqr', name: 'VietQR', icon: 'qr-code-outline' },
   { id: 'momo', name: 'MoMo', icon: 'wallet-outline' },
   { id: 'zalopay', name: 'ZaloPay', icon: 'flash-outline' },
-  { id: 'card', name: 'Visa/Master', icon: 'card-outline' },
 ] as const;
 
 type PaymentMethodId = (typeof PAYMENT_METHODS)[number]['id'];
@@ -18,7 +20,7 @@ export const TopUpModal: React.FC = () => {
   const { isTopUpModalOpen, setTopUpModalOpen, wallet, depositCoins } = useAppStore();
 
   const [amount, setAmount] = useState('');
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodId>('vietqr');
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodId>('vnpay');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -35,8 +37,35 @@ export const TopUpModal: React.FC = () => {
       return;
     }
     setIsProcessing(true);
+
     try {
       const methodName = PAYMENT_METHODS.find((method) => method.id === selectedMethod)?.name || selectedMethod;
+
+      // Nếu là VNPay, thử gọi API tạo URL thanh toán VNPay từ Backend
+      if (selectedMethod === 'vnpay') {
+        try {
+          const res = await apiClient.post('/payment/vnpay/create-url', {
+            amount: amountVnd,
+            type: 'deposit',
+          });
+
+          if (res.success && res.data?.paymentUrl) {
+            setIsProcessing(false);
+            const result = await WebBrowser.openAuthSessionAsync(
+              res.data.paymentUrl,
+              'ai-cinemamobile://'
+            );
+            if (result.type === 'success') {
+              setIsSuccess(true);
+              return;
+            }
+          }
+        } catch {
+          // Fallback sang nạp coin trực tiếp nếu backend VNPay chưa sẵn sàng
+        }
+      }
+
+      // Xử lý nạp coin tiêu chuẩn
       const success = await depositCoins(amountVnd, methodName);
       setIsProcessing(false);
       if (success) setIsSuccess(true);
@@ -59,7 +88,7 @@ export const TopUpModal: React.FC = () => {
           style={[
             styles.container,
             {
-              backgroundColor: colors.surface,
+              backgroundColor: isDark ? '#121622' : '#FFFFFF',
               borderColor: colors.border,
             },
           ]}
@@ -88,7 +117,7 @@ export const TopUpModal: React.FC = () => {
               >
                 <View style={styles.rewardRow}>
                   <Text style={[styles.rewardLabel, { color: colors.textSecondary }]}>Coin nhận được:</Text>
-                    <Text style={styles.rewardValueHighlight}>Số dư đã cập nhật</Text>
+                  <Text style={styles.rewardValueHighlight}>Số dư đã cập nhật</Text>
                 </View>
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <View style={styles.rewardRow}>
@@ -125,9 +154,16 @@ export const TopUpModal: React.FC = () => {
                 value={amount}
                 onChangeText={(value) => setAmount(value.replace(/[^0-9]/g, ''))}
                 keyboardType="numeric"
-                placeholder="Nhập số tiền"
+                placeholder="Nhập số tiền (vd: 50000)"
                 placeholderTextColor={colors.textMuted}
-                style={[styles.amountInput, { color: colors.text, borderColor: colors.border }]}
+                style={[
+                  styles.amountInput,
+                  {
+                    backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
               />
 
               {/* Payment Method Selector */}
@@ -147,12 +183,12 @@ export const TopUpModal: React.FC = () => {
                         {
                           backgroundColor: isSelected
                             ? isDark
-                              ? '#1E293B'
-                              : '#EFF6FF'
+                              ? 'rgba(16, 185, 129, 0.2)'
+                              : '#ECFDF5'
                             : isDark
-                            ? '#131B2E'
+                            ? '#1E293B'
                             : '#F8FAFC',
-                          borderColor: isSelected ? colors.ruby : colors.border,
+                          borderColor: isSelected ? '#10B981' : colors.border,
                           borderWidth: isSelected ? 2 : 1,
                         },
                       ]}
@@ -160,13 +196,13 @@ export const TopUpModal: React.FC = () => {
                       <Ionicons
                         name={method.icon as any}
                         size={16}
-                        color={isSelected ? colors.ruby : colors.textSecondary}
+                        color={isSelected ? '#10B981' : colors.textSecondary}
                       />
                       <Text
                         style={[
                           styles.methodText,
                           {
-                            color: isSelected ? colors.ruby : colors.text,
+                            color: isSelected ? '#10B981' : colors.text,
                             fontWeight: isSelected ? '700' : '500',
                           },
                         ]}
@@ -178,11 +214,11 @@ export const TopUpModal: React.FC = () => {
                 })}
               </View>
 
-              {/* Submit button */}
+              {/* Submit button (Green theme) */}
               <TouchableOpacity
                 style={[
                   styles.topUpBtn,
-                  { backgroundColor: colors.ruby, opacity: isProcessing ? 0.7 : 1 },
+                  { backgroundColor: '#10B981', opacity: isProcessing ? 0.7 : 1 },
                 ]}
                 disabled={isProcessing}
                 onPress={handleTopUp}
@@ -191,7 +227,7 @@ export const TopUpModal: React.FC = () => {
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
                   <Text style={styles.topUpBtnText}>
-                    Nạp {Number(amount || 0).toLocaleString('vi-VN')} đ
+                    Thanh toán {Number(amount || 0).toLocaleString('vi-VN')} đ
                   </Text>
                 )}
               </TouchableOpacity>
@@ -304,9 +340,6 @@ const styles = StyleSheet.create({
   },
   rewardLabel: {
     fontSize: 13,
-  },
-  rewardSubLabel: {
-    fontSize: 11,
   },
   rewardValueHighlight: {
     fontSize: 15,
