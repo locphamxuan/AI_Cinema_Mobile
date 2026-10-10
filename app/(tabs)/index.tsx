@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../src/components/common/Header';
 import { HeroBanner } from '../../src/components/home/HeroBanner';
 import { ContinueWatchingSection } from '../../src/components/home/ContinueWatchingSection';
@@ -22,7 +19,7 @@ import { Movie } from '../../src/types/movie';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { movies, currentMovie, loadInitialData, fetchMovies } = useAppStore();
 
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');

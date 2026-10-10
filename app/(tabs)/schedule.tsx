@@ -8,7 +8,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../src/components/common/Header';
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';

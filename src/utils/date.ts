@@ -30,11 +30,3 @@ export function getTodayDateString(date: Date = new Date()): string {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
-
-/**
- * Returns Vietnamese day of week label for today, e.g. "Thứ Tư (T4)".
- */
-export function getTodayVnLabel(date: Date = new Date()): string {
-  const idx = getTodayDayIndex(date);
-  return VN_DAY_LABELS[idx];
-}

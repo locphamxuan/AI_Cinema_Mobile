@@ -11,10 +11,8 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
 import { movieService } from '../../src/services';
 import { Movie, Episode } from '../../src/types/movie';
@@ -48,6 +46,7 @@ export default function WatchScreen() {
   const [targetUnlockEp, setTargetUnlockEp] = useState<Episode | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // Movie list/detail responses carry no episodes, so they are always fetched separately.
   useEffect(() => {
     if (!foundMovie && id) {
       setLoading(true);
@@ -64,8 +63,12 @@ export default function WatchScreen() {
       setCurrentMovie(foundMovie);
       setActiveEpisode(foundMovie.episodes?.[0] || null);
       setLoading(false);
-    }
-  }, [id, foundMovie, setCurrentMovie]);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, setCurrentMovie]);
 
   const episodes: Episode[] = movie?.episodes && movie.episodes.length > 0
     ? movie.episodes
@@ -139,7 +142,7 @@ export default function WatchScreen() {
     return (
       <View style={[styles.container, { backgroundColor: '#000000', justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
         <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-        <Text style={[styles.title, { color: '#FFFFFF', marginTop: 12 }]}>Không tìm thấy phim</Text>
+        <Text style={[styles.movieTitle, { marginTop: 12 }]}>Không tìm thấy phim</Text>
         <TouchableOpacity
           style={styles.backBtnFallback}
           onPress={() => router.back()}
@@ -360,7 +363,7 @@ export default function WatchScreen() {
                   onPress={() => handleSelectEpisode(ep)}
                 >
                   <Ionicons
-                    name={isLocked ? 'lock-closed' : 'play'}
+                    name={isUnderRevision ? 'construct' : isLocked ? 'lock-closed' : 'play'}
                     size={12}
                     color={isLocked ? '#F59E0B' : isCurrent ? '#FFFFFF' : '#FFFFFF'}
                   />
@@ -372,6 +375,23 @@ export default function WatchScreen() {
               );
             })}
           </View>
+
+          {movie.episodes.length === 0 && (
+            <Text style={styles.episodeInfoText}>Phim chưa có tập nào được phát hành.</Text>
+          )}
+
+          {activeEpisode && (
+            <View style={styles.episodeInfo}>
+              <View style={styles.aiLabelRow}>
+                <MaterialCommunityIcons name="robot-outline" size={14} color="#10B981" />
+                <Text style={styles.aiLabelText}>{activeEpisode.aiLabel || 'Nội dung được tạo bởi AI'}</Text>
+              </View>
+              {activeEpisode.duration ? (
+                <Text style={styles.episodeInfoText}>Thời lượng: {activeEpisode.duration}</Text>
+              ) : null}
+              {activeEpisode.notice ? <Text style={styles.episodeNoticeText}>{activeEpisode.notice}</Text> : null}
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -663,6 +683,28 @@ const styles = StyleSheet.create({
   },
   epGridButtonTextActive: {
     color: '#FFFFFF',
+  },
+  episodeInfo: {
+    marginTop: 14,
+    gap: 6,
+  },
+  aiLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  aiLabelText: {
+    color: '#10B981',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  episodeInfoText: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  episodeNoticeText: {
+    color: '#F59E0B',
+    fontSize: 12,
   },
   coinCostTag: {
     color: '#F59E0B',

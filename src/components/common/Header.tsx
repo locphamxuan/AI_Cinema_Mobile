@@ -15,9 +15,6 @@ import { useRouter } from 'expo-router';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 import { useAppStore } from '../../store/useAppStore';
-import { useProductionStore } from '../../store/useProductionStore';
-import { ThemeToggle } from './ThemeToggle';
-import { WalletHeaderBadge } from './WalletHeaderBadge';
 import { ExploreModal } from './ExploreModal';
 
 interface HeaderProps {
@@ -29,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({ onProfilePress, onSearch }) => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { isAuthenticated, user, openAuthModal, toggleChat, logout, isVIPMode, wallet } = useAppStore();
+  const { isAuthenticated, user, openAuthModal, logout, isVIPMode, wallet } = useAppStore();
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isExploreOpen, setIsExploreOpen] = useState(false);

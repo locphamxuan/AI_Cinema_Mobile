@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons, FontAwesome5, Feather } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { Header } from '../../src/components/common/Header';
 import { ThemeToggle } from '../../src/components/common/ThemeToggle';
 import { useTheme } from '../../src/theme';

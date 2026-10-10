@@ -87,28 +87,6 @@ export default function VipScreen() {
     }
   };
 
-  const getDeviceQuota = (planId: string) => {
-    switch (planId) {
-      case 'vip':
-        return '5 thiết bị (Tối đa)';
-      case 'premium':
-        return '3 thiết bị cùng lúc';
-      default:
-        return '1 thiết bị kết nối';
-    }
-  };
-
-  const getQualityBadge = (planId: string) => {
-    switch (planId) {
-      case 'vip':
-        return '4K HDR + Dolby Atmos';
-      case 'premium':
-        return '4K Ultra HD 2160p';
-      default:
-        return 'Full HD 1080p';
-    }
-  };
-
   const faqs = [
     {
       q: 'Quyền quản lý thiết bị (MainFlow4) hoạt động như thế nào?',

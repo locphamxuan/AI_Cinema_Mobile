@@ -17,12 +17,7 @@ import {
   chatService,
 } from '../services';
 import { apiClient } from '../services/apiClient';
-import {
-  adaptApiMovieToMovie,
-  adaptApiWalletToWallet,
-  adaptApiCheckInToStreak,
-  adaptUserProfile,
-} from '../lib/apiAdapter';
+import { adaptUserProfile } from '../lib/apiAdapter';
 import { getTodayDayIndex } from '../utils/date';
 
 export const emptySubscription: UserSubscription = {
@@ -47,6 +42,17 @@ const createEmptyCheckInStreak = (): CheckInStreak => ({
   currentStreak: 0,
   lastCheckInDate: null,
   todayClaimed: false,
+});
+
+/** Everything tied to the signed-in account, reset on logout or when the session expires. */
+const signedOutState = () => ({
+  isAuthenticated: false,
+  user: null,
+  isVIPMode: false,
+  wallet: emptyWallet,
+  checkInStreak: createEmptyCheckInStreak(),
+  subscription: emptySubscription,
+  transactions: [] as Transaction[],
 });
 
 interface AppState {
@@ -148,8 +154,18 @@ export const useAppStore = create<AppState>()(
             ? moviesRes.data
             : [];
           set({ movies: rawList, currentMovie: rawList[0] || null, isLoadingMovies: false });
-          if (get().isAuthenticated) await get().loadAccountData();
-        } catch (e) {
+          if (get().isAuthenticated) {
+            // The persisted "signed in" flag can outlive the session; confirm it with the backend.
+            const profileRes = await authService.getProfile();
+            if (profileRes.success) {
+              set((s) => ({ user: s.user ? { ...s.user, ...profileRes.data } : profileRes.data }));
+              await get().loadAccountData();
+            } else if (profileRes.statusCode === 401) {
+              await apiClient.clearSession();
+              set(signedOutState());
+            }
+          }
+        } catch {
           set({ isLoadingMovies: false });
         }
       },
@@ -190,7 +206,7 @@ export const useAppStore = create<AppState>()(
             }
           }
           set({ movies: [], isLoadingMovies: false });
-        } catch (e) {
+        } catch {
           set({ movies: [], isLoadingMovies: false });
         }
       },
@@ -209,14 +225,6 @@ export const useAppStore = create<AppState>()(
 
       login: async (email, password) => {
         const trimmedEmail = email.trim().toLowerCase();
-
-        // 1. Chặn tài khoản Maker / Checker trên Mobile - chỉ hỗ trợ trên Web Studio
-        if (trimmedEmail === 'creator@gmail.com' || trimmedEmail === 'reviewer@gmail.com') {
-          return {
-            success: false,
-            error: 'Tài khoản Sản xuất & Kiểm duyệt (Maker/Checker) chỉ hỗ trợ trên phiên bản Web Studio máy tính. Ứng dụng di động chỉ dành riêng cho Khán giả!',
-          };
-        }
 
         try {
           const res = await authService.login({ email: trimmedEmail, password });
@@ -294,17 +302,8 @@ export const useAppStore = create<AppState>()(
       },
 
       logout: async () => {
-        try {
-          await authService.logout();
-        } catch (e) {
-          console.warn('Logout error:', e);
-        }
-        set({
-          isAuthenticated: false,
-          user: null,
-          isVIPMode: false,
-          subscription: emptySubscription,
-        });
+        await authService.logout();
+        set(signedOutState());
       },
 
       // ===== THEME (Default Pure White Light Mode) =====
@@ -576,3 +575,6 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+
+// A refresh token the backend rejects means the session is over on every screen.
+apiClient.onSessionExpired(() => useAppStore.setState(signedOutState()));

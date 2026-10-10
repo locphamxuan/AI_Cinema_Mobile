@@ -8,21 +8,3 @@ export interface UserProfile {
   vipExpiresAt?: string;
   createdAt: string;
 }
-
-export interface AuthResponse {
-  user: UserProfile;
-  token: string;
-  refreshToken?: string;
-}
-
-export interface LoginCredentials {
-  email: string;
-  password: string;
-  rememberMe?: boolean;
-}
-
-export interface RegisterCredentials {
-  name: string;
-  email: string;
-  password: string;
-}

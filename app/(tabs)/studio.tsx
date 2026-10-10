@@ -9,7 +9,7 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { Header } from '../../src/components/common/Header';
 import { MakerCheckerHeader } from '../../src/components/studio/MakerCheckerHeader';
 import { SceneCard } from '../../src/components/studio/SceneCard';
