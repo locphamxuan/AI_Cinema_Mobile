@@ -102,7 +102,7 @@ export default function ExploreScreen() {
 
   const handleMoviePress = (movie: Movie) => {
     router.push({
-      pathname: '/watch/[id]',
+      pathname: '/movie/[id]',
       params: { id: movie.id },
     });
   };

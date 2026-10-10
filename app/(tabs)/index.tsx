@@ -43,7 +43,7 @@ export default function HomeScreen() {
 
   const handleMoviePress = (movie: Movie) => {
     router.push({
-      pathname: '/watch/[id]',
+      pathname: '/movie/[id]',
       params: { id: movie.id },
     });
   };

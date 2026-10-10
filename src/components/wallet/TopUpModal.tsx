@@ -4,7 +4,7 @@ import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../../theme';
-import { apiClient } from '../../services/apiClient';
+import { walletService } from '../../services/walletService';
 
 const PAYMENT_METHODS = [
   { id: 'vnpay', name: 'VNPay', icon: 'card-outline' },
@@ -17,7 +17,7 @@ type PaymentMethodId = (typeof PAYMENT_METHODS)[number]['id'];
 
 export const TopUpModal: React.FC = () => {
   const { colors, isDark } = useTheme();
-  const { isTopUpModalOpen, setTopUpModalOpen, wallet, depositCoins } = useAppStore();
+  const { isTopUpModalOpen, setTopUpModalOpen, wallet } = useAppStore();
 
   const [amount, setAmount] = useState('');
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethodId>('vnpay');
@@ -39,40 +39,60 @@ export const TopUpModal: React.FC = () => {
     setIsProcessing(true);
 
     try {
-      const methodName = PAYMENT_METHODS.find((method) => method.id === selectedMethod)?.name || selectedMethod;
+      const provider = selectedMethod.toUpperCase() === 'MOMO' ? 'MOMO' : 'VNPAY';
 
-      // Nếu là VNPay, thử gọi API tạo URL thanh toán VNPay từ Backend
-      if (selectedMethod === 'vnpay') {
-        try {
-          const res = await apiClient.post('/payment/vnpay/create-url', {
-            amount: amountVnd,
-            type: 'deposit',
-          });
+      // 1. Tạo đơn nạp PENDING (POST /api/wallet/top-ups) với DTO { provider, amountVnd }
+      const response = await walletService.deposit({ amountVnd, provider });
 
-          if (res.success && res.data?.paymentUrl) {
-            setIsProcessing(false);
-            const result = await WebBrowser.openAuthSessionAsync(
-              res.data.paymentUrl,
-              'ai-cinemamobile://'
-            );
-            if (result.type === 'success') {
-              setIsSuccess(true);
-              return;
+      if (response.success && response.data?.paymentUrl) {
+        const topUpId = response.data.topUpId || response.data.transactionId;
+
+        // 2. Mở cổng thanh toán VNPay
+        const browserResult = await WebBrowser.openAuthSessionAsync(
+          response.data.paymentUrl,
+          'ai-cinemamobile://'
+        );
+
+        if (topUpId) {
+          // 3. Poll GET /api/wallet/top-ups/:topUpId mỗi 2.5 giây khi đơn còn PENDING
+          const pollInterval = setInterval(async () => {
+            try {
+              const statusRes = await walletService.getTopUpStatus(topUpId);
+              if (statusRes.success && statusRes.data) {
+                const { status } = statusRes.data;
+                if (status === 'PAID') {
+                  clearInterval(pollInterval);
+                  setIsProcessing(false);
+                  setIsSuccess(true);
+                } else if (['FAILED', 'CANCELLED', 'EXPIRED'].includes(status)) {
+                  clearInterval(pollInterval);
+                  setIsProcessing(false);
+                  Alert.alert('Thanh toán thất bại', `Trạng thái đơn: ${status}`);
+                }
+              }
+            } catch {
+              // Bỏ qua lỗi mạng tạm thời trong lúc poll
             }
-          }
-        } catch {
-          // Fallback sang nạp coin trực tiếp nếu backend VNPay chưa sẵn sàng
-        }
-      }
+          }, 2500);
 
-      // Xử lý nạp coin tiêu chuẩn
-      const success = await depositCoins(amountVnd, methodName);
+          // Timeout sau 60 giây dừng polling
+          setTimeout(() => {
+            clearInterval(pollInterval);
+            setIsProcessing(false);
+          }, 60000);
+        } else {
+          setIsProcessing(false);
+          if (browserResult.type === 'success') {
+            setIsSuccess(true);
+          }
+        }
+      } else {
+        setIsProcessing(false);
+        Alert.alert('Lỗi nạp tiền', response.message || 'TOPUP_AMOUNT_OUT_OF_RANGE: Số tiền vượt hạn mức hệ thống.');
+      }
+    } catch (err: any) {
       setIsProcessing(false);
-      if (success) setIsSuccess(true);
-      else Alert.alert('Không thể nạp Coin', 'Máy chủ chưa xác nhận giao dịch. Vui lòng thử lại.');
-    } catch {
-      setIsProcessing(false);
-      Alert.alert('Lỗi kết nối', 'Không thể kết nối máy chủ nạp Coin.');
+      Alert.alert('Lỗi kết nối', err?.message || 'Không thể kết nối đến máy chủ.');
     }
   };
 

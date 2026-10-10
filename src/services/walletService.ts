@@ -45,19 +45,28 @@ class WalletService {
     });
   }
 
-  async deposit(dto: DepositRequestDto): Promise<ApiResponse<{ balance: WalletState; transactionId: string }>> {
-    return apiClient.post<DepositResponseDto>(API_ROUTES.WALLET.DEPOSIT, dto).then((response) => {
-      if (!response.success || !response.data) {
-        return { ...response, data: null as unknown as { balance: WalletState; transactionId: string } };
-      }
+  async deposit(dto: DepositRequestDto): Promise<ApiResponse<{ balance?: WalletState; transactionId: string; paymentUrl?: string; topUpId?: string }>> {
+    const response = await apiClient.post<DepositResponseDto>(API_ROUTES.WALLET.DEPOSIT, dto);
+    if (!response.success || !response.data) {
       return {
-        ...response,
-        data: {
-          balance: adaptApiWalletToWallet(response.data.balance),
-          transactionId: response.data.transactionId,
-        },
+        success: false,
+        data: null as unknown as { balance?: WalletState; transactionId: string; paymentUrl?: string; topUpId?: string },
+        message: response.message || 'TOPUP_AMOUNT_OUT_OF_RANGE hoặc lỗi tạo đơn nạp tiền trên máy chủ',
+        statusCode: response.statusCode,
       };
-    });
+    }
+    return {
+      ...response,
+      data: {
+        transactionId: response.data.topUpId,
+        topUpId: response.data.topUpId,
+        paymentUrl: response.data.redirectUrl,
+      },
+    };
+  }
+
+  async getTopUpStatus(topUpId: string): Promise<ApiResponse<{ id: string; status: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED' | 'EXPIRED'; amountVnd: number; mainCoin?: number }>> {
+    return apiClient.get(API_ROUTES.WALLET.TOP_UP_DETAIL(topUpId));
   }
 
   async getTransactions(): Promise<ApiResponse<Transaction[]>> {
@@ -66,20 +75,6 @@ class WalletService {
 
   async unlockEpisode(dto: UnlockEpisodeRequestDto): Promise<ApiResponse<{ success: boolean; newBalance?: WalletState }>> {
     const res = await apiClient.post<{ success: boolean; newBalance?: WalletState }>(API_ROUTES.WALLET.UNLOCK_EPISODE, dto);
-    if (res.success) {
-      return res;
-    }
-    // Graceful fallback if backend endpoint 404 (not implemented yet)
-    if (res.statusCode === 404) {
-      return {
-        success: true,
-        data: {
-          success: true,
-          newBalance: { mainCoin: 320, bonusCoin: 150 },
-        },
-        statusCode: 200,
-      };
-    }
     return res;
   }
 }

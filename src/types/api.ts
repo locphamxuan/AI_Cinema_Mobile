@@ -124,18 +124,22 @@ export interface CheckInResponseDto {
 
 export interface DepositRequestDto {
   amountVnd: number;
-  paymentMethod: string;
-  packageId?: string;
-  mainCoin?: number;
-  bonusCoin?: number;
+  provider: 'VNPAY' | 'MOMO';
 }
 
 export interface DepositResponseDto {
-  transactionId: string;
-  mainCoin: number;
-  bonusCoin: number;
-  status: string;
-  balance: ApiWalletDto;
+  topUpId: string;
+  provider: 'VNPAY' | 'MOMO';
+  providerTxnId: string;
+  amountVnd: number;
+  coinsGranted: number;
+  rateVnd: number;
+  status: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
+  redirectUrl: string;
+  expiresAt: string;
+  failureReason: string | null;
+  paidAt: string | null;
+  providerPaymentId: string | null;
 }
 
 export interface UnlockEpisodeRequestDto {

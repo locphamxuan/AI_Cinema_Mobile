@@ -1,6 +1,6 @@
 /**
  * AI Cinema Mobile - Backend API Endpoints Registry
- * Maps 1-to-1 with NestJS Backend Controllers
+ * Maps 1-to-1 with NestJS Backend Controllers (39 Endpoints Spec Match)
  */
 export const API_ROUTES = {
   // Auth
@@ -28,8 +28,10 @@ export const API_ROUTES = {
     INFO: '/wallet',
     CHECK_IN: '/wallet/check-in',
     STREAK: '/wallet/streak',
-    DEPOSIT: '/wallet/deposit',
-    TRANSACTIONS: '/wallet/transactions',
+    DEPOSIT: '/wallet/top-ups', // Spec #12: POST /api/wallet/top-ups
+    TOP_UPS: '/wallet/top-ups',
+    TOP_UP_DETAIL: (topUpId: string) => `/wallet/top-ups/${topUpId}`,
+    TRANSACTIONS: '/wallet/statements',
     UNLOCK_EPISODE: '/wallet/unlock-episode',
   },
 
