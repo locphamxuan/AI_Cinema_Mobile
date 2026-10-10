@@ -94,7 +94,7 @@ export default function ScheduleScreen() {
                 },
               ]}
               activeOpacity={0.8}
-              onPress={() => router.push({ pathname: '/watch/[id]', params: { id: movie.id } })}
+              onPress={() => router.push({ pathname: '/movie/[id]', params: { id: movie.id } })}
             >
               <Image source={{ uri: movie.posterUrl }} style={styles.poster} />
               <View style={styles.info}>

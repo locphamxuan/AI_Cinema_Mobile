@@ -523,7 +523,8 @@ export const useAppStore = create<AppState>()(
 
       // ===== DEPOSIT COINS =====
       depositCoins: async (amountVnd, paymentMethod) => {
-        const response = await walletService.deposit({ amountVnd, paymentMethod });
+        const provider = paymentMethod.toUpperCase() === 'MOMO' ? 'MOMO' : 'VNPAY';
+        const response = await walletService.deposit({ amountVnd, provider });
         if (!response.success || !response.data) return false;
         if (response.data.balance) set({ wallet: response.data.balance });
         else {

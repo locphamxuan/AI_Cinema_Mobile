@@ -1,24 +1,26 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Modal, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../../theme';
+import { walletService } from '../../services/walletService';
 
 const PAYMENT_METHODS = [
+  { id: 'vnpay', name: 'VNPay', icon: 'card-outline' },
   { id: 'vietqr', name: 'VietQR', icon: 'qr-code-outline' },
   { id: 'momo', name: 'MoMo', icon: 'wallet-outline' },
   { id: 'zalopay', name: 'ZaloPay', icon: 'flash-outline' },
-  { id: 'card', name: 'Visa/Master', icon: 'card-outline' },
 ] as const;
 
 type PaymentMethodId = (typeof PAYMENT_METHODS)[number]['id'];
 
 export const TopUpModal: React.FC = () => {
   const { colors, isDark } = useTheme();
-  const { isTopUpModalOpen, setTopUpModalOpen, wallet, depositCoins } = useAppStore();
+  const { isTopUpModalOpen, setTopUpModalOpen, wallet } = useAppStore();
 
   const [amount, setAmount] = useState('');
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodId>('vietqr');
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodId>('vnpay');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -35,15 +37,62 @@ export const TopUpModal: React.FC = () => {
       return;
     }
     setIsProcessing(true);
+
     try {
-      const methodName = PAYMENT_METHODS.find((method) => method.id === selectedMethod)?.name || selectedMethod;
-      const success = await depositCoins(amountVnd, methodName);
+      const provider = selectedMethod.toUpperCase() === 'MOMO' ? 'MOMO' : 'VNPAY';
+
+      // 1. Tạo đơn nạp PENDING (POST /api/wallet/top-ups) với DTO { provider, amountVnd }
+      const response = await walletService.deposit({ amountVnd, provider });
+
+      if (response.success && response.data?.paymentUrl) {
+        const topUpId = response.data.topUpId || response.data.transactionId;
+
+        // 2. Mở cổng thanh toán VNPay
+        const browserResult = await WebBrowser.openAuthSessionAsync(
+          response.data.paymentUrl,
+          'ai-cinemamobile://'
+        );
+
+        if (topUpId) {
+          // 3. Poll GET /api/wallet/top-ups/:topUpId mỗi 2.5 giây khi đơn còn PENDING
+          const pollInterval = setInterval(async () => {
+            try {
+              const statusRes = await walletService.getTopUpStatus(topUpId);
+              if (statusRes.success && statusRes.data) {
+                const { status } = statusRes.data;
+                if (status === 'PAID') {
+                  clearInterval(pollInterval);
+                  setIsProcessing(false);
+                  setIsSuccess(true);
+                } else if (['FAILED', 'CANCELLED', 'EXPIRED'].includes(status)) {
+                  clearInterval(pollInterval);
+                  setIsProcessing(false);
+                  Alert.alert('Thanh toán thất bại', `Trạng thái đơn: ${status}`);
+                }
+              }
+            } catch {
+              // Bỏ qua lỗi mạng tạm thời trong lúc poll
+            }
+          }, 2500);
+
+          // Timeout sau 60 giây dừng polling
+          setTimeout(() => {
+            clearInterval(pollInterval);
+            setIsProcessing(false);
+          }, 60000);
+        } else {
+          setIsProcessing(false);
+          if (browserResult.type === 'success') {
+            setIsSuccess(true);
+          }
+        }
+      } else {
+        setIsProcessing(false);
+        Alert.alert('Lỗi nạp tiền', response.message || 'TOPUP_AMOUNT_OUT_OF_RANGE: Số tiền vượt hạn mức hệ thống.');
+      }
+    } catch (err: any) {
       setIsProcessing(false);
-      if (success) setIsSuccess(true);
-      else Alert.alert('Không thể nạp Coin', 'Máy chủ chưa xác nhận giao dịch. Vui lòng thử lại.');
-    } catch {
-      setIsProcessing(false);
-      Alert.alert('Lỗi kết nối', 'Không thể kết nối máy chủ nạp Coin.');
+      Alert.alert('Lỗi kết nối', err?.message || 'Không thể kết nối đến máy chủ.');
     }
   };
 
@@ -59,7 +108,7 @@ export const TopUpModal: React.FC = () => {
           style={[
             styles.container,
             {
-              backgroundColor: colors.surface,
+              backgroundColor: isDark ? '#121622' : '#FFFFFF',
               borderColor: colors.border,
             },
           ]}
@@ -88,7 +137,7 @@ export const TopUpModal: React.FC = () => {
               >
                 <View style={styles.rewardRow}>
                   <Text style={[styles.rewardLabel, { color: colors.textSecondary }]}>Coin nhận được:</Text>
-                    <Text style={styles.rewardValueHighlight}>Số dư đã cập nhật</Text>
+                  <Text style={styles.rewardValueHighlight}>Số dư đã cập nhật</Text>
                 </View>
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <View style={styles.rewardRow}>
@@ -125,9 +174,16 @@ export const TopUpModal: React.FC = () => {
                 value={amount}
                 onChangeText={(value) => setAmount(value.replace(/[^0-9]/g, ''))}
                 keyboardType="numeric"
-                placeholder="Nhập số tiền"
+                placeholder="Nhập số tiền (vd: 50000)"
                 placeholderTextColor={colors.textMuted}
-                style={[styles.amountInput, { color: colors.text, borderColor: colors.border }]}
+                style={[
+                  styles.amountInput,
+                  {
+                    backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
               />
 
               {/* Payment Method Selector */}
@@ -147,12 +203,12 @@ export const TopUpModal: React.FC = () => {
                         {
                           backgroundColor: isSelected
                             ? isDark
-                              ? '#1E293B'
-                              : '#EFF6FF'
+                              ? 'rgba(16, 185, 129, 0.2)'
+                              : '#ECFDF5'
                             : isDark
-                            ? '#131B2E'
+                            ? '#1E293B'
                             : '#F8FAFC',
-                          borderColor: isSelected ? colors.ruby : colors.border,
+                          borderColor: isSelected ? '#10B981' : colors.border,
                           borderWidth: isSelected ? 2 : 1,
                         },
                       ]}
@@ -160,13 +216,13 @@ export const TopUpModal: React.FC = () => {
                       <Ionicons
                         name={method.icon as any}
                         size={16}
-                        color={isSelected ? colors.ruby : colors.textSecondary}
+                        color={isSelected ? '#10B981' : colors.textSecondary}
                       />
                       <Text
                         style={[
                           styles.methodText,
                           {
-                            color: isSelected ? colors.ruby : colors.text,
+                            color: isSelected ? '#10B981' : colors.text,
                             fontWeight: isSelected ? '700' : '500',
                           },
                         ]}
@@ -178,11 +234,11 @@ export const TopUpModal: React.FC = () => {
                 })}
               </View>
 
-              {/* Submit button */}
+              {/* Submit button (Green theme) */}
               <TouchableOpacity
                 style={[
                   styles.topUpBtn,
-                  { backgroundColor: colors.ruby, opacity: isProcessing ? 0.7 : 1 },
+                  { backgroundColor: '#10B981', opacity: isProcessing ? 0.7 : 1 },
                 ]}
                 disabled={isProcessing}
                 onPress={handleTopUp}
@@ -191,7 +247,7 @@ export const TopUpModal: React.FC = () => {
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
                   <Text style={styles.topUpBtnText}>
-                    Nạp {Number(amount || 0).toLocaleString('vi-VN')} đ
+                    Thanh toán {Number(amount || 0).toLocaleString('vi-VN')} đ
                   </Text>
                 )}
               </TouchableOpacity>
@@ -304,9 +360,6 @@ const styles = StyleSheet.create({
   },
   rewardLabel: {
     fontSize: 13,
-  },
-  rewardSubLabel: {
-    fontSize: 11,
   },
   rewardValueHighlight: {
     fontSize: 15,
