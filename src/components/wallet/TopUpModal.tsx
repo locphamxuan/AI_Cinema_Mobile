@@ -87,7 +87,9 @@ export const TopUpModal: React.FC = () => {
       setErrorMsg(res.message || 'Không tạo được đơn nạp Coin.');
       return;
     }
-    await WebBrowser.openAuthSessionAsync(res.data.redirectUrl, 'ai-cinemamobile://');
+    // The backend returns to the web wallet page. Keep the auth session open until the member
+    // closes that page or a future backend return deep link reaches this app, then reconcile.
+    await WebBrowser.openAuthSessionAsync(res.data.redirectUrl, 'aicinema://');
     poll(res.data.topUpId);
   };
 
