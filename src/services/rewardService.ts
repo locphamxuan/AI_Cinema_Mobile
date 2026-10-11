@@ -21,8 +21,8 @@ class RewardService {
   }
 
   /** POST /rewards/spins — uses the oldest spin; the BE draws and pays the prize. */
-  spin(): Promise<ApiResponse<SpinResult>> {
-    return apiClient.post<SpinResult>(API_ROUTES.REWARDS.SPINS, {}, { headers: { 'Idempotency-Key': idempotencyKey('spin-') } });
+  spin(key = idempotencyKey('spin-')): Promise<ApiResponse<SpinResult>> {
+    return apiClient.post<SpinResult>(API_ROUTES.REWARDS.SPINS, {}, { headers: { 'Idempotency-Key': key } });
   }
 }
 

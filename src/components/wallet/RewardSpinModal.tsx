@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../../theme';
 import { rewardService } from '../../services/rewardService';
+import { idempotencyKey } from '../../lib/ids';
 import type { RewardPrize, RewardWheelStatus, SpinResult } from '../../types/episodeAccess';
 
 const SPIN_MS = 2400;
@@ -24,6 +25,8 @@ function SpinDialog() {
   const [wheel, setWheel] = useState<RewardWheelStatus | null>(null);
   const [won, setWon] = useState<SpinResult | null>(null);
   const [spinning, setSpinning] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [pendingSpinKey, setPendingSpinKey] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const turn = useRef(new Animated.Value(0)).current;
 
@@ -31,7 +34,7 @@ function SpinDialog() {
     rewardService.getWheel().then((res) => {
       if (res.success && res.data) setWheel(res.data);
       else setErrorMsg(res.message || 'Không tải được vòng quay.');
-    });
+    }).catch(() => setErrorMsg('Không tải được vòng quay.')).finally(() => setLoading(false));
   }, []);
 
   const close = () => {
@@ -41,25 +44,40 @@ function SpinDialog() {
   };
 
   const spin = async () => {
+    if (spinning || (spins <= 0 && !pendingSpinKey) || prizes.length === 0) return;
     setSpinning(true);
     setErrorMsg(null);
     setWon(null);
-    const res = await rewardService.spin();
-    if (!res.success || !res.data) {
+    const key = pendingSpinKey ?? idempotencyKey('spin-');
+    if (!pendingSpinKey) setPendingSpinKey(key);
+    try {
+      const res = await rewardService.spin(key);
+      if (!res.success || !res.data) {
+        setSpinning(false);
+        setErrorMsg(res.message || 'Không quay được, vui lòng thử lại.');
+        return;
+      }
+      setPendingSpinKey(null);
+      const result = res.data;
+      turn.setValue(0);
+      Animated.timing(turn, { toValue: 1, duration: SPIN_MS, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => {
+        setSpinning(false);
+        setWon(result);
+        setWalletBalance(result.mainBalance, result.bonusBalance);
+        // Plan days may have started a plan: the BE says whether every episode is open now.
+        if (result.planDays) void loadAccountData();
+        setWheel((w) => w && { ...w, availableSpins: result.availableSpins, history: [result, ...w.history].slice(0, 10) });
+      });
+    } catch {
       setSpinning(false);
-      setErrorMsg(res.message || 'Không quay được, vui lòng thử lại.');
-      return;
+      setErrorMsg('Chưa nhận được kết quả. Hãy thử lại để kiểm tra lượt quay vừa rồi.');
+      try {
+        const refreshed = await rewardService.getWheel();
+        if (refreshed.success && refreshed.data) setWheel(refreshed.data);
+      } catch {
+        // Keep the pending key so a retry asks the server for the same result.
+      }
     }
-    const result = res.data;
-    turn.setValue(0);
-    Animated.timing(turn, { toValue: 1, duration: SPIN_MS, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => {
-      setSpinning(false);
-      setWon(result);
-      setWalletBalance(result.mainBalance, result.bonusBalance);
-      // Plan days may have started a plan: the BE says whether every episode is open now.
-      if (result.planDays) void loadAccountData();
-      setWheel((w) => w && { ...w, availableSpins: result.availableSpins, history: [result, ...w.history].slice(0, 10) });
-    });
   };
 
   const rotate = turn.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '1800deg'] });
@@ -76,9 +94,9 @@ function SpinDialog() {
               <Ionicons name="close" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
-          <Text style={[styles.sub, { color: colors.textSecondary }]}>Bạn còn {spins} lượt quay.</Text>
+          <Text style={[styles.sub, { color: colors.textSecondary }]}>{loading ? 'Đang tải lượt quay...' : `Bạn còn ${spins} lượt quay.`}</Text>
 
-          {!wheel && !errorMsg && <ActivityIndicator style={{ marginVertical: 30 }} color="#8B5CF6" />}
+          {loading && <ActivityIndicator style={{ marginVertical: 30 }} color="#8B5CF6" />}
 
           {wheel && (
             <>
@@ -86,7 +104,7 @@ function SpinDialog() {
                 <Ionicons name="gift" size={46} color="#FFFFFF" />
               </Animated.View>
               {prizes.length === 0 ? (
-                <Text style={[styles.sub, { color: colors.textSecondary, textAlign: 'center' }]}>Vòng quay chưa có giải thưởng nào.</Text>
+                <Text style={[styles.sub, { color: colors.textSecondary, textAlign: 'center' }]}>Chưa có giải thưởng phù hợp cho tài khoản này.</Text>
               ) : (
                 <View style={styles.prizeList}>
                   {prizes.map((p) => (
@@ -110,14 +128,19 @@ function SpinDialog() {
             </View>
           )}
 
-          {errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
+          {errorMsg && (
+            <View style={styles.errorRow}>
+              <Text style={styles.errorText}>{errorMsg}</Text>
+              {!pendingSpinKey && <TouchableOpacity onPress={() => { setLoading(true); setErrorMsg(null); void rewardService.getWheel().then((res) => { if (res.success && res.data) setWheel(res.data); else setErrorMsg(res.message || 'Không tải được vòng quay.'); }).catch(() => setErrorMsg('Không tải được vòng quay.')).finally(() => setLoading(false)); }}><Text style={styles.errorText}>Thử tải lại</Text></TouchableOpacity>}
+            </View>
+          )}
 
           <TouchableOpacity
-            style={[styles.spinBtn, { opacity: spinning || spins <= 0 || prizes.length === 0 ? 0.5 : 1 }]}
+            style={[styles.spinBtn, { opacity: loading || spinning || (spins <= 0 && !pendingSpinKey) || prizes.length === 0 ? 0.5 : 1 }]}
             onPress={spin}
-            disabled={spinning || spins <= 0 || prizes.length === 0}
+            disabled={loading || spinning || (spins <= 0 && !pendingSpinKey) || prizes.length === 0}
           >
-            <Text style={styles.spinBtnText}>{spinning ? 'Đang quay...' : spins > 0 ? `Quay ngay (${spins})` : 'Hết lượt quay'}</Text>
+            <Text style={styles.spinBtnText}>{loading ? 'Đang tải vòng quay...' : spinning ? 'Đang quay...' : pendingSpinKey ? 'Lấy kết quả lần quay' : spins > 0 ? `Quay ngay (${spins})` : 'Hết lượt quay'}</Text>
           </TouchableOpacity>
           {spins <= 0 && !spinning && (
             <Text style={[styles.footnote, { color: colors.textMuted }]}>Điểm danh tới ngày mốc của chuỗi để nhận thêm lượt quay.</Text>
@@ -152,6 +175,7 @@ const styles = StyleSheet.create({
   wonTitle: { color: '#10B981', fontWeight: '800', fontSize: 14, textAlign: 'center' },
   wonText: { color: '#10B981', fontSize: 12, marginTop: 2, textAlign: 'center' },
   errorText: { color: '#EF4444', fontSize: 12, marginBottom: 10, textAlign: 'center' },
+  errorRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   spinBtn: { width: '100%', paddingVertical: 12, borderRadius: 12, alignItems: 'center', backgroundColor: '#F59E0B' },
   spinBtnText: { color: '#0F172A', fontWeight: '900', fontSize: 14 },
   footnote: { fontSize: 11, textAlign: 'center', marginTop: 8 },

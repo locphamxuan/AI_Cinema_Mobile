@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useAppStore } from '../../store/useAppStore';
@@ -28,10 +28,19 @@ export function ladderDays(status: DailyRewardStatus | null, claimedDay?: number
 /** BR-05: daily check-in pays bonus Coins only; the milestone day of the ladder also grants a spin (BR-09). */
 export const CheckInModal: React.FC = () => {
   const { colors, isDark } = useTheme();
-  const { isCheckInModalOpen, setCheckInModalOpen, dailyReward, claimDailyCheckIn, setRewardSpinOpen } = useAppStore();
+  const { isCheckInModalOpen, setCheckInModalOpen, dailyReward, loadDailyReward, claimDailyCheckIn, setRewardSpinOpen } = useAppStore();
   const [claimed, setClaimed] = useState<CheckInResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isCheckInModalOpen) return;
+    setStatusLoading(true);
+    void loadDailyReward()
+      .catch(() => setErrorMsg('Không tải được trạng thái điểm danh.'))
+      .finally(() => setStatusLoading(false));
+  }, [isCheckInModalOpen, loadDailyReward]);
 
   const close = () => {
     setClaimed(null);
@@ -47,10 +56,21 @@ export const CheckInModal: React.FC = () => {
   const handleClaim = async () => {
     setBusy(true);
     setErrorMsg(null);
-    const res = await claimDailyCheckIn();
-    setBusy(false);
-    if (res.success && res.result) setClaimed(res.result);
-    else setErrorMsg(res.error || 'Không điểm danh được.');
+    try {
+      const res = await claimDailyCheckIn();
+      if (res.success && res.result) setClaimed(res.result);
+      else setErrorMsg(res.error || 'Không điểm danh được.');
+    } catch {
+      setErrorMsg('Chưa nhận được kết quả điểm danh. Đang kiểm tra lại...');
+      try {
+        await loadDailyReward();
+        setErrorMsg(null);
+      } catch {
+        setErrorMsg('Không tải được trạng thái điểm danh. Hãy thử tải lại.');
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   const days = ladderDays(dailyReward, claimed?.streakDay);
@@ -59,8 +79,9 @@ export const CheckInModal: React.FC = () => {
   const spins = dailyReward?.availableSpins ?? 0;
 
   let claimLabel = `Nhận ${todayReward} Coin thưởng`;
-  if (doneToday) claimLabel = 'Đã điểm danh hôm nay';
-  else if (todayReward <= 0) claimLabel = 'Hôm nay chưa có phần thưởng';
+  if (statusLoading || (!dailyReward && !errorMsg)) claimLabel = 'Đang tải thông tin...';
+  else if (doneToday) claimLabel = 'Đã điểm danh hôm nay';
+  else if (dailyReward && todayReward <= 0) claimLabel = 'Hôm nay chưa có phần thưởng';
 
   return (
     <Modal visible={isCheckInModalOpen} transparent animationType="fade" onRequestClose={close}>
@@ -119,12 +140,19 @@ export const CheckInModal: React.FC = () => {
             </View>
           )}
 
-          {errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
+          {errorMsg && (
+            <View style={styles.errorRow}>
+              <Text style={styles.errorText}>{errorMsg}</Text>
+              <TouchableOpacity onPress={() => { setErrorMsg(null); setStatusLoading(true); void loadDailyReward().catch(() => setErrorMsg('Không tải được trạng thái điểm danh.')).finally(() => setStatusLoading(false)); }}>
+                <Text style={styles.errorText}>Thử tải lại</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <TouchableOpacity
             style={[styles.claimBtn, { backgroundColor: doneToday || todayReward <= 0 ? '#64748B' : colors.ruby }]}
             onPress={handleClaim}
-            disabled={busy || doneToday || todayReward <= 0}
+            disabled={statusLoading || busy || !dailyReward || doneToday || todayReward <= 0}
           >
             {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.claimBtnText}>{claimLabel}</Text>}
           </TouchableOpacity>
@@ -163,6 +191,7 @@ const styles = StyleSheet.create({
   successText: { color: '#10B981', fontSize: 12, marginTop: 2 },
   spinText: { color: '#8B5CF6', fontSize: 12, fontWeight: '700', marginTop: 4 },
   errorText: { color: '#EF4444', fontSize: 12, marginBottom: 10, textAlign: 'center' },
+  errorRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   claimBtn: { paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
   claimBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
   spinBtn: {
