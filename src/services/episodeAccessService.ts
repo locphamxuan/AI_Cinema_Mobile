@@ -10,6 +10,7 @@ import type {
   PurchaseResult,
   SubscriptionActivation,
   SubscriptionIntent,
+  SubscriptionCycleView,
 } from '../types/episodeAccess';
 
 const once = (key: string) => ({ headers: { 'Idempotency-Key': key } });
@@ -33,6 +34,11 @@ class EpisodeAccessService {
   /** GET /subscriptions/me — the open plan, or null. */
   getMySubscription(): Promise<ApiResponse<MySubscription | null>> {
     return apiClient.get<MySubscription | null>(API_ROUTES.SUBSCRIPTION.MINE);
+  }
+
+  /** GET /subscriptions/:id/cycles — billing history, including unsuccessful renewal attempts. */
+  getSubscriptionCycles(subscriptionId: string): Promise<ApiResponse<SubscriptionCycleView[]>> {
+    return apiClient.get<SubscriptionCycleView[]>(API_ROUTES.SUBSCRIPTION.CYCLES(subscriptionId));
   }
 
   /**

@@ -133,11 +133,34 @@ describe('MF-2 services call the BE contract', () => {
   });
 
   it('reads the wheel and the Coin history from their own routes', async () => {
-    const fetchMock = routeFetch({ 'GET /rewards/spins': { availableSpins: 0, prizes: [], history: [] }, 'GET /wallet/statements': [] });
+    const fetchMock = routeFetch({
+      'GET /rewards/spins': { availableSpins: 0, prizes: [], history: [] },
+      'GET /wallet/statements': { data: [{ id: 'tx-1', entryType: 'TOP_UP' }], meta: { currentPage: 2, itemsPerPage: 20 } },
+    });
     await rewardService.getWheel();
-    await walletService.getStatements(2, 'TOP_UP');
+    const statements = await walletService.getStatements(2, 'TOP_UP');
+    expect(statements.data).toEqual([{ id: 'tx-1', entryType: 'TOP_UP' }]);
     const urls = fetchMock.mock.calls.map(([url]) => String(url));
     expect(urls[0]).toMatch(/\/rewards\/spins$/);
     expect(urls[1]).toMatch(/\/wallet\/statements\?page=2&limit=20&entryType=TOP_UP$/);
+  });
+
+  it('exposes the remaining member billing reads', async () => {
+    const fetchMock = routeFetch({
+      'GET /wallet/top-ups': { data: [], meta: { currentPage: 1, itemsPerPage: 20 } },
+      'GET /wallet/transactions/tx-1': { id: 'tx-1' },
+      'GET /wallet/affordability': { enoughCoins: true },
+      'GET /subscriptions/sub-1/cycles': [],
+    });
+    await walletService.getTopUps();
+    await walletService.getTransaction('tx-1');
+    await walletService.getAffordability(10);
+    await episodeAccessService.getSubscriptionCycles('sub-1');
+    expect(fetchMock.mock.calls.map(([url]) => new URL(String(url), 'http://x').pathname.replace(/^\/api/, ''))).toEqual([
+      '/wallet/top-ups',
+      '/wallet/transactions/tx-1',
+      '/wallet/affordability',
+      '/subscriptions/sub-1/cycles',
+    ]);
   });
 });

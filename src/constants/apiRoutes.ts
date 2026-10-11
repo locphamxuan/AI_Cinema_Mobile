@@ -21,10 +21,12 @@ export const API_ROUTES = {
   // MF-2 — wallet & Coin top-ups
   WALLET: {
     INFO: '/wallet',
+    AFFORDABILITY: '/wallet/affordability',
     TOP_UPS: '/wallet/top-ups',
     TOP_UP_OPTIONS: '/wallet/top-ups/options',
     TOP_UP_DETAIL: (topUpId: string) => `/wallet/top-ups/${topUpId}`,
     STATEMENTS: '/wallet/statements',
+    TRANSACTION_DETAIL: (transactionId: string) => `/wallet/transactions/${transactionId}`,
   },
 
   // MF-2 — episode access decision and single-episode purchase
@@ -41,6 +43,7 @@ export const API_ROUTES = {
     ACTIVATE: (id: string) => `/subscriptions/${id}/activate`,
     CANCEL_RENEW: (id: string) => `/subscriptions/${id}/cancel-auto-renew`,
     RESUME_RENEW: (id: string) => `/subscriptions/${id}/resume-auto-renew`,
+    CYCLES: (id: string) => `/subscriptions/${id}/cycles`,
   },
 
   // MF-2 — daily check-in and reward wheel

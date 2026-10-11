@@ -70,6 +70,12 @@ export interface CoinTopUp {
   expiresAt: string | null;
 }
 
+/** Paginated endpoint result returned by Nest's pagination wrapper. */
+export interface Page<T> {
+  data: T[];
+  meta: { totalItems?: number; currentPage: number; totalPages?: number; itemsPerPage: number };
+}
+
 /** GET /wallet/top-ups/options */
 export interface TopUpOptions {
   rateVnd: number;
@@ -99,11 +105,23 @@ export interface StatementLine {
   createdAt: string;
   mainBalanceAfter: number;
   bonusBalanceAfter: number;
+  rateVnd?: number;
+  referenceType?: string | null;
+  referenceId?: string | null;
 }
 
-export interface Page<T> {
-  data: T[];
-  meta: { totalItems?: number; currentPage: number; totalPages?: number; itemsPerPage: number };
+export interface SubscriptionCycleView {
+  id: string;
+  cycleNumber: number;
+  status: 'PAID' | 'FAILED' | 'SKIPPED';
+  priceCoins: number;
+  periodStart: string;
+  periodEnd: string;
+  mainCoinsCharged: number;
+  bonusCoinsCharged: number;
+  failureReason: string | null;
+  attemptedAt: string;
+  createdAt: string;
 }
 
 /** GET /membership-plans */
