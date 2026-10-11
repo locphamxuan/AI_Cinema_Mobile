@@ -6,6 +6,7 @@ import { ThemeProvider, useTheme } from '../src/theme';
 import { AuthModal } from '../src/components/auth/AuthModal';
 import { CheckInModal } from '../src/components/wallet/CheckInModal';
 import { TopUpModal } from '../src/components/wallet/TopUpModal';
+import { RewardSpinModal } from '../src/components/wallet/RewardSpinModal';
 import { ChatModal } from '../src/components/chat/ChatModal';
 
 function RootLayoutContent() {
@@ -41,6 +42,7 @@ function RootLayoutContent() {
       <AuthModal />
       <CheckInModal />
       <TopUpModal />
+      <RewardSpinModal />
       <ChatModal />
     </>
   );
