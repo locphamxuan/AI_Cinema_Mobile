@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { View, Text, ScrollView, TouchableOpacity, Switch, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { Header } from '../../src/components/common/Header';
@@ -26,13 +27,32 @@ export default function VipScreen() {
   const { colors, isDark } = useTheme();
   const { isAuthenticated, openAuthModal, setTopUpModalOpen, setWalletBalance, loadAccountData, subscription, wallet } = useAppStore();
   const [plans, setPlans] = useState<MembershipPlan[] | null>(null);
+  const [plansLoadFailed, setPlansLoadFailed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
-  useEffect(() => {
-    episodeAccessService.getPlans().then((res) => {
-      setPlans(res.success && Array.isArray(res.data) ? res.data.filter((p) => !p.isFree && p.isActive && p.priceCoins !== null) : []);
-    });
+  const loadPlans = useCallback(() => {
+    let active = true;
+    setPlans(null);
+    setPlansLoadFailed(false);
+    void episodeAccessService.getPlans()
+      .then((res) => {
+        if (!active) return;
+        if (!res.success || !Array.isArray(res.data)) {
+          setPlans([]);
+          setPlansLoadFailed(true);
+          return;
+        }
+        setPlans(res.data.filter((p) => !p.isFree && p.isActive && p.priceCoins !== null));
+      })
+      .catch(() => {
+        if (!active) return;
+        setPlans([]);
+        setPlansLoadFailed(true);
+      });
+    return () => { active = false; };
   }, []);
+
+  useFocusEffect(loadPlans);
 
   const reload = useCallback(() => loadAccountData(), [loadAccountData]);
   useEffect(() => {
@@ -141,7 +161,16 @@ export default function VipScreen() {
           <>
             <Text style={[styles.section, { color: colors.text }]}>Chọn gói</Text>
             {plans === null && <ActivityIndicator color={colors.ruby} />}
-            {plans?.length === 0 && <Text style={[styles.meta, { color: colors.textSecondary }]}>Hiện chưa có gói nào được mở bán.</Text>}
+            {plansLoadFailed ? (
+              <View>
+                <Text style={[styles.meta, { color: colors.textSecondary }]}>Không tải được danh sách gói. Vui lòng thử lại.</Text>
+                <TouchableOpacity onPress={loadPlans} style={styles.retryButton}>
+                  <Text style={styles.joinText}>Tải lại</Text>
+                </TouchableOpacity>
+              </View>
+            ) : plans?.length === 0 ? (
+              <Text style={[styles.meta, { color: colors.textSecondary }]}>Hiện chưa có gói nào được mở bán.</Text>
+            ) : null}
             {plans?.map((plan) => (
               <View key={plan.id} style={[styles.card, card, plan.isFeatured && { borderColor: '#E50914', borderWidth: 2 }]}>
                 <View style={styles.rowBetween}>
@@ -195,5 +224,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
   },
+  retryButton: { alignSelf: 'flex-start', backgroundColor: '#E50914', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14, marginTop: 10 },
   joinText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
 });
