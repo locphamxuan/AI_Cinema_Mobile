@@ -9,8 +9,8 @@ import type { RewardPrize, RewardWheelStatus, SpinResult } from '../../types/epi
 
 const SPIN_MS = 2400;
 
-export const prizeLabel = (p: Pick<RewardPrize, 'type' | 'bonusCoins' | 'planDays'>) =>
-  p.type === 'BONUS_COIN' ? `+${p.bonusCoins} Coin thưởng` : `+${p.planDays} ngày gói Tháng`;
+export const prizeLabel = (p: Pick<RewardPrize, 'type' | 'bonusCoins' | 'planDays' | 'chancePercent'>) =>
+  `${p.type === 'BONUS_COIN' ? `+${p.bonusCoins} Coin thưởng` : `Gói Tháng ${p.planDays} ngày`} · ${p.chancePercent ?? 0}%`;
 
 /** BR-09: a milestone check-in earns a spin; the BE draws the prize and pays it out. */
 export const RewardSpinModal: React.FC = () => {
@@ -95,6 +95,7 @@ function SpinDialog() {
             </TouchableOpacity>
           </View>
           <Text style={[styles.sub, { color: colors.textSecondary }]}>{loading ? 'Đang tải lượt quay...' : `Bạn còn ${spins} lượt quay.`}</Text>
+          <Text style={[styles.sub, { color: colors.textSecondary, marginTop: 2 }]}>10 ô gồm 9 mức Coin ngẫu nhiên và 1 gói Tháng 30 ngày (tỉ lệ 2%).</Text>
 
           {loading && <ActivityIndicator style={{ marginVertical: 30 }} color="#8B5CF6" />}
 
@@ -123,7 +124,7 @@ function SpinDialog() {
               <Text style={styles.wonText}>
                 {won.bonusCoins
                   ? `+${won.bonusCoins} Coin thưởng đã vào ví.`
-                  : `+${won.planDays} ngày gói Tháng${won.planActiveUntil ? `, hiệu lực đến ${new Date(won.planActiveUntil).toLocaleDateString('vi-VN')}` : ''}.`}
+                  : `Chúc mừng! Gói Tháng 30 ngày đã được kích hoạt${won.planActiveUntil ? `, hiệu lực đến ${new Date(won.planActiveUntil).toLocaleDateString('vi-VN')}` : ''}.`}
               </Text>
             </View>
           )}

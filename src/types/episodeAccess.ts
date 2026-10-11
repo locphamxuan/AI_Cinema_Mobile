@@ -220,6 +220,7 @@ export interface RewardPrize {
   type: RewardPrizeType;
   bonusCoins: number | null;
   planDays: number | null;
+  chancePercent?: number;
 }
 
 export interface RewardSpinHistoryItem {

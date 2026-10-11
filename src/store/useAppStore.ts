@@ -68,7 +68,7 @@ interface AppState {
 
   // Daily check-in (BR-05) and reward spins (BR-09)
   dailyReward: DailyRewardStatus | null;
-  loadDailyReward: () => Promise<void>;
+  loadDailyReward: () => Promise<boolean>;
   claimDailyCheckIn: () => Promise<{ success: boolean; result?: CheckInResult; error?: string }>;
   isRewardSpinOpen: boolean;
   setRewardSpinOpen: (open: boolean) => void;
@@ -290,7 +290,9 @@ export const useAppStore = create<AppState>()(
         const res = await rewardService.getDailyStatus();
         if (res.success && res.data) {
           set({ dailyReward: res.data, wallet: { mainCoin: res.data.mainBalance, bonusCoin: res.data.bonusBalance } });
+          return true;
         }
+        return false;
       },
 
       claimDailyCheckIn: async () => {

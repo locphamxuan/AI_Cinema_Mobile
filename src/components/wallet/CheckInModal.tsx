@@ -38,6 +38,7 @@ export const CheckInModal: React.FC = () => {
     if (!isCheckInModalOpen) return;
     setStatusLoading(true);
     void loadDailyReward()
+      .then((loaded) => { if (!loaded) setErrorMsg('Không tải được trạng thái điểm danh.'); })
       .catch(() => setErrorMsg('Không tải được trạng thái điểm danh.'))
       .finally(() => setStatusLoading(false));
   }, [isCheckInModalOpen, loadDailyReward]);
@@ -63,8 +64,8 @@ export const CheckInModal: React.FC = () => {
     } catch {
       setErrorMsg('Chưa nhận được kết quả điểm danh. Đang kiểm tra lại...');
       try {
-        await loadDailyReward();
-        setErrorMsg(null);
+        const loaded = await loadDailyReward();
+        setErrorMsg(loaded ? null : 'Không tải được trạng thái điểm danh. Hãy thử tải lại.');
       } catch {
         setErrorMsg('Không tải được trạng thái điểm danh. Hãy thử tải lại.');
       }
@@ -143,7 +144,7 @@ export const CheckInModal: React.FC = () => {
           {errorMsg && (
             <View style={styles.errorRow}>
               <Text style={styles.errorText}>{errorMsg}</Text>
-              <TouchableOpacity onPress={() => { setErrorMsg(null); setStatusLoading(true); void loadDailyReward().catch(() => setErrorMsg('Không tải được trạng thái điểm danh.')).finally(() => setStatusLoading(false)); }}>
+              <TouchableOpacity onPress={() => { setErrorMsg(null); setStatusLoading(true); void loadDailyReward().then((loaded) => { if (!loaded) setErrorMsg('Không tải được trạng thái điểm danh.'); }).catch(() => setErrorMsg('Không tải được trạng thái điểm danh.')).finally(() => setStatusLoading(false)); }}>
                 <Text style={styles.errorText}>Thử tải lại</Text>
               </TouchableOpacity>
             </View>
