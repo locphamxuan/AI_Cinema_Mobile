@@ -216,7 +216,7 @@ export const Header: React.FC<HeaderProps> = ({ onProfilePress, onSearch }) => {
                             { color: isVIP ? '#F59E0B' : colors.textSecondary },
                           ]}
                         >
-                          {isVIP ? 'Hội viên VIP' : 'Tài khoản thường'}
+                          {isVIP ? 'Gói Tháng' : 'Gói Thường'}
                         </Text>
                       </View>
 

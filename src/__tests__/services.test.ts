@@ -2,8 +2,6 @@ import {
   adaptApiMovieToMovie,
   adaptApiEpisodeToEpisode,
   formatDuration,
-  adaptApiWalletToWallet,
-  adaptApiCheckInToStreak,
   adaptApiProjectToProject,
   adaptUserProfile,
 } from '../lib/apiAdapter';
@@ -12,7 +10,7 @@ import {
   authService,
   movieService,
   walletService,
-  subscriptionService,
+  episodeAccessService,
   productionService,
   chatService,
 } from '../services';
@@ -31,9 +29,10 @@ describe('API Routes and Config', () => {
     expect(API_ROUTES.AUTH.LOGIN).toBe('/auth/login');
     expect(API_ROUTES.MOVIES.LIST).toBe('/movies');
     expect(API_ROUTES.WALLET.INFO).toBe('/wallet');
-    expect(API_ROUTES.WALLET.CHECK_IN).toBe('/wallet/check-in');
-    expect(API_ROUTES.WALLET.STREAK).toBe('/wallet/streak');
-    expect(API_ROUTES.SUBSCRIPTION.CURRENT).toBe('/subscription');
+    expect(API_ROUTES.REWARDS.CHECK_IN).toBe('/daily-rewards/check-in');
+    expect(API_ROUTES.REWARDS.STATUS).toBe('/daily-rewards/status');
+    expect(API_ROUTES.SUBSCRIPTION.MINE).toBe('/subscriptions/me');
+    expect(API_ROUTES.ACCESS.DECISION('ep-1')).toBe('/episodes/ep-1/access');
     expect(API_ROUTES.PRODUCTION.PROJECTS).toBe('/production-projects');
   });
 
@@ -128,12 +127,6 @@ describe('API Adapters', () => {
     jest.restoreAllMocks();
   });
 
-  it('adaptApiWalletToWallet maps coins properly', () => {
-    const wallet = adaptApiWalletToWallet({ mainBalance: 250, bonusBalance: 100 });
-    expect(wallet.mainCoin).toBe(250);
-    expect(wallet.bonusCoin).toBe(100);
-  });
-
   it('date utils accurately calculates day index and labels', () => {
     // Wednesday 2026-09-23 -> index 2 (T4)
     const wed = new Date('2026-09-23T10:00:00');
@@ -150,29 +143,6 @@ describe('API Adapters', () => {
     const mon = new Date('2026-09-21T10:00:00');
     expect(getTodayDayIndex(mon)).toBe(0);
     expect(VN_DAY_LABELS[getTodayDayIndex(mon)]).toBe('T2');
-  });
-
-  it('adaptApiCheckInToStreak maps streak data properly with dynamic today', () => {
-    const streak = adaptApiCheckInToStreak({
-      streakCount: 3,
-      lastCheckInDate: '2026-09-23',
-      currentDay: 2, // Wednesday = T4
-      todayClaimed: true,
-    });
-    expect(streak.currentStreak).toBe(3);
-    expect(streak.todayClaimed).toBe(true);
-    expect(streak.days).toHaveLength(7);
-    expect(streak.days[2].dayLabel).toBe('T4');
-    expect(streak.days[2].isToday).toBe(true);
-    expect(streak.days[2].claimed).toBe(true);
-    expect(streak.days[6].isToday).toBe(false);
-  });
-
-  it('adaptApiCheckInToStreak does not invent claims for an empty response', () => {
-    const streak = adaptApiCheckInToStreak({});
-    expect(streak.currentStreak).toBe(0);
-    expect(streak.todayClaimed).toBe(false);
-    expect(streak.days.every((day) => !day.claimed && day.reward === 0)).toBe(true);
   });
 
   it('adaptApiProjectToProject maps project data properly', () => {
@@ -214,8 +184,8 @@ describe('Mobile Services do not return mock fallbacks', () => {
     expect(res.message).toContain('network offline');
   });
 
-  it('subscriptionService.getPlans reports the backend network error', async () => {
-    const res = await subscriptionService.getPlans();
+  it('episodeAccessService.getPlans reports the backend network error', async () => {
+    const res = await episodeAccessService.getPlans();
     expect(res.success).toBe(false);
     expect(res.message).toContain('network offline');
   });

@@ -163,8 +163,6 @@ class ApiClient {
         requestInit.body = typeof body === 'string' ? body : JSON.stringify(body);
       }
 
-      console.log(`[API Request] ${options.method || 'GET'} ${url}`, body ? { body } : '');
-
       const response = await fetch(url, requestInit);
       clearTimeout(timeoutId);
 
@@ -176,10 +174,9 @@ class ApiClient {
         let errorMessage = `HTTP error! status: ${response.status}`;
         try {
           const errJson = await response.json();
-          console.error(`[API Error Response] ${response.status} ${url}:`, errJson);
           errorMessage = extractErrorMessage(errJson) || errorMessage;
-        } catch (e) {
-          console.error(`[API Error Non-JSON] ${response.status} ${url}:`, e);
+        } catch {
+          // Keep the returned status/message useful without logging response bodies or URLs.
         }
 
         return {
@@ -193,7 +190,6 @@ class ApiClient {
       // 204 No Content (e.g. logout) has no body to parse.
       const text = await response.text();
       const data = text ? JSON.parse(text) : null;
-      console.log(`[API Success] ${url}`, data);
       return {
         success: true,
         data: data?.data !== undefined ? data.data : data,
@@ -202,7 +198,6 @@ class ApiClient {
     } catch (err: any) {
       clearTimeout(timeoutId);
       const isTimeout = err?.name === 'AbortError';
-      console.error(`[API ${isTimeout ? 'Timeout' : 'Network Exception'}] ${url}:`, err);
       return {
         success: false,
         data: null as unknown as T,

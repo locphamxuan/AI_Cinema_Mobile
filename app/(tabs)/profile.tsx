@@ -15,6 +15,7 @@ import { ThemeToggle } from '../../src/components/common/ThemeToggle';
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
 import { useProductionStore } from '../../src/store/useProductionStore';
+import { StatementList } from '../../src/components/wallet/StatementList';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -23,8 +24,8 @@ export default function ProfileScreen() {
     isAuthenticated,
     user,
     wallet,
-    transactions,
     watchHistory,
+    subscription,
     isVIPMode,
     logout,
     openAuthModal,
@@ -40,12 +41,6 @@ export default function ProfileScreen() {
   } = useProductionStore();
 
   const [activeTab, setActiveTab] = useState<'history' | 'transactions'>('history');
-  const [filterType, setFilterType] = useState<string>('all');
-
-  const filteredTxns = transactions.filter((tx) => {
-    if (filterType === 'all') return true;
-    return tx.type === filterType;
-  });
 
   const handleLogout = () => {
     Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?', [
@@ -119,7 +114,7 @@ export default function ProfileScreen() {
               <Text style={[styles.name, { color: colors.text }]}>{user?.name}</Text>
               {(user?.isVIP || isVIPMode) && (
                 <View style={styles.vipBadge}>
-                  <Text style={styles.vipBadgeText}>VIP PRO</Text>
+                  <Text style={styles.vipBadgeText}>GÓI THÁNG</Text>
                 </View>
               )}
             </View>
@@ -141,7 +136,7 @@ export default function ProfileScreen() {
             <View style={styles.vipTitleRow}>
               <FontAwesome5 name="crown" size={16} color="#F59E0B" />
               <Text style={[styles.vipCardTitle, { color: isVIPMode ? '#F59E0B' : colors.text }]}>
-                {isVIPMode ? 'Thành Viên VIP Hoàng Gia' : 'Gói Hội Viên Tiêu Chuẩn'}
+                {isVIPMode && subscription ? subscription.plan.name : 'Gói Thường'}
               </Text>
             </View>
             <TouchableOpacity
@@ -157,14 +152,14 @@ export default function ProfileScreen() {
                   { color: isVIPMode ? '#F59E0B' : '#FFFFFF' },
                 ]}
               >
-                {isVIPMode ? 'Đổi Gói' : 'Nâng VIP'}
+                {isVIPMode ? 'Quản lý' : 'Đăng ký gói'}
               </Text>
             </TouchableOpacity>
           </View>
           <Text style={[styles.vipCardDesc, { color: colors.textSecondary }]}>
-            {isVIPMode
-              ? 'Mở khóa toàn bộ kho phim 4K không quảng cáo, nhận +50 Coin thưởng mỗi tháng.'
-              : 'Nâng cấp lên VIP để xem không giới hạn kho phim AI độc quyền và nhận ưu đãi Coin.'}
+            {isVIPMode && subscription
+              ? `Xem mọi tập đã phát hành đến ${new Date(subscription.currentPeriodEnd).toLocaleDateString('vi-VN')}${subscription.autoRenew ? ', tự gia hạn khi hết kỳ' : ''}.`
+              : 'Đăng ký gói Tháng bằng Coin để xem trọn bộ mọi phim đã phát hành.'}
           </Text>
         </View>
 
@@ -436,7 +431,7 @@ export default function ProfileScreen() {
                   },
                 ]}
               >
-                Giao Dịch ({filteredTxns.length})
+                Giao Dịch
               </Text>
             </View>
           </TouchableOpacity>
@@ -530,110 +525,7 @@ export default function ProfileScreen() {
         {/* Tab 2: Transaction History */}
         {activeTab === 'transactions' && (
           <View style={styles.sectionContainer}>
-            {/* Filter Chips */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-              {[
-                { id: 'all', label: 'Tất cả' },
-                { id: 'deposit', label: 'Nạp tiền' },
-                { id: 'episode_purchase', label: 'Mua tập' },
-                { id: 'checkin', label: 'Điểm danh' },
-              ].map((tab) => {
-                const isSelected = filterType === tab.id;
-                return (
-                  <TouchableOpacity
-                    key={tab.id}
-                    activeOpacity={0.8}
-                    onPress={() => setFilterType(tab.id)}
-                    style={[
-                      styles.filterChip,
-                      {
-                        backgroundColor: isSelected
-                          ? colors.ruby
-                          : isDark
-                          ? '#1E293B'
-                          : '#F1F5F9',
-                        borderColor: isSelected ? colors.ruby : colors.border,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        {
-                          color: isSelected ? '#FFFFFF' : colors.textSecondary,
-                          fontWeight: isSelected ? '700' : '500',
-                        },
-                      ]}
-                    >
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            {/* List of transactions */}
-            <View style={styles.txnList}>
-              {filteredTxns.map((tx) => {
-                const isPositive = tx.totalAmount > 0;
-                return (
-                  <View
-                    key={tx.id}
-                    style={[
-                      styles.txnCard,
-                      {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
-                      },
-                    ]}
-                  >
-                    <View style={styles.txnLeft}>
-                      <View
-                        style={[
-                          styles.txnIcon,
-                          {
-                            backgroundColor: isPositive
-                              ? 'rgba(16, 185, 129, 0.12)'
-                              : 'rgba(239, 68, 68, 0.12)',
-                          },
-                        ]}
-                      >
-                        <Ionicons
-                          name={isPositive ? 'arrow-down' : 'arrow-up'}
-                          size={16}
-                          color={isPositive ? '#10B981' : '#EF4444'}
-                        />
-                      </View>
-                      <View style={styles.txnInfo}>
-                        <Text style={[styles.txnTitle, { color: colors.text }]} numberOfLines={1}>
-                          {tx.typeLabel}
-                        </Text>
-                        <Text style={[styles.txnDesc, { color: colors.textMuted }]} numberOfLines={1}>
-                          {tx.description}
-                        </Text>
-                        <Text style={[styles.txnDate, { color: colors.textMuted }]}>
-                          {new Date(tx.createdAt).toLocaleDateString('vi-VN')}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.txnRight}>
-                      <Text
-                        style={[
-                          styles.txnAmount,
-                          { color: isPositive ? '#10B981' : '#EF4444' },
-                        ]}
-                      >
-                        {isPositive ? `+${tx.totalAmount}` : tx.totalAmount} Coin
-                      </Text>
-                      <View style={styles.statusBadge}>
-                        <Text style={styles.statusBadgeText}>{tx.statusLabel}</Text>
-                      </View>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
+            <StatementList />
           </View>
         )}
 

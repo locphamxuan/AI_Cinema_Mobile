@@ -1,81 +1,73 @@
 import { apiClient } from './apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
-import { adaptApiWalletToWallet, adaptApiCheckInToStreak } from '../lib/apiAdapter';
-import type { ApiResponse, DepositRequestDto, DepositResponseDto, UnlockEpisodeRequestDto } from '../types/api';
-import type { WalletState, CheckInStreak } from '../types/wallet';
-import type { Transaction } from '../types/transaction';
+import type { ApiResponse } from '../types/api';
+import type { WalletState } from '../types/wallet';
+import type {
+  CoinEntryType,
+  CoinTopUp,
+  PaymentProvider,
+  StatementLine,
+  TopUpOptions,
+  WalletBalance,
+  Page,
+} from '../types/episodeAccess';
+
+export const STATEMENT_PAGE_SIZE = 20;
 
 class WalletService {
+  /** GET /wallet — main Coins (top-ups) and bonus Coins (rewards). */
   async getWalletInfo(): Promise<ApiResponse<WalletState>> {
-    return apiClient.get<WalletState>(API_ROUTES.WALLET.INFO).then((res) => {
-      if (res.success && res.data) {
-        return {
-          ...res,
-          data: adaptApiWalletToWallet(res.data),
-        };
-      }
-      return res;
+    const res = await apiClient.get<WalletBalance>(API_ROUTES.WALLET.INFO);
+    if (!res.success || !res.data) return { ...res, data: null as unknown as WalletState };
+    return { ...res, data: { mainCoin: res.data.mainBalance, bonusCoin: res.data.bonusBalance } };
+  }
+
+  /** GET /wallet/top-ups/options — the Admin's VND-per-Coin rate and accepted range. */
+  getTopUpOptions(): Promise<ApiResponse<TopUpOptions>> {
+    return apiClient.get<TopUpOptions>(API_ROUTES.WALLET.TOP_UP_OPTIONS);
+  }
+
+  /** GET /wallet/affordability — split an intended spend between main and bonus Coins. */
+  getAffordability(amountCoins: number): Promise<ApiResponse<{
+    requiredCoins: number;
+    mainBalance: number;
+    bonusBalance: number;
+    enoughCoins: boolean;
+    missingCoins: number;
+    plannedSplit: { mainCoins: number; bonusCoins: number };
+  }>> {
+    return apiClient.get(API_ROUTES.WALLET.AFFORDABILITY, { params: { amountCoins } });
+  }
+
+  /** POST /wallet/top-ups — opens a gateway order; `redirectUrl` is the payment page. */
+  createTopUp(provider: PaymentProvider, amountVnd: number): Promise<ApiResponse<CoinTopUp>> {
+    return apiClient.post<CoinTopUp>(API_ROUTES.WALLET.TOP_UPS, { provider, amountVnd });
+  }
+
+  /** GET /wallet/top-ups — this member's paginated order history. */
+  getTopUps(page = 1): Promise<ApiResponse<Page<CoinTopUp>>> {
+    return apiClient.get<Page<CoinTopUp>>(API_ROUTES.WALLET.TOP_UPS, { params: { page, limit: STATEMENT_PAGE_SIZE } });
+  }
+
+  /** GET /wallet/top-ups/:topUpId — the IPN settles the order in the background. */
+  getTopUp(topUpId: string): Promise<ApiResponse<CoinTopUp>> {
+    return apiClient.get<CoinTopUp>(API_ROUTES.WALLET.TOP_UP_DETAIL(topUpId));
+  }
+
+  /** GET /wallet/statements — the member's Coin ledger, newest first. */
+  async getStatements(page = 1, entryType?: CoinEntryType): Promise<ApiResponse<StatementLine[]>> {
+    const res = await apiClient.get<Page<StatementLine> | StatementLine[]>(API_ROUTES.WALLET.STATEMENTS, {
+      params: { page, limit: STATEMENT_PAGE_SIZE, entryType },
     });
+    if (!res.success || !res.data) return { ...res, data: null as unknown as StatementLine[] };
+    // The BE returns { data, meta }; keep the existing UI contract as a list of rows.
+    const rows = Array.isArray(res.data) ? res.data : res.data.data;
+    return { ...res, data: rows };
   }
 
-  async getStreak(): Promise<ApiResponse<CheckInStreak>> {
-    return apiClient.get<CheckInStreak>(API_ROUTES.WALLET.STREAK).then((res) => {
-      if (res.success && res.data) {
-        return {
-          ...res,
-          data: adaptApiCheckInToStreak(res.data),
-        };
-      }
-      return res;
-    });
-  }
-
-  async checkIn(): Promise<ApiResponse<CheckInStreak & { wallet?: WalletState }>> {
-    return apiClient.post<CheckInStreak & { wallet?: WalletState }>(API_ROUTES.WALLET.CHECK_IN, {}).then((res) => {
-      if (res.success && res.data) {
-        return {
-          ...res,
-          data: {
-            ...adaptApiCheckInToStreak(res.data),
-            wallet: (res.data as any).wallet ? adaptApiWalletToWallet((res.data as any).wallet) : undefined,
-          },
-        };
-      }
-      return res;
-    });
-  }
-
-  async deposit(dto: DepositRequestDto): Promise<ApiResponse<{ balance?: WalletState; transactionId: string; paymentUrl?: string; topUpId?: string }>> {
-    const response = await apiClient.post<DepositResponseDto>(API_ROUTES.WALLET.DEPOSIT, dto);
-    if (!response.success || !response.data) {
-      return {
-        success: false,
-        data: null as unknown as { balance?: WalletState; transactionId: string; paymentUrl?: string; topUpId?: string },
-        message: response.message || 'TOPUP_AMOUNT_OUT_OF_RANGE hoặc lỗi tạo đơn nạp tiền trên máy chủ',
-        statusCode: response.statusCode,
-      };
-    }
-    return {
-      ...response,
-      data: {
-        transactionId: response.data.topUpId,
-        topUpId: response.data.topUpId,
-        paymentUrl: response.data.redirectUrl,
-      },
-    };
-  }
-
-  async getTopUpStatus(topUpId: string): Promise<ApiResponse<{ id: string; status: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED' | 'EXPIRED'; amountVnd: number; mainCoin?: number }>> {
-    return apiClient.get(API_ROUTES.WALLET.TOP_UP_DETAIL(topUpId));
-  }
-
-  async getTransactions(): Promise<ApiResponse<Transaction[]>> {
-    return apiClient.get<Transaction[]>(API_ROUTES.WALLET.TRANSACTIONS);
-  }
-
-  async unlockEpisode(dto: UnlockEpisodeRequestDto): Promise<ApiResponse<{ success: boolean; newBalance?: WalletState }>> {
-    const res = await apiClient.post<{ success: boolean; newBalance?: WalletState }>(API_ROUTES.WALLET.UNLOCK_EPISODE, dto);
-    return res;
+  /** GET /wallet/transactions/:id — one ledger row, scoped to the signed-in member. */
+  getTransaction(id: string): Promise<ApiResponse<StatementLine & { walletId: string; reversesId: string | null; lotId: string | null }>> {
+    return apiClient.get(API_ROUTES.WALLET.TRANSACTION_DETAIL(id));
   }
 }
 

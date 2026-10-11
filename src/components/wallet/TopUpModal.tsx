@@ -1,254 +1,174 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Modal, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, TextInput, Modal, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../../theme';
 import { walletService } from '../../services/walletService';
+import type { PaymentProvider, TopUpOptions, TopUpStatus } from '../../types/episodeAccess';
 
-const PAYMENT_METHODS = [
-  { id: 'vnpay', name: 'VNPay', icon: 'card-outline' },
-  { id: 'vietqr', name: 'VietQR', icon: 'qr-code-outline' },
-  { id: 'momo', name: 'MoMo', icon: 'wallet-outline' },
-  { id: 'zalopay', name: 'ZaloPay', icon: 'flash-outline' },
-] as const;
+const PROVIDERS: { id: PaymentProvider; name: string }[] = [
+  { id: 'VNPAY', name: 'VNPay' },
+  { id: 'MOMO', name: 'MoMo' },
+];
+const POLL_MS = 2500;
+const POLL_LIMIT = 24;
+const FINAL: TopUpStatus[] = ['PAID', 'FAILED', 'CANCELLED', 'EXPIRED'];
 
-type PaymentMethodId = (typeof PAYMENT_METHODS)[number]['id'];
+const STATUS_TEXT: Record<Exclude<TopUpStatus, 'PENDING' | 'PAID'>, string> = {
+  FAILED: 'Thanh toán thất bại.',
+  CANCELLED: 'Bạn đã huỷ thanh toán.',
+  EXPIRED: 'Đơn nạp đã hết hạn.',
+};
 
+/** Main Coins a top-up of `amountVnd` buys at the Admin's rate; the BE credits the same. */
+export const coinsFor = (amountVnd: number, rateVnd: number) => (rateVnd > 0 ? Math.floor(amountVnd / rateVnd) : 0);
+
+/** MF-2 top-up: a VNPay / MoMo order; the gateway's IPN credits main Coins, the app waits for it. */
 export const TopUpModal: React.FC = () => {
   const { colors, isDark } = useTheme();
-  const { isTopUpModalOpen, setTopUpModalOpen, wallet } = useAppStore();
-
+  const { isTopUpModalOpen, setTopUpModalOpen, wallet, loadAccountData } = useAppStore();
+  const [options, setOptions] = useState<TopUpOptions | null>(null);
   const [amount, setAmount] = useState('');
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodId>('vnpay');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [provider, setProvider] = useState<PaymentProvider>('VNPAY');
+  const [phase, setPhase] = useState<'form' | 'waiting' | 'paid'>('form');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleClose = () => {
-    setIsSuccess(false);
-    setIsProcessing(false);
+  useEffect(() => {
+    if (!isTopUpModalOpen) return;
+    walletService.getTopUpOptions().then((res) => {
+      if (res.success && res.data) setOptions(res.data);
+      else setErrorMsg(res.message || 'Không tải được tỉ giá nạp Coin.');
+    });
+  }, [isTopUpModalOpen]);
+
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+
+  const close = () => {
+    if (timer.current) clearTimeout(timer.current);
+    setPhase('form');
+    setErrorMsg(null);
+    setAmount('');
     setTopUpModalOpen(false);
   };
 
+  const amountVnd = Number(amount) || 0;
+  const inRange = options !== null && amountVnd >= options.minVnd && amountVnd <= options.maxVnd;
+
+  const poll = (topUpId: string, round = 0) => {
+    timer.current = setTimeout(async () => {
+      const res = await walletService.getTopUp(topUpId);
+      const status = res.success ? res.data?.status : undefined;
+      if (status === 'PAID') {
+        await loadAccountData();
+        setPhase('paid');
+      } else if (status && FINAL.includes(status)) {
+        setPhase('form');
+        setErrorMsg(STATUS_TEXT[status as keyof typeof STATUS_TEXT]);
+      } else if (round + 1 < POLL_LIMIT) {
+        poll(topUpId, round + 1);
+      } else {
+        setPhase('form');
+        setErrorMsg('Chưa nhận được kết quả thanh toán. Số dư sẽ tự cập nhật khi cổng thanh toán xác nhận.');
+      }
+    }, POLL_MS);
+  };
+
   const handleTopUp = async () => {
-    const amountVnd = Number(amount);
-    if (!Number.isFinite(amountVnd) || amountVnd <= 0) {
-      Alert.alert('Số tiền không hợp lệ', 'Nhập số tiền nạp lớn hơn 0.');
+    if (!inRange) return;
+    setErrorMsg(null);
+    setPhase('waiting');
+    const res = await walletService.createTopUp(provider, amountVnd);
+    if (!res.success || !res.data?.redirectUrl) {
+      setPhase('form');
+      setErrorMsg(res.message || 'Không tạo được đơn nạp Coin.');
       return;
     }
-    setIsProcessing(true);
-
-    try {
-      const provider = selectedMethod.toUpperCase() === 'MOMO' ? 'MOMO' : 'VNPAY';
-
-      // 1. Tạo đơn nạp PENDING (POST /api/wallet/top-ups) với DTO { provider, amountVnd }
-      const response = await walletService.deposit({ amountVnd, provider });
-
-      if (response.success && response.data?.paymentUrl) {
-        const topUpId = response.data.topUpId || response.data.transactionId;
-
-        // 2. Mở cổng thanh toán VNPay
-        const browserResult = await WebBrowser.openAuthSessionAsync(
-          response.data.paymentUrl,
-          'ai-cinemamobile://'
-        );
-
-        if (topUpId) {
-          // 3. Poll GET /api/wallet/top-ups/:topUpId mỗi 2.5 giây khi đơn còn PENDING
-          const pollInterval = setInterval(async () => {
-            try {
-              const statusRes = await walletService.getTopUpStatus(topUpId);
-              if (statusRes.success && statusRes.data) {
-                const { status } = statusRes.data;
-                if (status === 'PAID') {
-                  clearInterval(pollInterval);
-                  setIsProcessing(false);
-                  setIsSuccess(true);
-                } else if (['FAILED', 'CANCELLED', 'EXPIRED'].includes(status)) {
-                  clearInterval(pollInterval);
-                  setIsProcessing(false);
-                  Alert.alert('Thanh toán thất bại', `Trạng thái đơn: ${status}`);
-                }
-              }
-            } catch {
-              // Bỏ qua lỗi mạng tạm thời trong lúc poll
-            }
-          }, 2500);
-
-          // Timeout sau 60 giây dừng polling
-          setTimeout(() => {
-            clearInterval(pollInterval);
-            setIsProcessing(false);
-          }, 60000);
-        } else {
-          setIsProcessing(false);
-          if (browserResult.type === 'success') {
-            setIsSuccess(true);
-          }
-        }
-      } else {
-        setIsProcessing(false);
-        Alert.alert('Lỗi nạp tiền', response.message || 'TOPUP_AMOUNT_OUT_OF_RANGE: Số tiền vượt hạn mức hệ thống.');
-      }
-    } catch (err: any) {
-      setIsProcessing(false);
-      Alert.alert('Lỗi kết nối', err?.message || 'Không thể kết nối đến máy chủ.');
-    }
+    // The backend returns to the web wallet page. Keep the auth session open until the member
+    // closes that page or a future backend return deep link reaches this app, then reconcile.
+    await WebBrowser.openAuthSessionAsync(res.data.redirectUrl, 'aicinema://');
+    poll(res.data.topUpId);
   };
 
   return (
-    <Modal
-      visible={isTopUpModalOpen}
-      transparent
-      animationType="slide"
-      onRequestClose={handleClose}
-    >
+    <Modal visible={isTopUpModalOpen} transparent animationType="slide" onRequestClose={close}>
       <View style={styles.backdrop}>
-        <View
-          style={[
-            styles.container,
-            {
-              backgroundColor: isDark ? '#121622' : '#FFFFFF',
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          {isSuccess ? (
-            /* Success View */
-            <View style={styles.successContainer}>
-              <View style={styles.successIconCircle}>
-                <Ionicons name="checkmark-circle" size={60} color="#10B981" />
-              </View>
-              <Text style={[styles.successTitle, { color: colors.text }]}>
-                Nạp Coin Thành Công! 🎉
-              </Text>
-              <Text style={[styles.successSubtitle, { color: colors.textSecondary }]}>
-                Yêu cầu nạp {Number(amount).toLocaleString('vi-VN')}đ đã được máy chủ xác nhận.
-              </Text>
+        <View style={[styles.container, { backgroundColor: isDark ? '#121622' : '#FFFFFF', borderColor: colors.border }]}>
+          <View style={styles.header}>
+            <View style={styles.titleRow}>
+              <FontAwesome5 name="coins" size={18} color="#F59E0B" />
+              <Text style={[styles.title, { color: colors.text }]}>Nạp Coin</Text>
+            </View>
+            <TouchableOpacity onPress={close} accessibilityLabel="Đóng">
+              <Ionicons name="close" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
 
-              <View
-                style={[
-                  styles.rewardCard,
-                  {
-                    backgroundColor: isDark ? '#064E3B20' : '#ECFDF5',
-                    borderColor: '#10B98140',
-                  },
-                ]}
-              >
-                <View style={styles.rewardRow}>
-                  <Text style={[styles.rewardLabel, { color: colors.textSecondary }]}>Coin nhận được:</Text>
-                  <Text style={styles.rewardValueHighlight}>Số dư đã cập nhật</Text>
-                </View>
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                <View style={styles.rewardRow}>
-                  <Text style={[styles.rewardLabel, { color: colors.textSecondary }]}>Số dư ví hiện tại:</Text>
-                  <Text style={[styles.walletTotal, { color: colors.text }]}>
-                    {wallet.mainCoin} chính / {wallet.bonusCoin} thưởng
-                  </Text>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: '#10B981' }]}
-                onPress={handleClose}
-              >
+          {phase === 'paid' ? (
+            <View style={styles.center}>
+              <Ionicons name="checkmark-circle" size={56} color="#10B981" />
+              <Text style={[styles.successTitle, { color: colors.text }]}>Nạp Coin thành công</Text>
+              <Text style={[styles.hint, { color: colors.textSecondary }]}>
+                Số dư: {wallet.mainCoin} Coin chính · {wallet.bonusCoin} Coin thưởng
+              </Text>
+              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#10B981' }]} onPress={close}>
                 <Text style={styles.actionBtnText}>Xong</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            /* Normal TopUp Form */
             <>
-              {/* Header */}
-              <View style={styles.header}>
-                <View style={styles.titleRow}>
-                  <FontAwesome5 name="coins" size={20} color="#F59E0B" />
-                  <Text style={[styles.title, { color: colors.text }]}>Nạp Coin Xem Phim</Text>
-                </View>
-                <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
-                  <Ionicons name="close" size={20} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-
-              <Text style={[styles.methodTitle, { color: colors.textSecondary }]}>Số tiền (VND)</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Số tiền (VND)</Text>
               <TextInput
                 value={amount}
-                onChangeText={(value) => setAmount(value.replace(/[^0-9]/g, ''))}
+                onChangeText={(value) => setAmount(value.replace(/\D/g, ''))}
                 keyboardType="numeric"
-                placeholder="Nhập số tiền (vd: 50000)"
+                placeholder={options ? `${options.minVnd.toLocaleString('vi-VN')} – ${options.maxVnd.toLocaleString('vi-VN')}` : 'Đang tải…'}
                 placeholderTextColor={colors.textMuted}
-                style={[
-                  styles.amountInput,
-                  {
-                    backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
-                    color: colors.text,
-                    borderColor: colors.border,
-                  },
-                ]}
+                editable={phase === 'form'}
+                style={[styles.amountInput, { backgroundColor: isDark ? '#1E293B' : '#F8FAFC', color: colors.text, borderColor: colors.border }]}
               />
+              {options && amountVnd > 0 && (
+                <Text style={[styles.hint, { color: inRange ? '#10B981' : '#EF4444' }]}>
+                  {inRange
+                    ? `Nhận ${coinsFor(amountVnd, options.rateVnd).toLocaleString('vi-VN')} Coin chính (1 Coin = ${options.rateVnd.toLocaleString('vi-VN')}đ)`
+                    : `Mỗi lần nạp từ ${options.minVnd.toLocaleString('vi-VN')}đ đến ${options.maxVnd.toLocaleString('vi-VN')}đ`}
+                </Text>
+              )}
 
-              {/* Payment Method Selector */}
-              <Text style={[styles.methodTitle, { color: colors.textSecondary }]}>
-                Phương thức thanh toán:
-              </Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Cổng thanh toán</Text>
               <View style={styles.methodRow}>
-                {PAYMENT_METHODS.map((method) => {
-                  const isSelected = selectedMethod === method.id;
+                {PROVIDERS.map((p) => {
+                  const selected = provider === p.id;
                   return (
                     <TouchableOpacity
-                      key={method.id}
-                      activeOpacity={0.8}
-                      onPress={() => setSelectedMethod(method.id)}
-                      style={[
-                        styles.methodBtn,
-                        {
-                          backgroundColor: isSelected
-                            ? isDark
-                              ? 'rgba(16, 185, 129, 0.2)'
-                              : '#ECFDF5'
-                            : isDark
-                            ? '#1E293B'
-                            : '#F8FAFC',
-                          borderColor: isSelected ? '#10B981' : colors.border,
-                          borderWidth: isSelected ? 2 : 1,
-                        },
-                      ]}
+                      key={p.id}
+                      onPress={() => setProvider(p.id)}
+                      disabled={phase !== 'form'}
+                      style={[styles.methodCard, { borderColor: selected ? '#F59E0B' : colors.border, backgroundColor: selected ? 'rgba(245, 158, 11, 0.1)' : 'transparent' }]}
                     >
-                      <Ionicons
-                        name={method.icon as any}
-                        size={16}
-                        color={isSelected ? '#10B981' : colors.textSecondary}
-                      />
-                      <Text
-                        style={[
-                          styles.methodText,
-                          {
-                            color: isSelected ? '#10B981' : colors.text,
-                            fontWeight: isSelected ? '700' : '500',
-                          },
-                        ]}
-                      >
-                        {method.name}
-                      </Text>
+                      <Text style={[styles.methodName, { color: colors.text }]}>{p.name}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
 
-              {/* Submit button (Green theme) */}
+              {errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
+
               <TouchableOpacity
-                style={[
-                  styles.topUpBtn,
-                  { backgroundColor: '#10B981', opacity: isProcessing ? 0.7 : 1 },
-                ]}
-                disabled={isProcessing}
+                style={[styles.actionBtn, { backgroundColor: '#F59E0B', opacity: inRange && phase === 'form' ? 1 : 0.5 }]}
                 onPress={handleTopUp}
+                disabled={!inRange || phase !== 'form'}
               >
-                {isProcessing ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
+                {phase === 'waiting' ? (
+                  <View style={styles.waitingRow}>
+                    <ActivityIndicator color="#0F172A" />
+                    <Text style={styles.actionBtnTextDark}>Đang chờ cổng thanh toán…</Text>
+                  </View>
                 ) : (
-                  <Text style={styles.topUpBtnText}>
-                    Thanh toán {Number(amount || 0).toLocaleString('vi-VN')} đ
-                  </Text>
+                  <Text style={styles.actionBtnTextDark}>Thanh toán</Text>
                 )}
               </TouchableOpacity>
             </>
@@ -260,130 +180,22 @@ export const TopUpModal: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    justifyContent: 'flex-end',
-  },
-  container: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderTopWidth: 1,
-    padding: 20,
-    paddingBottom: 28,
-    gap: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  amountInput: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-  },
-  methodTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  methodRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  methodBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRadius: 8,
-    alignItems: 'center',
-    gap: 4,
-  },
-  methodText: {
-    fontSize: 11,
-  },
-  topUpBtn: {
-    paddingVertical: 13,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  topUpBtnText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  // Success state styles
-  successContainer: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    gap: 12,
-  },
-  successIconCircle: {
-    marginBottom: 4,
-  },
-  successTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  successSubtitle: {
-    fontSize: 13,
-    textAlign: 'center',
-  },
-  rewardCard: {
-    width: '100%',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginVertical: 6,
-    gap: 6,
-  },
-  rewardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  rewardLabel: {
-    fontSize: 13,
-  },
-  rewardValueHighlight: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#10B981',
-  },
-  divider: {
-    height: 1,
-    marginVertical: 4,
-  },
-  walletTotal: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  actionBtn: {
-    width: '100%',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  actionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', justifyContent: 'flex-end' },
+  container: { borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, padding: 20, paddingBottom: 32 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  title: { fontSize: 17, fontWeight: '800' },
+  label: { fontSize: 12, fontWeight: '700', marginBottom: 6, marginTop: 6 },
+  amountInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, fontWeight: '700' },
+  hint: { fontSize: 12, marginTop: 6 },
+  methodRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  methodCard: { flex: 1, borderWidth: 1.5, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  methodName: { fontSize: 14, fontWeight: '800' },
+  errorText: { color: '#EF4444', fontSize: 12, marginBottom: 10 },
+  actionBtn: { marginTop: 6, paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
+  actionBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
+  actionBtnTextDark: { color: '#0F172A', fontWeight: '800', fontSize: 14 },
+  waitingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  center: { alignItems: 'center', gap: 6 },
+  successTitle: { fontSize: 17, fontWeight: '800' },
 });

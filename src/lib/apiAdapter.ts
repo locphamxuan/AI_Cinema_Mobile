@@ -1,8 +1,6 @@
 import type { Movie, Episode, AIComplianceInfo } from '../types/movie';
-import type { WalletState, CheckInStreak } from '../types/wallet';
 import type { Project, ProductionEpisode, Scene } from '../types/production';
 import type { UserProfile } from '../types/auth';
-import { getTodayDayIndex, getTodayDateString, VN_DAY_LABELS } from '../utils/date';
 
 export function adaptUserProfile(api: any): UserProfile {
   if (!api) {
@@ -115,45 +113,6 @@ export function adaptApiEpisodeToEpisode(api: any, defaultIndex = 1): Episode {
     aiLabel: api.aiLabel?.labelText || null,
     isUnlocked: Boolean(api.isUnlocked),
     synopsis: api.description || api.synopsis || '',
-  };
-}
-
-export function adaptApiWalletToWallet(api: any): WalletState {
-  if (!api) return { mainCoin: 0, bonusCoin: 0 };
-  return {
-    mainCoin: Number(api.mainBalance ?? api.mainCoin) || 0,
-    bonusCoin: Number(api.bonusBalance ?? api.bonusCoin) || 0,
-  };
-}
-
-export function adaptApiCheckInToStreak(api: any): CheckInStreak {
-  const todayIdx = getTodayDayIndex();
-  const todayStr = getTodayDateString();
-
-  api = api || {};
-
-  const currentDay = typeof api.currentDay === 'number' ? api.currentDay : todayIdx;
-  const isClaimedToday = Boolean(
-    api.todayClaimed ?? (api.lastCheckInDate === todayStr || api.canClaimToday === false)
-  );
-
-  return {
-    days: VN_DAY_LABELS.map((dayLabel, idx) => {
-      const isToday = idx === currentDay;
-      const claimed = Array.isArray(api.claimedDays)
-        ? api.claimedDays.includes(idx)
-        : isToday && isClaimedToday;
-      return {
-        dayIndex: idx,
-        dayLabel,
-        reward: Number(api.dailyRewards?.[idx] ?? api.rewards?.[idx]) || 0,
-        claimed,
-        isToday,
-      };
-    }),
-    currentStreak: Number(api.streakCount) || 0,
-    lastCheckInDate: api.lastCheckInDate || (isClaimedToday ? todayStr : null),
-    todayClaimed: isClaimedToday,
   };
 }
 

@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAppStore } from '../../src/store/useAppStore';
+import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
 import { movieService } from '../../src/services';
 import { Movie, Episode } from '../../src/types/movie';
 import { Header } from '../../src/components/common/Header';
@@ -21,11 +22,9 @@ import { AIComplianceModal } from '../../src/components/player/AIComplianceModal
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
 
 export default function WatchScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, episodeId } = useLocalSearchParams<{ id: string; episodeId?: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { colors, isDark } = useTheme();
-  const { currentMovie, setCurrentMovie, openAuthModal, isAuthenticated, movies, myList, toggleMyList, user, isVIPMode } = useAppStore();
+  const { currentMovie, setCurrentMovie, movies, myList, toggleMyList, isVIPMode } = useAppStore();
 
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
 
@@ -42,92 +41,49 @@ export default function WatchScreen() {
   const [showThumbnailGrid, setShowThumbnailGrid] = useState(false);
 
   const [complianceModalOpen, setComplianceModalOpen] = useState(false);
-  const [unlockModalOpen, setUnlockModalOpen] = useState(false);
-  const [targetUnlockEp, setTargetUnlockEp] = useState<Episode | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Movie list/detail responses carry no episodes, so they are always fetched separately.
   useEffect(() => {
-    if (!foundMovie && id) {
-      setLoading(true);
-      movieService.getMovieDetail(id).then((res) => {
-        if (res.success && res.data) {
-          setMovie(res.data);
-          setCurrentMovie(res.data);
-          setActiveEpisode(res.data.episodes?.[0] || null);
-        }
-        setLoading(false);
-      });
-    } else if (foundMovie) {
-      setMovie(foundMovie);
-      setCurrentMovie(foundMovie);
-      setActiveEpisode(foundMovie.episodes?.[0] || null);
+    if (!id) return;
+    let cancelled = false;
+    const { movies: listed, currentMovie: selected } = useAppStore.getState();
+    const known = listed.find((item) => item.id === id) || (selected?.id === id ? selected : null);
+    setLoading(!known);
+
+    Promise.all([
+      known ? Promise.resolve(known) : movieService.getMovieDetail(id).then((res) => (res.success ? res.data : null)),
+      movieService.getEpisodes(id),
+    ]).then(([base, episodesRes]) => {
+      if (cancelled) return;
+      if (base) {
+        const episodes = episodesRes.data;
+        const loaded: Movie = { ...base, episodes, totalEpisodes: episodes.length || base.totalEpisodes };
+        setMovie(loaded);
+        setCurrentMovie(loaded);
+        setActiveEpisode(episodes.find((ep) => ep.id === episodeId) || episodes[0] || null);
+      }
       setLoading(false);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [id, setCurrentMovie]);
+  }, [id, setCurrentMovie, episodeId]);
 
-  const episodes: Episode[] = movie?.episodes && movie.episodes.length > 0
-    ? movie.episodes
-    : Array.from({ length: 14 }, (_, i) => ({
-        id: `ep-${movie?.id || 'default'}-${i + 1}`,
-        episodeNumber: i + 1,
-        title: `Tập ${i + 1}`,
-        duration: '01:03:41',
-        hlsUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        thumbnailUrl: movie?.posterUrl || movie?.bannerUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80',
-        price: i === 0 ? 0 : 10,
-        isFree: i === 0,
-        isPreview: i === 1,
-        isUnlocked: i === 0,
-        synopsis: `Tập ${i + 1} của bộ phim ${movie?.title || 'AI Cinema'}.`,
-        currentVersion: 'v1.0',
-        versions: [],
-      }));
+  // Released episodes only; a movie with none says so instead of showing placeholders.
+  const episodes: Episode[] = movie?.episodes ?? [];
 
   const currentActiveEpisode = activeEpisode || episodes[0] || null;
 
-  const handleSelectEpisode = (ep: Episode) => {
-    const isVIP = isVIPMode || user?.isVIP;
-
-    if (isVIP || ep.isFree || ep.isUnlocked) {
-      setActiveEpisode(ep);
-      setIsPlaying(true);
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-      Alert.alert('Đang phát', `Đang phát Tập ${ep.episodeNumber}: ${ep.title}`);
-    } else {
-      if (!isAuthenticated) {
-        openAuthModal('login');
-        return;
-      }
-      setTargetUnlockEp(ep);
-      setUnlockModalOpen(true);
-    }
+  const play = (ep: Episode) => {
+    setActiveEpisode({ ...ep, isUnlocked: true });
+    setIsPlaying(true);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
-
-  const handleWatchNow = () => {
-    const isVIP = isVIPMode || user?.isVIP;
-    const ep = currentActiveEpisode;
-
-    if (!ep) return;
-
-    if (isVIP || ep.isFree || ep.isUnlocked) {
-      setActiveEpisode(ep);
-      setIsPlaying(true);
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-      Alert.alert('Bắt đầu phát', `Đang phát Tập ${ep.episodeNumber}: ${ep.title}`);
-    } else {
-      if (!isAuthenticated) {
-        openAuthModal('login');
-        return;
-      }
-      setTargetUnlockEp(ep);
-      setUnlockModalOpen(true);
-    }
-  };
+  // Every episode is opened through the BE access decision (free starter, plan, purchase).
+  const gate = useEpisodeGate(play);
+  const handleSelectEpisode = (ep: Episode) => void gate.open(ep);
 
   if (loading) {
     return (
@@ -142,7 +98,7 @@ export default function WatchScreen() {
     return (
       <View style={[styles.container, { backgroundColor: '#000000', justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
         <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-        <Text style={[styles.movieTitle, { marginTop: 12 }]}>Không tìm thấy phim</Text>
+        <Text style={[styles.screenMovieTitle, { marginTop: 12 }]}>Không tìm thấy phim</Text>
         <TouchableOpacity
           style={styles.backBtnFallback}
           onPress={() => router.back()}
@@ -353,7 +309,9 @@ export default function WatchScreen() {
           <View style={styles.episodeGrid}>
             {episodes.map((ep) => {
               const isCurrent = ep.id === currentActiveEpisode?.id;
-              const isLocked = !ep.isFree && !ep.isUnlocked;
+              const isUnderRevision = ep.availability === 'UNDER_REVISION';
+              // A hint only: the BE decides when the episode is opened.
+              const isLocked = !isVIPMode && !ep.isFree && !ep.isUnlocked;
 
               return (
                 <TouchableOpacity
@@ -403,18 +361,7 @@ export default function WatchScreen() {
       />
 
       {/* Unlock Episode Modal */}
-      <UnlockEpisodeModal
-        visible={unlockModalOpen}
-        onClose={() => setUnlockModalOpen(false)}
-        episode={targetUnlockEp}
-        onUnlocked={() => {
-          if (targetUnlockEp) {
-            setActiveEpisode({ ...targetUnlockEp, isUnlocked: true });
-            setIsPlaying(true);
-            scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-          }
-        }}
-      />
+      <UnlockEpisodeModal locked={gate.locked} onClose={gate.close} onUnlocked={play} />
     </View>
   );
 }

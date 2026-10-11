@@ -11,11 +11,10 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
+import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
 import { movieService } from '../../src/services';
 import { Movie, Episode } from '../../src/types/movie';
 import { Header } from '../../src/components/common/Header';
@@ -25,8 +24,6 @@ import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeMod
 export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { colors, isDark } = useTheme();
   const { currentMovie, setCurrentMovie, openAuthModal, isAuthenticated, movies, myList, toggleMyList, user, isVIPMode } = useAppStore();
 
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
@@ -38,61 +35,41 @@ export default function MovieDetailScreen() {
   const [showThumbnailGrid, setShowThumbnailGrid] = useState(false);
 
   const [complianceModalOpen, setComplianceModalOpen] = useState(false);
-  const [unlockModalOpen, setUnlockModalOpen] = useState(false);
-  const [targetUnlockEp, setTargetUnlockEp] = useState<Episode | null>(null);
 
+  // Movie list/detail responses carry no episodes, so they are always fetched separately.
   useEffect(() => {
-    if (!foundMovie && id) {
-      setLoading(true);
-      movieService.getMovieDetail(id).then((res) => {
-        if (res.success && res.data) {
-          setMovie(res.data);
-          setCurrentMovie(res.data);
-        }
-        setLoading(false);
-      });
-    } else if (foundMovie) {
-      setMovie(foundMovie);
-      setCurrentMovie(foundMovie);
-      setLoading(false);
-    }
-  }, [id, foundMovie, setCurrentMovie]);
+    if (!id) return;
+    let cancelled = false;
+    const { movies: listed, currentMovie: selected } = useAppStore.getState();
+    const known = listed.find((item) => item.id === id) || (selected?.id === id ? selected : null);
+    setLoading(!known);
 
-  const episodes: Episode[] = movie?.episodes && movie.episodes.length > 0
-    ? movie.episodes
-    : Array.from({ length: 14 }, (_, i) => ({
-        id: `ep-${movie?.id || 'default'}-${i + 1}`,
-        episodeNumber: i + 1,
-        title: `Tập ${i + 1}`,
-        duration: '01:03:41',
-        hlsUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        thumbnailUrl: movie?.posterUrl || movie?.bannerUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80',
-        price: i === 0 ? 0 : 10,
-        isFree: i === 0,
-        isPreview: i === 1,
-        isUnlocked: i === 0,
-        synopsis: `Tập ${i + 1} của bộ phim ${movie?.title || 'AI Cinema'}.`,
-        currentVersion: 'v1.0',
-        versions: [],
-      }));
-
-  const handleSelectEpisode = (ep: Episode) => {
-    const isVIP = isVIPMode || user?.isVIP;
-
-    if (isVIP || ep.isFree || ep.isUnlocked) {
-      router.push({
-        pathname: '/watch/[id]',
-        params: { id: movie?.id, episodeId: ep.id },
-      });
-    } else {
-      if (!isAuthenticated) {
-        openAuthModal('login');
-        return;
+    Promise.all([
+      known ? Promise.resolve(known) : movieService.getMovieDetail(id).then((res) => (res.success ? res.data : null)),
+      movieService.getEpisodes(id),
+    ]).then(([base, episodesRes]) => {
+      if (cancelled) return;
+      if (base) {
+        const episodes = episodesRes.data;
+        const loaded: Movie = { ...base, episodes, totalEpisodes: episodes.length || base.totalEpisodes };
+        setMovie(loaded);
+        setCurrentMovie(loaded);
       }
-      setTargetUnlockEp(ep);
-      setUnlockModalOpen(true);
-    }
-  };
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, setCurrentMovie]);
+
+  // Released episodes only; a movie with none says so instead of showing placeholders.
+  const episodes: Episode[] = movie?.episodes ?? [];
+
+  const watch = (ep: Episode) => router.push({ pathname: '/watch/[id]', params: { id, episodeId: ep.id } });
+  // Every episode is opened through the BE access decision (free starter, plan, purchase).
+  const gate = useEpisodeGate(watch);
+  const handleSelectEpisode = (ep: Episode) => void gate.open(ep);
 
   const handleWatchNow = () => {
     if (episodes.length > 0) {
@@ -113,7 +90,7 @@ export default function MovieDetailScreen() {
     return (
       <View style={[styles.container, { backgroundColor: '#000000', justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
         <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-        <Text style={[styles.title, { color: '#FFFFFF', marginTop: 12 }]}>Không tìm thấy phim</Text>
+        <Text style={[styles.movieTitle, { color: '#FFFFFF', marginTop: 12 }]}>Không tìm thấy phim</Text>
         <TouchableOpacity
           style={styles.backBtnFallback}
           onPress={() => router.back()}
@@ -297,9 +274,10 @@ export default function MovieDetailScreen() {
 
           {/* Episode Buttons Grid */}
           <View style={styles.episodeGrid}>
-            {episodes.map((ep, i) => {
-              const isLocked = !ep.isFree && !ep.isUnlocked;
-              const isCurrent = i === 10; // Tập 11 as example in screenshot
+            {episodes.map((ep) => {
+              // A hint only: the BE decides when the episode is opened.
+              const isLocked = !isVIPMode && !ep.isFree && !ep.isUnlocked;
+              const isCurrent = false;
 
               return (
                 <TouchableOpacity
@@ -393,19 +371,7 @@ export default function MovieDetailScreen() {
       />
 
       {/* Unlock Episode Modal */}
-      <UnlockEpisodeModal
-        visible={unlockModalOpen}
-        onClose={() => setUnlockModalOpen(false)}
-        episode={targetUnlockEp}
-        onUnlocked={() => {
-          if (targetUnlockEp) {
-            router.push({
-              pathname: '/watch/[id]',
-              params: { id: movie?.id, episodeId: targetUnlockEp.id },
-            });
-          }
-        }}
-      />
+      <UnlockEpisodeModal locked={gate.locked} onClose={gate.close} onUnlocked={watch} />
     </View>
   );
 }

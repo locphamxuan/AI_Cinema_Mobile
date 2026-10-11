@@ -18,25 +18,39 @@ export const API_ROUTES = {
     EPISODES: (movieId: string) => `/movies/${movieId}/episodes`,
   },
 
-  // Wallet & Payments
+  // MF-2 — wallet & Coin top-ups
   WALLET: {
     INFO: '/wallet',
-    CHECK_IN: '/wallet/check-in',
-    STREAK: '/wallet/streak',
-    DEPOSIT: '/wallet/top-ups', // Spec #12: POST /api/wallet/top-ups
+    AFFORDABILITY: '/wallet/affordability',
     TOP_UPS: '/wallet/top-ups',
+    TOP_UP_OPTIONS: '/wallet/top-ups/options',
     TOP_UP_DETAIL: (topUpId: string) => `/wallet/top-ups/${topUpId}`,
-    TRANSACTIONS: '/wallet/statements',
-    UNLOCK_EPISODE: '/wallet/unlock-episode',
+    STATEMENTS: '/wallet/statements',
+    TRANSACTION_DETAIL: (transactionId: string) => `/wallet/transactions/${transactionId}`,
   },
 
-  // Subscription (VIP Plans)
+  // MF-2 — episode access decision and single-episode purchase
+  ACCESS: {
+    DECISION: (episodeId: string) => `/episodes/${episodeId}/access`,
+    PURCHASE: (episodeId: string) => `/episodes/${episodeId}/purchase`,
+  },
+
+  // MF-2 — monthly plan
   SUBSCRIPTION: {
-    CURRENT: '/subscription',
-    SUBSCRIBE: '/subscription/subscribe',
-    CANCEL: '/subscription/cancel',
-    TOGGLE_AUTO_RENEW: '/subscription/toggle-auto-renew',
-    PLANS: '/subscription/plans',
+    PLANS: '/membership-plans',
+    MINE: '/subscriptions/me',
+    QUOTE: '/subscriptions',
+    ACTIVATE: (id: string) => `/subscriptions/${id}/activate`,
+    CANCEL_RENEW: (id: string) => `/subscriptions/${id}/cancel-auto-renew`,
+    RESUME_RENEW: (id: string) => `/subscriptions/${id}/resume-auto-renew`,
+    CYCLES: (id: string) => `/subscriptions/${id}/cycles`,
+  },
+
+  // MF-2 — daily check-in and reward wheel
+  REWARDS: {
+    STATUS: '/daily-rewards/status',
+    CHECK_IN: '/daily-rewards/check-in',
+    SPINS: '/rewards/spins',
   },
 
   // Production Workflow (Mobile Studio)
