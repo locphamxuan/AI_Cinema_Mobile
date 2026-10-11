@@ -46,36 +46,3 @@ export interface AuthResponseDto {
   id?: string;
   email?: string;
 }
-
-// Wallet DTOs
-export interface ApiWalletDto {
-  mainBalance: number;
-  bonusBalance: number;
-  totalCoins: number;
-  vipTier?: string;
-}
-
-export interface DepositRequestDto {
-  amountVnd: number;
-  provider: 'VNPAY' | 'MOMO';
-}
-
-export interface DepositResponseDto {
-  topUpId: string;
-  provider: 'VNPAY' | 'MOMO';
-  providerTxnId: string;
-  amountVnd: number;
-  coinsGranted: number;
-  rateVnd: number;
-  status: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
-  redirectUrl: string;
-  expiresAt: string;
-  failureReason: string | null;
-  paidAt: string | null;
-  providerPaymentId: string | null;
-}
-
-export interface UnlockEpisodeRequestDto {
-  episodeId: string;
-  movieId?: string;
-}
