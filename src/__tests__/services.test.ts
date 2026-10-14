@@ -2,7 +2,6 @@ import {
   adaptApiMovieToMovie,
   adaptApiEpisodeToEpisode,
   formatDuration,
-  adaptApiProjectToProject,
   adaptUserProfile,
 } from '../lib/apiAdapter';
 import { getTodayDayIndex, VN_DAY_LABELS } from '../utils/date';
@@ -11,7 +10,6 @@ import {
   movieService,
   walletService,
   episodeAccessService,
-  productionService,
   chatService,
 } from '../services';
 import { apiClient, extractErrorMessage } from '../services/apiClient';
@@ -33,7 +31,6 @@ describe('API Routes and Config', () => {
     expect(API_ROUTES.REWARDS.STATUS).toBe('/daily-rewards/status');
     expect(API_ROUTES.SUBSCRIPTION.MINE).toBe('/subscriptions/me');
     expect(API_ROUTES.ACCESS.DECISION('ep-1')).toBe('/episodes/ep-1/access');
-    expect(API_ROUTES.PRODUCTION.PROJECTS).toBe('/production-projects');
   });
 
   it('should have smart base URL configured', () => {
@@ -115,6 +112,12 @@ describe('API Adapters', () => {
     expect(formatDuration(null)).toBe('');
   });
 
+  it('does not invent episodes for a movie the API sends without any', () => {
+    const movie = adaptApiMovieToMovie({ id: 'mv-1', title: 'Phim không tập', episodeCount: 8 });
+    expect(movie.episodes).toEqual([]);
+    expect(movie.totalEpisodes).toBe(8);
+  });
+
   it('movieService.getEpisodes calls the movie episodes endpoint', async () => {
     const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
@@ -145,22 +148,6 @@ describe('API Adapters', () => {
     expect(VN_DAY_LABELS[getTodayDayIndex(mon)]).toBe('T2');
   });
 
-  it('adaptApiProjectToProject maps project data properly', () => {
-    const rawProject = {
-      id: 'proj-01',
-      title: 'Thành Phố Tương Lai',
-      status: 'IN_PRODUCTION',
-      totalAiQuotaBudget: 5000,
-      remainingAiQuotaBudget: 3500,
-      assignedCreator: { fullName: 'Trần Minh Huy' },
-    };
-    const proj = adaptApiProjectToProject(rawProject);
-    expect(proj.id).toBe('proj-01');
-    expect(proj.status).toBe('in_production');
-    expect(proj.totalBudgetTokens).toBe(5000);
-    expect(proj.allocatedTokens).toBe(1500);
-    expect(proj.creatorName).toBe('Trần Minh Huy');
-  });
 });
 
 describe('Mobile Services do not return mock fallbacks', () => {
@@ -190,12 +177,6 @@ describe('Mobile Services do not return mock fallbacks', () => {
     expect(res.message).toContain('network offline');
   });
 
-  it('productionService.listProjects reports the backend network error', async () => {
-    const res = await productionService.listProjects();
-    expect(res.success).toBe(false);
-    expect(res.message).toContain('network offline');
-  });
-
   it('chatService.sendMessage reports the backend network error', async () => {
     const res = await chatService.sendMessage('Xin chào');
     expect(res.success).toBe(false);
@@ -204,16 +185,6 @@ describe('Mobile Services do not return mock fallbacks', () => {
 });
 
 describe('Live Backend Connection (Port 3001)', () => {
-  it('successfully handles production-projects endpoint response structure', async () => {
-    const res = await apiClient.get('/production-projects');
-    if (res.success) {
-      expect(res.statusCode).toBe(200);
-      expect(res.data).toBeDefined();
-    } else {
-      expect([401, 404, undefined]).toContain(res.statusCode);
-    }
-  });
-
   it('successfully handles real genres list from live NestJS BE', async () => {
     const res = await apiClient.get<{ id: string; name: string }[]>('/genres');
     if (res.success) {
