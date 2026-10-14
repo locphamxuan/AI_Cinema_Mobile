@@ -77,14 +77,6 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="studio"
-        options={{
-          title: 'Studio AI',
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
         name="profile"
         options={{
           title: 'Tài khoản',
