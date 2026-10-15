@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Switch,
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -20,6 +19,9 @@ import { Movie, Episode } from '../../src/types/movie';
 import { Header } from '../../src/components/common/Header';
 import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
+import { AudioModeTabs, trackFor, type AudioMode } from '../../src/components/movie/AudioModeTabs';
+import { EpisodeList } from '../../src/components/movie/EpisodeList';
+import { LikeButton, compactCount, useMovieEngagement } from '../../src/components/movie/LikeButton';
 
 export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,9 +32,9 @@ export default function MovieDetailScreen() {
 
   const [movie, setMovie] = useState<Movie | null>(foundMovie);
   const [loading, setLoading] = useState(!foundMovie);
-  const [activeTab, setActiveTab] = useState<'subtitle' | 'voiceover' | 'recommend' | 'cast'>('subtitle');
-  const [selectedServer, setSelectedServer] = useState('Vietsub (SN)');
-  const [showThumbnailGrid, setShowThumbnailGrid] = useState(false);
+  const [audioMode, setAudioMode] = useState<AudioMode>('subtitle');
+  const [chosenTrack, setChosenTrack] = useState<string | null>(null);
+  const [engagement] = useMovieEngagement(id);
 
   const [complianceModalOpen, setComplianceModalOpen] = useState(false);
 
@@ -66,7 +68,8 @@ export default function MovieDetailScreen() {
   // Released episodes only; a movie with none says so instead of showing placeholders.
   const episodes: Episode[] = movie?.episodes ?? [];
 
-  const watch = (ep: Episode) => router.push({ pathname: '/watch/[id]', params: { id, episodeId: ep.id } });
+  // The watch screen starts in the mode chosen here: subtitles on (Phụ đề) or the film's own audio (Thuyết minh).
+  const watch = (ep: Episode) => router.push({ pathname: '/watch/[id]', params: { id, episodeId: ep.id, mode: audioMode } });
   // Every episode is opened through the BE access decision (free starter, plan, purchase).
   const gate = useEpisodeGate(watch);
   const handleSelectEpisode = (ep: Episode) => void gate.open(ep);
@@ -141,7 +144,9 @@ export default function MovieDetailScreen() {
           {/* Release Date info */}
           <View style={styles.releaseInfoRow}>
             <Ionicons name="calendar-outline" size={14} color="#F59E0B" />
-            <Text style={styles.releaseInfoText}>Tập 11 phát sóng ngày 04-10-2026</Text>
+            <Text style={styles.releaseInfoText}>
+              {episodes.length} tập đã phát hành · {compactCount(engagement?.viewCount ?? 0)} lượt xem · {compactCount(engagement?.likeCount ?? 0)} tim
+            </Text>
           </View>
 
           {/* Primary Action Buttons (Green as requested in reference images) */}
@@ -167,12 +172,7 @@ export default function MovieDetailScreen() {
 
           {/* Action Icons Row (Like, Bookmark, Share) */}
           <View style={styles.iconActionsRow}>
-            <TouchableOpacity
-              style={styles.iconActionItem}
-              onPress={() => Alert.alert('Đã thích', 'Bạn đã thêm phim vào danh sách yêu thích.')}
-            >
-              <Ionicons name="heart-outline" size={18} color="#FFFFFF" />
-            </TouchableOpacity>
+            <LikeButton movieId={movie.id} />
 
             <TouchableOpacity
               style={styles.iconActionItem}
@@ -202,105 +202,17 @@ export default function MovieDetailScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Tabs Row (Phụ đề, Thuyết minh, Đề xuất, Diễn viên) */}
-        <View style={styles.tabsRow}>
-          <TouchableOpacity
-            style={[styles.tabItem, activeTab === 'subtitle' && styles.tabItemActive]}
-            onPress={() => setActiveTab('subtitle')}
-          >
-            <Text style={[styles.tabText, activeTab === 'subtitle' && styles.tabTextActive]}>PHỤ ĐỀ</Text>
-          </TouchableOpacity>
+        {/* Phụ đề = subtitles on; Thuyết minh = the film's own audio. The choice carries over to the player. */}
+        <AudioModeTabs
+          mode={audioMode}
+          onModeChange={setAudioMode}
+          tracks={episodes[0]?.subtitles ?? []}
+          trackId={trackFor(audioMode, episodes[0]?.subtitles ?? [], chosenTrack)}
+          onTrackChange={setChosenTrack}
+          language={movie.language}
+        />
 
-          <TouchableOpacity
-            style={[styles.tabItem, activeTab === 'voiceover' && styles.tabItemActive]}
-            onPress={() => setActiveTab('voiceover')}
-          >
-            <Text style={[styles.tabText, activeTab === 'voiceover' && styles.tabTextActive]}>THUYẾT MINH</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabItem, activeTab === 'recommend' && styles.tabItemActive]}
-            onPress={() => setActiveTab('recommend')}
-          >
-            <Text style={[styles.tabText, activeTab === 'recommend' && styles.tabTextActive]}>ĐỀ XUẤT</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabItem, activeTab === 'cast' && styles.tabItemActive]}
-            onPress={() => setActiveTab('cast')}
-          >
-            <Text style={[styles.tabText, activeTab === 'cast' && styles.tabTextActive]}>DIỄN VIÊN</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Server Selection Pills */}
-        <View style={styles.serverSection}>
-          <Text style={styles.serverLabel}>MÁY CHỦ:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.serverScroll}>
-            {['Vietsub (SN)', 'Vietsub (PA)', 'Lox Sub AI'].map((server) => {
-              const isSelected = selectedServer === server;
-              return (
-                <TouchableOpacity
-                  key={server}
-                  style={[styles.serverPill, isSelected && styles.serverPillActive]}
-                  onPress={() => setSelectedServer(server)}
-                >
-                  <Text style={[styles.serverPillText, isSelected && styles.serverPillTextActive]}>
-                    {server} | {episodes.length}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* Episodes Grid / List Section (as seen in image 3) */}
-        <View style={styles.episodesSection}>
-          <View style={styles.episodesHeadingRow}>
-            <Text style={styles.episodesHeading}>
-              Danh sách tập (11 / {episodes.length})
-            </Text>
-            <View style={styles.thumbnailSwitchRow}>
-              <Text style={styles.switchLabel}>Hiện ảnh</Text>
-              <Switch
-                value={showThumbnailGrid}
-                onValueChange={setShowThumbnailGrid}
-                trackColor={{ false: '#27272A', true: '#10B981' }}
-                thumbColor={'#FFFFFF'}
-                ios_backgroundColor="#27272A"
-              />
-            </View>
-          </View>
-
-          {/* Episode Buttons Grid */}
-          <View style={styles.episodeGrid}>
-            {episodes.map((ep) => {
-              // A hint only: the BE decides when the episode is opened.
-              const isLocked = !isVIPMode && !ep.isFree && !ep.isUnlocked;
-              const isCurrent = false;
-
-              return (
-                <TouchableOpacity
-                  key={ep.id}
-                  style={[styles.epGridButton, isCurrent && styles.epGridButtonActive]}
-                  activeOpacity={0.8}
-                  onPress={() => handleSelectEpisode(ep)}
-                >
-                  <Ionicons
-                    name={isLocked ? 'lock-closed' : 'play'}
-                    size={12}
-                    color={isLocked ? '#F59E0B' : '#FFFFFF'}
-                  />
-                  <Text style={[styles.epGridButtonText, isCurrent && styles.epGridButtonTextActive]} numberOfLines={1}>
-                    Tập {ep.episodeNumber}
-                  </Text>
-                  {isLocked && <Text style={styles.coinCostTag}>{ep.price}C</Text>}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
+        <EpisodeList episodes={episodes} isVIPMode={isVIPMode} posterUrl={movie.posterUrl} onSelect={handleSelectEpisode} />
         {/* Comments Section (as seen in image 4) */}
         <View style={styles.commentsSection}>
           <View style={styles.commentHeaderRow}>
