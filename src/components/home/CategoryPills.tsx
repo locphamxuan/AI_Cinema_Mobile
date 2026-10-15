@@ -9,8 +9,8 @@ interface CategoryPillsProps {
   onSelectCategory: (category: string) => void;
 }
 
-const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  'Tất cả': 'sparkles',
+const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap | undefined> = {
+  'Tất cả': undefined,
   'Thịnh hành': 'flame',
   'Khoa học Viễn tưởng': 'planet-outline',
   'Cyberpunk 2049': 'hardware-chip-outline',
