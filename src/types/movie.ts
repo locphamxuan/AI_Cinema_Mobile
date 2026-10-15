@@ -10,6 +10,15 @@ export interface AIComplianceInfo {
 
 export type EpisodeAvailability = 'AVAILABLE' | 'UNDER_REVISION';
 
+/** A subtitle track of the released version; its WebVTT is read from GET /subtitles/:id. */
+export interface SubtitleTrack {
+  id: string;
+  /** ISO code: vi, en… */
+  language: string;
+  label: string;
+  isDefault: boolean;
+}
+
 export interface Episode {
   id: string;
   seasonNumber: number;
@@ -27,6 +36,7 @@ export interface Episode {
   notice: string | null;
   /** AI content label text that must be shown with the episode (BR-10). */
   aiLabel: string | null;
+  subtitles: SubtitleTrack[];
   isUnlocked: boolean;
   synopsis: string;
 }
@@ -39,6 +49,8 @@ export interface Movie {
   bannerUrl: string;
   description: string;
   year: number;
+  /** Spoken language of the film (BE defaultLanguage), e.g. vi or en. */
+  language: string;
   episodes: Episode[];
   aiCompliance: AIComplianceInfo;
   totalEpisodes: number;

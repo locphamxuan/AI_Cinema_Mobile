@@ -60,6 +60,7 @@ export function adaptApiMovieToMovie(api: any): Movie {
     bannerUrl: api.bannerUrl || api.posterUrl || '',
     description: api.description || api.synopsis || '',
     year: Number(api.releaseYear || api.year) || 0,
+    language: api.defaultLanguage || api.language || 'vi',
     episodes,
     aiCompliance,
     totalEpisodes: Number(api.totalEpisodes ?? api.episodeCount) || episodes.length,
@@ -96,6 +97,14 @@ export function adaptApiEpisodeToEpisode(api: any, defaultIndex = 1): Episode {
     availability: api.availability === 'UNDER_REVISION' ? 'UNDER_REVISION' : 'AVAILABLE',
     notice: api.notice || null,
     aiLabel: api.aiLabel?.labelText || null,
+    subtitles: Array.isArray(api.subtitles)
+      ? api.subtitles.map((s: any) => ({
+          id: String(s.id),
+          language: String(s.language),
+          label: String(s.label || s.language),
+          isDefault: Boolean(s.isDefault),
+        }))
+      : [],
     isUnlocked: Boolean(api.isUnlocked),
     synopsis: api.description || api.synopsis || '',
   };

@@ -16,6 +16,18 @@ export const API_ROUTES = {
     LIST: '/movies',
     DETAIL: (id: string) => `/movies/${id}`,
     EPISODES: (movieId: string) => `/movies/${movieId}/episodes`,
+    ENGAGEMENT: (movieId: string) => `/movies/${movieId}/engagement`,
+    LIKE: (movieId: string) => `/movies/${movieId}/like`,
+    VIEWS: (episodeId: string) => `/episodes/${episodeId}/views`,
+    SUBTITLE: (subtitleId: string) => `/subtitles/${subtitleId}`,
+  },
+
+  // In-app notifications of the signed-in account
+  NOTIFICATIONS: {
+    LIST: '/notifications',
+    UNREAD_COUNT: '/notifications/unread-count',
+    READ_ALL: '/notifications/read-all',
+    READ: (id: string) => `/notifications/${id}/read`,
   },
 
   // MF-2 — wallet & Coin top-ups
