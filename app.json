@@ -3,7 +3,7 @@
     "name": "AI Cinema",
     "slug": "ai-cinema-mobile",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "aicinema",
     "userInterfaceStyle": "automatic",
@@ -33,7 +33,8 @@
       "expo-router",
       "expo-font",
       "expo-asset",
-      "expo-video"
+      "expo-video",
+      "expo-screen-orientation"
     ],
     "experiments": {
       "typedRoutes": true
