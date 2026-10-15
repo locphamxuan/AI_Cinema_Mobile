@@ -114,5 +114,14 @@ vite.config.ts.timestamp-*
 .claude-tools/
 .claude-mem/
 CLAUDE.md
+.agents/
+.agent/
+GEMINI.md
 TESTING.md
+PROJECT_OVERVIEW.md
+PROJECT_CONTEXT.md
+PROGRESS.md
 .codegraph/
+
+# Agent working notes
+.artifacts/

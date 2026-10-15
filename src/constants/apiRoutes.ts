@@ -16,6 +16,18 @@ export const API_ROUTES = {
     LIST: '/movies',
     DETAIL: (id: string) => `/movies/${id}`,
     EPISODES: (movieId: string) => `/movies/${movieId}/episodes`,
+    ENGAGEMENT: (movieId: string) => `/movies/${movieId}/engagement`,
+    LIKE: (movieId: string) => `/movies/${movieId}/like`,
+    VIEWS: (episodeId: string) => `/episodes/${episodeId}/views`,
+    SUBTITLE: (subtitleId: string) => `/subtitles/${subtitleId}`,
+  },
+
+  // In-app notifications of the signed-in account
+  NOTIFICATIONS: {
+    LIST: '/notifications',
+    UNREAD_COUNT: '/notifications/unread-count',
+    READ_ALL: '/notifications/read-all',
+    READ: (id: string) => `/notifications/${id}/read`,
   },
 
   // MF-2 — wallet & Coin top-ups
@@ -51,26 +63,6 @@ export const API_ROUTES = {
     STATUS: '/daily-rewards/status',
     CHECK_IN: '/daily-rewards/check-in',
     SPINS: '/rewards/spins',
-  },
-
-  // Production Workflow (Mobile Studio)
-  PRODUCTION: {
-    PROJECTS: '/production-projects',
-    PROJECT_DETAIL: (projectId: string) => `/production-projects/${projectId}`,
-    PLANS: (projectId: string) => `/production-projects/${projectId}/plans`,
-    PLAN_DETAIL: (planId: string) => `/production-plans/${planId}`,
-    PLAN_SUBMIT: (planId: string) => `/production-plans/${planId}/submit`,
-    PLAN_REVIEWS: (planId: string) => `/production-plans/${planId}/plan-reviews`,
-    QUOTA_ALLOCATIONS: (planId: string) => `/production-plans/${planId}/quota-allocations`,
-    SCENES: (planId: string) => `/production-plans/${planId}/scenes`,
-    SCENE_DETAIL: (sceneId: string) => `/scenes/${sceneId}`,
-    SCENE_SUBMIT: (sceneId: string) => `/scenes/${sceneId}/submit`,
-    GENERATION_JOBS: (planId: string) => `/production-plans/${planId}/generation-jobs`,
-    JOB_DETAIL: (jobId: string) => `/generation-jobs/${jobId}`,
-    JOB_RETRY: (jobId: string) => `/generation-jobs/${jobId}/retry`,
-    PACKAGES: (planId: string) => `/production-plans/${planId}/episode-packages`,
-    PACKAGE_DETAIL: (packageId: string) => `/episode-packages/${packageId}`,
-    COMPLIANCE_CHECKS: (packageId: string) => `/episode-packages/${packageId}/compliance-checks`,
   },
 
   // Chat & AI Support

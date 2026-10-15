@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Modal,
   TouchableWithoutFeedback,
-  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,6 +15,29 @@ import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 import { useAppStore } from '../../store/useAppStore';
 import { ExploreModal } from './ExploreModal';
+import { notificationService } from '../../services/notificationService';
+
+const UNREAD_POLL_MS = 60_000;
+
+/** Unread notifications of the signed-in Member, read again every minute. */
+function useUnreadNotifications(signedIn: boolean): number {
+  const [unread, setUnread] = useState(0);
+  React.useEffect(() => {
+    if (!signedIn) {
+      setUnread(0);
+      return;
+    }
+    let active = true;
+    const read = () => void notificationService.unreadCount().then((res) => active && res.success && setUnread(res.data?.unread ?? 0));
+    read();
+    const timer = setInterval(read, UNREAD_POLL_MS);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [signedIn]);
+  return unread;
+}
 
 interface HeaderProps {
   onProfilePress?: () => void;
@@ -31,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({ onProfilePress, onSearch }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isExploreOpen, setIsExploreOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const unread = useUnreadNotifications(isAuthenticated);
 
   const handleAvatarPress = () => {
     setIsDropdownOpen(prev => !prev);
@@ -114,10 +137,15 @@ export const Header: React.FC<HeaderProps> = ({ onProfilePress, onSearch }) => {
 
           <TouchableOpacity
             style={styles.iconBtn}
-            onPress={() => Alert.alert('Thông báo', 'Bạn không có thông báo mới nào.')}
-            accessibilityLabel="Thông báo"
+            onPress={() => (isAuthenticated ? router.push('/notifications') : openAuthModal('login'))}
+            accessibilityLabel={unread ? `Thông báo, ${unread} chưa đọc` : 'Thông báo'}
           >
             <Ionicons name="notifications-outline" size={20} color={colors.text} />
+            {unread > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>{unread > 99 ? '99+' : unread}</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           {isAuthenticated ? (
@@ -537,4 +565,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  bellBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 3,
+    borderRadius: 8,
+    backgroundColor: '#E11D48',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800' },
 });

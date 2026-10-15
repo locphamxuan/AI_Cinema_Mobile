@@ -1,0 +1,82 @@
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { clock } from '../../lib/vtt';
+
+export const SEEK_SECONDS = 10;
+
+interface PlayerControlsProps {
+  currentTime: number;
+  duration: number;
+  playing: boolean;
+  fullscreen: boolean;
+  rate: number;
+  onTogglePlay: () => void;
+  onSeekBy: (seconds: number) => void;
+  onSeekTo: (seconds: number) => void;
+  onSettings: () => void;
+  onToggleFullscreen: () => void;
+}
+
+/** YouTube-like controls: back / forward 10 s around play, a seek bar, settings and fullscreen. */
+export function PlayerControls(props: PlayerControlsProps) {
+  const { currentTime, duration, playing, fullscreen, rate, onTogglePlay, onSeekBy, onSeekTo, onSettings, onToggleFullscreen } = props;
+  const [barWidth, setBarWidth] = React.useState(0);
+  const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
+  const seekOnBar = (e: GestureResponderEvent) => {
+    if (barWidth > 0 && duration > 0) onSeekTo((e.nativeEvent.locationX / barWidth) * duration);
+  };
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      <View style={styles.center} pointerEvents="box-none">
+        <TouchableOpacity style={styles.seekBtn} onPress={() => onSeekBy(-SEEK_SECONDS)} accessibilityLabel="Lùi 10 giây">
+          <MaterialIcons name="replay-10" size={30} color="#FFFFFF" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.playBtn} onPress={onTogglePlay} accessibilityLabel={playing ? 'Tạm dừng' : 'Phát'}>
+          <Ionicons name={playing ? 'pause' : 'play'} size={30} color="#FFFFFF" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.seekBtn} onPress={() => onSeekBy(SEEK_SECONDS)} accessibilityLabel="Tua tới 10 giây">
+          <MaterialIcons name="forward-10" size={30} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.bottom}>
+        <Text style={styles.time}>
+          {clock(currentTime)} / {clock(duration)}
+        </Text>
+        <TouchableOpacity
+          style={styles.barTouch}
+          activeOpacity={1}
+          onPress={seekOnBar}
+          onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
+          accessibilityLabel="Thanh tua"
+        >
+          <View style={styles.track}>
+            <View style={[styles.fill, { width: `${progress * 100}%` }]} />
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onSettings} style={styles.iconBtn} accessibilityLabel="Cài đặt">
+          <Ionicons name="settings-outline" size={18} color="#FFFFFF" />
+          {rate !== 1 && <Text style={styles.rateTag}>{rate}x</Text>}
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onToggleFullscreen} style={styles.iconBtn} accessibilityLabel={fullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}>
+          <Ionicons name={fullscreen ? 'contract' : 'expand'} size={18} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  center: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 36 },
+  seekBtn: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' },
+  playBtn: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)' },
+  bottom: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, paddingBottom: 6, paddingTop: 4, backgroundColor: 'rgba(0,0,0,0.45)' },
+  time: { color: '#FFFFFF', fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  barTouch: { flex: 1, height: 22, justifyContent: 'center' },
+  track: { height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)', overflow: 'hidden' },
+  fill: { height: '100%', backgroundColor: '#10B981' },
+  iconBtn: { padding: 4, flexDirection: 'row', alignItems: 'center', gap: 2 },
+  rateTag: { color: '#10B981', fontSize: 10, fontWeight: '800' },
+});

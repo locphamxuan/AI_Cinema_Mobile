@@ -24,7 +24,7 @@ export interface RegisterRequestDto {
   dateOfBirth?: string;
 }
 
-export interface BEUserDto {
+interface BEUserDto {
   id: string;
   email: string;
   fullName: string;

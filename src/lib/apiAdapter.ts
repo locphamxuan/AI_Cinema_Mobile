@@ -1,5 +1,4 @@
 import type { Movie, Episode, AIComplianceInfo } from '../types/movie';
-import type { Project, ProductionEpisode, Scene } from '../types/production';
 import type { UserProfile } from '../types/auth';
 
 export function adaptUserProfile(api: any): UserProfile {
@@ -35,21 +34,7 @@ export function adaptApiMovieToMovie(api: any): Movie {
 
   const episodes: Episode[] = Array.isArray(api.episodes) && api.episodes.length > 0
     ? api.episodes.map((ep: any, index: number) => adaptApiEpisodeToEpisode(ep, index + 1))
-    : Array.from({ length: 12 }, (_, i) => ({
-        id: `ep-${api.id || 'default'}-${i + 1}`,
-        episodeNumber: i + 1,
-        title: `Tập ${i + 1}`,
-        duration: '24:00',
-        hlsUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        thumbnailUrl: api.posterUrl || api.thumbnailUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80',
-        price: i === 0 ? 0 : 10,
-        isFree: i === 0,
-        isPreview: i === 1,
-        isUnlocked: i === 0,
-        synopsis: `Tập ${i + 1} của bộ phim ${api.title || 'AI Cinema'}.`,
-        currentVersion: 'v1.0',
-        versions: [],
-      }));
+    : [];
 
   const genres: string[] = Array.isArray(api.genre)
     ? api.genre
@@ -75,6 +60,7 @@ export function adaptApiMovieToMovie(api: any): Movie {
     bannerUrl: api.bannerUrl || api.posterUrl || '',
     description: api.description || api.synopsis || '',
     year: Number(api.releaseYear || api.year) || 0,
+    language: api.defaultLanguage || api.language || 'vi',
     episodes,
     aiCompliance,
     totalEpisodes: Number(api.totalEpisodes ?? api.episodeCount) || episodes.length,
@@ -111,67 +97,15 @@ export function adaptApiEpisodeToEpisode(api: any, defaultIndex = 1): Episode {
     availability: api.availability === 'UNDER_REVISION' ? 'UNDER_REVISION' : 'AVAILABLE',
     notice: api.notice || null,
     aiLabel: api.aiLabel?.labelText || null,
+    subtitles: Array.isArray(api.subtitles)
+      ? api.subtitles.map((s: any) => ({
+          id: String(s.id),
+          language: String(s.language),
+          label: String(s.label || s.language),
+          isDefault: Boolean(s.isDefault),
+        }))
+      : [],
     isUnlocked: Boolean(api.isUnlocked),
     synopsis: api.description || api.synopsis || '',
-  };
-}
-
-export function adaptApiProjectToProject(api: any): Project {
-  const episodes: ProductionEpisode[] = Array.isArray(api.episodes) && api.episodes.length > 0
-    ? api.episodes.map((ep: any, index: number) => {
-        const scenes: Scene[] = Array.isArray(ep.scenes)
-            ? ep.scenes.map((sc: any, sIdx: number) => ({
-              id: sc.id || '',
-              title: sc.title || '',
-              prompt: sc.prompt || sc.description || '',
-              status: sc.status || 'pending',
-              duration: sc.duration || '',
-              model: sc.model || '',
-              progress: Number(sc.progress) || 0,
-              videoUrl: sc.videoUrl || sc.assetUrl,
-              resolution: sc.resolution || '',
-              audioTrack: sc.audioTrack || '',
-              voiceOver: sc.voiceOver || '',
-            }))
-          : [];
-
-        return {
-          id: ep.id || `ep-pkg-${index + 1}`,
-          title: ep.title || `Tập ${index + 1}`,
-          episodeNumber: ep.episodeNumber || index + 1,
-          status: ep.status || (index === 0 ? 'published' : 'draft'),
-          quotaAllocated: Number(ep.quotaAllocated ?? ep.quota_allocated) || 0,
-          tokensUsed: Number(ep.tokensUsed ?? ep.actual_tokens_used) || 0,
-          scenes,
-          plan: {
-            title: ep.title || '',
-            synopsis: ep.synopsis || '',
-            targetDuration: Number(ep.targetDuration) || 0,
-            estimatedTokens: Number(ep.estimatedTokens) || 0,
-            approach: ep.productionApproach || '',
-            status: ep.status || 'approved',
-          },
-          videoDraftUrl: ep.videoDraftUrl || ep.video_draft_url,
-        };
-      })
-    : [];
-
-  return {
-    id: api.id || '',
-    title: api.title || '',
-    synopsis: api.synopsis || api.description || '',
-    totalEpisodes: episodes.length || Number(api.episodeCount) || 0,
-    deadline: api.deadline || '',
-    plannedReleaseDate: api.plannedReleaseDate || '',
-    creatorName: api.assignedCreator?.fullName || '',
-    reviewerName: api.createdBy?.fullName || '',
-    genre: Array.isArray(api.genre) ? api.genre : [],
-    status: api.status === 'PUBLISHED' ? 'completed' : api.status === 'IN_PRODUCTION' ? 'in_production' : 'planning',
-    totalBudgetTokens: Number(api.totalAiQuotaBudget) || 0,
-    allocatedTokens: Math.max(0, Number(api.totalAiQuotaBudget || 0) - Number(api.remainingAiQuotaBudget || 0)),
-    consumedTokens: Number(api.consumedTokens) || 0,
-    episodes,
-    createdAt: api.createdAt || new Date().toISOString(),
-    updatedAt: api.updatedAt || new Date().toISOString(),
   };
 }

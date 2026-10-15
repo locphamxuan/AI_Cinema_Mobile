@@ -6,7 +6,7 @@ import { useTheme } from '../../theme';
 import type { CheckInResult, DailyRewardStatus } from '../../types/episodeAccess';
 
 /** The BE ladder runs seven streak days, then starts again at day 1. */
-export const LADDER_LENGTH = 7;
+const LADDER_LENGTH = 7;
 
 type DayState = 'claimed' | 'next' | 'locked';
 

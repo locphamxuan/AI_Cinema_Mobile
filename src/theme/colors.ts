@@ -1,4 +1,4 @@
-export const sharedColors = {
+const sharedColors = {
   ruby: '#E50914',
   rubyDark: '#B20710',
   rubyLight: '#FF4D58',

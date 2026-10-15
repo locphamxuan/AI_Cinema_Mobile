@@ -1,4 +1,4 @@
-export type ChatSender = 'user' | 'bot' | 'agent' | 'system';
+type ChatSender = 'user' | 'bot' | 'agent' | 'system';
 export type ChatPhase = 'bot' | 'escalating' | 'waiting' | 'agent';
 
 export interface ChatMessage {

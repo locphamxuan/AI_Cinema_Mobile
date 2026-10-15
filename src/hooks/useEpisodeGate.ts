@@ -35,7 +35,7 @@ export function useEpisodeGate(onGranted: (episode: Episode) => void) {
       }
       if (res.data.accessGranted) {
         markEpisodeUnlocked(episode.id);
-        onGranted(episode);
+        onGranted({ ...episode, hlsUrl: res.data.streamUrl ?? episode.hlsUrl });
         return;
       }
       if (res.data.nextAction === 'REGISTER_OR_LOGIN') {
