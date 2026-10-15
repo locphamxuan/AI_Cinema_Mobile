@@ -93,6 +93,13 @@ describe('MF-2 rules on the client', () => {
 });
 
 describe('MF-2 services call the BE contract', () => {
+  it('gets the stream to play from the access decision, not from the catalog', async () => {
+    routeFetch({
+      'GET /episodes/ep-1/access': { episodeId: 'ep-1', accessGranted: true, streamUrl: 'https://cdn/ep-1.mp4' },
+    });
+    const res = await episodeAccessService.checkAccess('ep-1');
+    expect(res.data?.streamUrl).toBe('https://cdn/ep-1.mp4');
+  });
   it('buys an episode once per key', async () => {
     const fetchMock = routeFetch({ 'POST /episodes/ep-1/purchase': { paidCoins: 10, mainBalance: 0, bonusBalance: 0 } });
     await episodeAccessService.purchaseEpisode('ep-1', 'k1');
