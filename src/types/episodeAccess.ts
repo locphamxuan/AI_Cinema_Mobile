@@ -15,6 +15,8 @@ export interface AccessDecision {
   source: AccessSourceName;
   actorType: 'GUEST' | 'MEMBER';
   planCode?: string;
+  /** What the player loads; the BE only sends it once access is granted. */
+  streamUrl?: string;
   accessMethods: AccessMethod[];
   required: {
     coinPrice: number;

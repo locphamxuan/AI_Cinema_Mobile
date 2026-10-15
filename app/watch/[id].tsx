@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  Image,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
@@ -12,7 +11,6 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAppStore } from '../../src/store/useAppStore';
 import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
 import { movieService } from '../../src/services';
@@ -20,6 +18,8 @@ import { Movie, Episode } from '../../src/types/movie';
 import { Header } from '../../src/components/common/Header';
 import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
+import { EpisodePlayer } from '../../src/components/player/EpisodePlayer';
+import { episodeAccessService } from '../../src/services/episodeAccessService';
 
 export default function WatchScreen() {
   const { id, episodeId } = useLocalSearchParams<{ id: string; episodeId?: string }>();
@@ -33,9 +33,6 @@ export default function WatchScreen() {
   const [activeEpisode, setActiveEpisode] = useState<Episode | null>(foundMovie?.episodes?.[0] || null);
   const [activeTab, setActiveTab] = useState<'subtitle' | 'voiceover' | 'recommend' | 'cast'>('subtitle');
   const [selectedServer, setSelectedServer] = useState('Vietsub (SN)');
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
   const [autoNext, setAutoNext] = useState(false);
   const [skipIntro, setSkipIntro] = useState(false);
   const [showThumbnailGrid, setShowThumbnailGrid] = useState(false);
@@ -76,9 +73,10 @@ export default function WatchScreen() {
 
   const currentActiveEpisode = activeEpisode || episodes[0] || null;
 
-  const play = (ep: Episode) => {
-    setActiveEpisode({ ...ep, isUnlocked: true });
-    setIsPlaying(true);
+  const play = async (ep: Episode) => {
+    // After a purchase the episode carries no stream yet: ask the BE again, it decides.
+    const streamUrl = ep.hlsUrl || (await episodeAccessService.checkAccess(ep.id)).data?.streamUrl || '';
+    setActiveEpisode({ ...ep, hlsUrl: streamUrl, isUnlocked: true });
     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
   // Every episode is opened through the BE access decision (free starter, plan, purchase).
@@ -117,69 +115,13 @@ export default function WatchScreen() {
       <Header />
 
       <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Full Video Player Area (as seen in image 2) */}
-        <View style={styles.playerContainer}>
-          <Image
-            source={{ uri: currentActiveEpisode?.thumbnailUrl || movie.bannerUrl || movie.posterUrl }}
-            style={styles.playerVideoBg}
-            resizeMode="cover"
-          />
-          <LinearGradient
-            colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.85)']}
-            style={styles.playerOverlay}
-          >
-            {/* Top-Left Lock Button */}
-            <TouchableOpacity
-              style={styles.playerLockBtn}
-              onPress={() => setIsLocked(!isLocked)}
-            >
-              <Ionicons name={isLocked ? 'lock-closed' : 'lock-open'} size={16} color="#FFFFFF" />
-            </TouchableOpacity>
-
-            {/* Center Play/Pause button */}
-            <TouchableOpacity
-              style={styles.playerCenterPlay}
-              onPress={() => setIsPlaying(!isPlaying)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name={isPlaying ? 'pause' : 'play'} size={32} color="#FFFFFF" />
-            </TouchableOpacity>
-
-            {/* Bottom Player Control Bar */}
-            <View style={styles.playerControlBar}>
-              <TouchableOpacity onPress={() => setIsPlaying(!isPlaying)} style={styles.controlIconBtn}>
-                <Ionicons name={isPlaying ? 'pause' : 'play'} size={16} color="#FFFFFF" />
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={() => setIsMuted(!isMuted)} style={styles.controlIconBtn}>
-                <Ionicons name={isMuted ? 'volume-mute' : 'volume-high'} size={16} color="#FFFFFF" />
-              </TouchableOpacity>
-
-              <Text style={styles.timeLabel}>00:00 / {currentActiveEpisode?.duration || '01:03:41'}</Text>
-
-              {/* Scrubber Track */}
-              <View style={styles.scrubberTrack}>
-                <View style={styles.scrubberFill} />
-              </View>
-
-              <TouchableOpacity style={styles.controlIconBtn}>
-                <MaterialCommunityIcons name="closed-caption" size={16} color="#FFFFFF" />
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.controlIconBtn}>
-                <Ionicons name="settings-outline" size={16} color="#FFFFFF" />
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.controlIconBtn}>
-                <Ionicons name="tv-outline" size={16} color="#FFFFFF" />
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.controlIconBtn}>
-                <Ionicons name="expand" size={16} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-          </LinearGradient>
-        </View>
+        <EpisodePlayer
+          streamUrl={currentActiveEpisode?.hlsUrl || ''}
+          posterUrl={currentActiveEpisode?.thumbnailUrl || movie.bannerUrl || movie.posterUrl}
+          aiLabel={currentActiveEpisode?.aiLabel ?? null}
+          checking={gate.checkingId !== null}
+          onRequestPlay={() => currentActiveEpisode && handleSelectEpisode(currentActiveEpisode)}
+        />
 
         {/* Toggles Row: Chuyển tập & Skip giới thiệu */}
         <View style={styles.playerTogglesRow}>
