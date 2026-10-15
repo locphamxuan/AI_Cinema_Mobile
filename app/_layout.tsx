@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from '../src/theme';
+import { lockPortrait } from '../src/lib/orientation';
 import { AuthModal } from '../src/components/auth/AuthModal';
 import { CheckInModal } from '../src/components/wallet/CheckInModal';
 import { TopUpModal } from '../src/components/wallet/TopUpModal';
@@ -11,6 +12,11 @@ import { ChatModal } from '../src/components/chat/ChatModal';
 
 function RootLayoutContent() {
   const { isDark, colors } = useTheme();
+
+  // app.json allows every orientation so fullscreen video can rotate; everything else stays portrait.
+  React.useEffect(() => {
+    void lockPortrait();
+  }, []);
 
   return (
     <>

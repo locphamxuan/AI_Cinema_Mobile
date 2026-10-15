@@ -2,6 +2,7 @@ import React from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { lockLandscape, lockPortrait } from '../../lib/orientation';
 
 const DEFAULT_AI_LABEL = 'Nội dung được tạo bởi AI';
 
@@ -31,7 +32,21 @@ function StreamPlayer({ streamUrl }: { streamUrl: string }) {
   const player = useVideoPlayer({ uri: streamUrl }, (p) => {
     p.play();
   });
-  return <VideoView style={styles.fill} player={player} nativeControls allowsFullscreen contentFit="contain" />;
+
+  // Leaving the screen while fullscreen must not strand the app in landscape.
+  React.useEffect(() => () => void lockPortrait(), []);
+
+  return (
+    <VideoView
+      style={styles.fill}
+      player={player}
+      nativeControls
+      allowsFullscreen
+      contentFit="contain"
+      onFullscreenEnter={() => void lockLandscape()}
+      onFullscreenExit={() => void lockPortrait()}
+    />
+  );
 }
 
 export function EpisodePlayer({ streamUrl, posterUrl, aiLabel, checking, onRequestPlay }: EpisodePlayerProps) {
