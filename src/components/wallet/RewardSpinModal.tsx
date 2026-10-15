@@ -9,7 +9,7 @@ import type { RewardPrize, RewardWheelStatus, SpinResult } from '../../types/epi
 
 const SPIN_MS = 2400;
 
-export const prizeLabel = (p: Pick<RewardPrize, 'type' | 'bonusCoins' | 'planDays' | 'chancePercent'>) =>
+const prizeLabel =(p: Pick<RewardPrize, 'type' | 'bonusCoins' | 'planDays' | 'chancePercent'>) =>
   `${p.type === 'BONUS_COIN' ? `+${p.bonusCoins} Coin thưởng` : `Gói Tháng ${p.planDays} ngày`} · ${p.chancePercent ?? 0}%`;
 
 /** BR-09: a milestone check-in earns a spin; the BE draws the prize and pays it out. */

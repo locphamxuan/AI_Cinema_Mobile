@@ -5,7 +5,7 @@ import { useTheme } from '../../theme';
 import { walletService, STATEMENT_PAGE_SIZE } from '../../services/walletService';
 import type { CoinEntryType, StatementLine } from '../../types/episodeAccess';
 
-export const ENTRY_LABEL: Record<CoinEntryType, string> = {
+const ENTRY_LABEL: Record<CoinEntryType, string> = {
   TOP_UP: 'Nạp Coin',
   EPISODE_PURCHASE: 'Mua tập',
   PLAN_PAYMENT: 'Thanh toán gói',
