@@ -27,9 +27,9 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   const getBadgeGradient = (badgeText: string): [string, string] => {
     const lower = badgeText.toLowerCase();
     if (lower.includes('1')) return ['#EF4444', '#F97316'];
-    if (lower.includes('2')) return ['#8B5CF6', '#EC4899'];
+    if (lower.includes('2')) return ['#FF7A45', '#EC4899'];
     if (lower.includes('3')) return ['#F59E0B', '#D97706'];
-    return ['#DC2626', '#991B1B'];
+    return ['#FF2D6F', '#E0245E'];
   };
 
   const ratingValue = movie.matchScore
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#232323',
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: '#10B981',
+    backgroundColor: '#FF3D7F',
   },
   matchText: {
     color: '#34D399',

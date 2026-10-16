@@ -8,9 +8,12 @@ interface RankingListProps {
   onMoviePress: (movie: Movie) => void;
 }
 
-/** One film per row: poster with its position, title, genres and the start of the synopsis. */
+// Ribbon colors for the top three, the rest share a grey one.
+const RIBBON = ['#FFB020', '#19C37D', '#3D8BFF'];
+
+/** One film per row: poster with its position, title, orange genre chip and the start of the synopsis. */
 export const RankingList: React.FC<RankingListProps> = ({ movies, onMoviePress }) => {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   return (
     <View style={styles.list}>
@@ -25,25 +28,25 @@ export const RankingList: React.FC<RankingListProps> = ({ movies, onMoviePress }
             {movie.posterUrl ? (
               <Image source={{ uri: movie.posterUrl }} style={styles.image} resizeMode="cover" />
             ) : null}
-            <View style={[styles.rank, { backgroundColor: index < 3 ? colors.ruby : 'rgba(0,0,0,0.65)' }]}>
+            {movie.badge ? (
+              <View style={[styles.badge, { backgroundColor: colors.hot }]}>
+                <Text style={styles.badgeText}>{movie.badge}</Text>
+              </View>
+            ) : null}
+            <View style={[styles.rank, { backgroundColor: RIBBON[index] ?? 'rgba(0,0,0,0.7)' }]}>
               <Text style={styles.rankText}>{index + 1}</Text>
             </View>
           </View>
           <View style={styles.info}>
-            <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
+            <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
               {movie.title}
             </Text>
-            <View style={styles.tags}>
-              {movie.genre.slice(0, 3).map((name) => (
-                <View
-                  key={name}
-                  style={[styles.tag, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9' }]}
-                >
-                  <Text style={[styles.tagText, { color: colors.ruby }]}>{name}</Text>
-                </View>
-              ))}
-            </View>
-            <Text style={[styles.synopsis, { color: colors.textSecondary }]} numberOfLines={3}>
+            {movie.genre[0] ? (
+              <View style={[styles.tag, { backgroundColor: colors.chip }]}>
+                <Text style={[styles.tagText, { color: colors.neon }]}>{movie.genre[0]}</Text>
+              </View>
+            ) : null}
+            <Text style={[styles.synopsis, { color: colors.textMuted }]} numberOfLines={2}>
               {movie.description}
             </Text>
           </View>
@@ -54,25 +57,34 @@ export const RankingList: React.FC<RankingListProps> = ({ movies, onMoviePress }
 };
 
 const styles = StyleSheet.create({
-  list: { paddingHorizontal: 16, gap: 16, maxWidth: 600, alignSelf: 'center', width: '100%' },
-  row: { flexDirection: 'row', gap: 12 },
-  poster: { width: 100, height: 140, borderRadius: 10, overflow: 'hidden' },
+  list: { paddingHorizontal: 16, gap: 18, maxWidth: 600, alignSelf: 'center', width: '100%' },
+  row: { flexDirection: 'row', gap: 14 },
+  poster: { width: 96, height: 128, borderRadius: 8, overflow: 'hidden' },
   image: { width: '100%', height: '100%' },
+  badge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderBottomRightRadius: 8,
+  },
+  badgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
   rank: {
     position: 'absolute',
-    bottom: 6,
-    left: 6,
+    left: 0,
+    bottom: 28,
     minWidth: 22,
-    height: 22,
-    borderRadius: 11,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderTopRightRadius: 6,
+    borderBottomRightRadius: 6,
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  rankText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
-  info: { flex: 1, gap: 6 },
-  title: { fontSize: 15, fontWeight: '800' },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tag: { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
-  tagText: { fontSize: 11, fontWeight: '700' },
-  synopsis: { fontSize: 12, lineHeight: 17 },
+  rankText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
+  info: { flex: 1, gap: 10, paddingTop: 2 },
+  title: { fontSize: 16, fontWeight: '600' },
+  tag: { alignSelf: 'flex-start', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4 },
+  tagText: { fontSize: 12.5, fontWeight: '600' },
+  synopsis: { fontSize: 13.5, lineHeight: 19 },
 });
