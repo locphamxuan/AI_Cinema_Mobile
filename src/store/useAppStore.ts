@@ -62,7 +62,7 @@ interface AppState {
   /** The monthly plan is running (GET /subscriptions/me): every released episode is open. */
   isVIPMode: boolean;
 
-  // Wallet — balances always come from the BE
+  // Wallet - balances always come from the BE
   wallet: WalletState;
   setWalletBalance: (main: number, bonus: number) => void;
 

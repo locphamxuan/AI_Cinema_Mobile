@@ -16,27 +16,27 @@ import type {
 const once = (key: string) => ({ headers: { 'Idempotency-Key': key } });
 
 class EpisodeAccessService {
-  /** GET /episodes/:id/access — whether this Guest or Member may watch it, and if not, how. */
+  /** GET /episodes/:id/access - whether this Guest or Member may watch it, and if not, how. */
   checkAccess(episodeId: string): Promise<ApiResponse<AccessDecision>> {
     return apiClient.get<AccessDecision>(API_ROUTES.ACCESS.DECISION(episodeId));
   }
 
-  /** POST /episodes/:id/purchase — unlocks one episode, main Coins first, then bonus Coins. */
+  /** POST /episodes/:id/purchase - unlocks one episode, main Coins first, then bonus Coins. */
   purchaseEpisode(episodeId: string, key = idempotencyKey('ep-')): Promise<ApiResponse<PurchaseResult>> {
     return apiClient.post<PurchaseResult>(API_ROUTES.ACCESS.PURCHASE(episodeId), {}, once(key));
   }
 
-  /** GET /membership-plans — the plans on sale, the free one included. */
+  /** GET /membership-plans - the plans on sale, the free one included. */
   getPlans(): Promise<ApiResponse<MembershipPlan[]>> {
     return apiClient.get<MembershipPlan[]>(API_ROUTES.SUBSCRIPTION.PLANS);
   }
 
-  /** GET /subscriptions/me — the open plan, or null. */
+  /** GET /subscriptions/me - the open plan, or null. */
   getMySubscription(): Promise<ApiResponse<MySubscription | null>> {
     return apiClient.get<MySubscription | null>(API_ROUTES.SUBSCRIPTION.MINE);
   }
 
-  /** GET /subscriptions/:id/cycles — billing history, including unsuccessful renewal attempts. */
+  /** GET /subscriptions/:id/cycles - billing history, including unsuccessful renewal attempts. */
   getSubscriptionCycles(subscriptionId: string): Promise<ApiResponse<SubscriptionCycleView[]>> {
     return apiClient.get<SubscriptionCycleView[]>(API_ROUTES.SUBSCRIPTION.CYCLES(subscriptionId));
   }
