@@ -3,14 +3,14 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../theme';
+import { textStyle, useTheme } from '../../theme';
 
 interface ScreenHeaderProps {
   title: string;
   right?: React.ReactNode;
 }
 
-/** Round back button on the left, centered title: the sub-screen header of MultiShorts. */
+/** Sub-screen header: round back button on the left, the title in the middle. */
 export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, right }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -25,7 +25,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, right }) => {
       >
         <Ionicons name="chevron-back" size={22} color={colors.text} />
       </TouchableOpacity>
-      <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+      <Text style={[styles.title, { color: colors.text }]} numberOfLines={1} accessibilityRole="header">
         {title}
       </Text>
       <View style={styles.side}>{right}</View>
@@ -36,6 +36,6 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, right }) => {
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12 },
   back: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  title: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '800' },
+  title: { ...textStyle.title, flex: 1, textAlign: 'center' },
   side: { width: 40, alignItems: 'flex-end' },
 });

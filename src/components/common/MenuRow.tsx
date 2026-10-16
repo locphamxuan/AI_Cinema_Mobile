@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../theme';
+import { textStyle, useTheme } from '../../theme';
 
 interface MenuRowProps {
   icon?: keyof typeof Ionicons.glyphMap;
@@ -16,7 +16,7 @@ interface MenuRowProps {
   last?: boolean;
 }
 
-/** One row of a grey menu card: outline icon, label, optional value, chevron. */
+/** One row of a menu card: outline icon, label, optional value, chevron. */
 export const MenuRow: React.FC<MenuRowProps> = ({ icon, label, value, count, danger, onPress, right, last }) => {
   const { colors } = useTheme();
   const tint = danger ? colors.danger : colors.text;
@@ -26,9 +26,10 @@ export const MenuRow: React.FC<MenuRowProps> = ({ icon, label, value, count, dan
       activeOpacity={onPress ? 0.7 : 1}
       onPress={onPress}
       disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
       style={[styles.row, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
     >
-      {icon ? <Ionicons name={icon} size={22} color={tint} style={styles.icon} /> : null}
+      {icon ? <Ionicons name={icon} size={21} color={danger ? colors.danger : colors.textSecondary} style={styles.icon} /> : null}
       <Text style={[styles.label, { color: tint }]}>{label}</Text>
       {count ? (
         <View style={[styles.count, { backgroundColor: colors.ruby }]}>
@@ -41,7 +42,7 @@ export const MenuRow: React.FC<MenuRowProps> = ({ icon, label, value, count, dan
   );
 };
 
-/** Grey rounded card that groups menu rows. */
+/** Rounded card that groups menu rows. */
 export const MenuCard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { colors } = useTheme();
   return <View style={[styles.card, { backgroundColor: colors.card }]}>{children}</View>;
@@ -49,10 +50,10 @@ export const MenuCard: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
 const styles = StyleSheet.create({
   card: { borderRadius: 16, paddingHorizontal: 16, marginHorizontal: 16 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 17, gap: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, gap: 12 },
   icon: { width: 24 },
-  label: { flex: 1, fontSize: 15, fontWeight: '500' },
-  value: { fontSize: 14 },
+  label: { ...textStyle.body, flex: 1 },
+  value: { ...textStyle.label },
   count: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center' },
-  countText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
+  countText: { ...textStyle.captionStrong, fontSize: 11, color: '#FFFFFF' },
 });
