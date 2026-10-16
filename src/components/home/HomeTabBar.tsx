@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useTheme } from '../../theme';
+import { fonts, useTheme } from '../../theme';
 import { HOME_TABS, type HomeTabKey } from '../../lib/homeFeed';
 
 interface HomeTabBarProps {
@@ -8,16 +8,12 @@ interface HomeTabBarProps {
   onChange: (tab: HomeTabKey) => void;
 }
 
+/** The home sections as words: the open one large and pink, the rest small and grey. */
 export const HomeTabBar: React.FC<HomeTabBarProps> = ({ active, onChange }) => {
   const { colors } = useTheme();
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.row}
-      style={styles.scroll}
-    >
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row} style={styles.scroll}>
       {HOME_TABS.map((tab) => {
         const selected = tab.key === active;
         return (
@@ -28,14 +24,7 @@ export const HomeTabBar: React.FC<HomeTabBarProps> = ({ active, onChange }) => {
             accessibilityRole="tab"
             accessibilityState={{ selected }}
           >
-            <Text
-              style={[
-                styles.label,
-                selected
-                  ? { color: colors.ruby, fontSize: 20, fontWeight: '900' }
-                  : { color: colors.textMuted, fontSize: 15, fontWeight: '600' },
-              ]}
-            >
+            <Text style={selected ? [styles.active, { color: colors.ruby }] : [styles.idle, { color: colors.textMuted }]}>
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -47,13 +36,7 @@ export const HomeTabBar: React.FC<HomeTabBarProps> = ({ active, onChange }) => {
 
 const styles = StyleSheet.create({
   scroll: { flexGrow: 0 },
-  row: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 22,
-    alignItems: 'baseline',
-  },
-  label: {
-    letterSpacing: -0.2,
-  },
+  row: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, gap: 20, alignItems: 'baseline' },
+  active: { fontFamily: fonts.displayHeavy, fontSize: 28, lineHeight: 32 },
+  idle: { fontFamily: fonts.display, fontSize: 19, lineHeight: 24 },
 });

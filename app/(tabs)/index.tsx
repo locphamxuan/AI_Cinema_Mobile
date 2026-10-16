@@ -7,7 +7,7 @@ import { HomeTopBar } from '../../src/components/home/HomeTopBar';
 import { HomeTabBar } from '../../src/components/home/HomeTabBar';
 import { PosterGrid } from '../../src/components/home/PosterGrid';
 import { RankingList } from '../../src/components/home/RankingList';
-import { useTheme } from '../../src/theme';
+import { textStyle, useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
 import {
   ALL_GENRES,
@@ -61,7 +61,7 @@ export default function HomeScreen() {
       {/* Wine tint behind the search bar and tabs, fading into the page. */}
       <LinearGradient
         colors={[colors.topTint, colors.background]}
-        style={[styles.tint, { height: insets.top + 200 }]}
+        style={[styles.tint, { height: insets.top + 220 }]}
         pointerEvents="none"
       />
       <View style={{ paddingTop: Math.max(insets.top, 10) }}>
@@ -79,14 +79,11 @@ export default function HomeScreen() {
             <PosterGrid movies={recommended} onMoviePress={openMovie} />
             {movies.length > 0 && (
               <View style={styles.moreRow}>
-                <TouchableOpacity
-                  style={[styles.moreBtn, { backgroundColor: colors.cardAlt }]}
-                  onPress={() => setTab('new')}
-                >
+                <TouchableOpacity style={[styles.moreBtn, { backgroundColor: colors.card }]} onPress={() => setTab('new')}>
                   <Text style={[styles.moreText, { color: colors.textSecondary }]}>Xem thêm</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.moreBtn, { backgroundColor: colors.cardAlt }]}
+                  style={[styles.moreBtn, { backgroundColor: colors.card, opacity: movies.length <= RECOMMEND_SIZE ? 0.45 : 1 }]}
                   onPress={() => setPage((p) => p + 1)}
                   disabled={movies.length <= RECOMMEND_SIZE}
                 >
@@ -103,12 +100,7 @@ export default function HomeScreen() {
 
         {tab === 'genre' && (
           <>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.genreRow}
-              style={styles.genreScroll}
-            >
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.genreRow} style={styles.genreScroll}>
               {genres.map((name) => {
                 const selected = name === genre;
                 return (
@@ -116,13 +108,10 @@ export default function HomeScreen() {
                     key={name}
                     onPress={() => setGenre(name)}
                     style={[styles.genrePill, selected && { backgroundColor: colors.rubySoft }]}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected }}
                   >
-                    <Text
-                      style={[
-                        styles.genreText,
-                        { color: selected ? colors.ruby : colors.textMuted, fontWeight: selected ? '800' : '500' },
-                      ]}
-                    >
+                    <Text style={[selected ? styles.genreOn : styles.genreOff, { color: selected ? colors.ruby : colors.textMuted }]}>
                       {name}
                     </Text>
                   </TouchableOpacity>
@@ -134,10 +123,10 @@ export default function HomeScreen() {
         )}
 
         {movies.length === 0 && (
-          <Text style={[styles.empty, { color: colors.textMuted }]}>Chưa có phim nào để hiển thị.</Text>
+          <Text style={[styles.empty, { color: colors.textMuted }]}>Chưa tải được phim. Kéo xuống để thử lại.</Text>
         )}
         {movies.length > 0 && tab === 'genre' && byGenre.length === 0 && (
-          <Text style={[styles.empty, { color: colors.textMuted }]}>Chưa có phim thuộc thể loại này.</Text>
+          <Text style={[styles.empty, { color: colors.textMuted }]}>Thể loại này chưa có phim.</Text>
         )}
       </ScrollView>
     </View>
@@ -149,12 +138,13 @@ const styles = StyleSheet.create({
   tint: { position: 'absolute', top: 0, left: 0, right: 0 },
   // Room for the floating tab bar.
   scrollContent: { paddingTop: 4, paddingBottom: 120 },
-  moreRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginTop: 18 },
+  moreRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginTop: 24 },
   moreBtn: { flex: 1, height: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  moreText: { fontSize: 16, fontWeight: '600' },
+  moreText: { ...textStyle.bodyStrong },
   genreScroll: { flexGrow: 0 },
   genreRow: { paddingHorizontal: 16, paddingBottom: 14, gap: 6 },
-  genrePill: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20 },
-  genreText: { fontSize: 15 },
-  empty: { textAlign: 'center', marginTop: 40, fontSize: 13 },
+  genrePill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  genreOn: { ...textStyle.bodyStrong },
+  genreOff: { ...textStyle.body },
+  empty: { ...textStyle.label, textAlign: 'center', marginTop: 48, paddingHorizontal: 32 },
 });
