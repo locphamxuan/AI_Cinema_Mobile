@@ -4,28 +4,35 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/theme';
 
+type IconName = keyof typeof Ionicons.glyphMap;
+
+function tabIcon(name: IconName) {
+  return function TabIcon({ color }: { color: string }) {
+    return <Ionicons name={name} size={24} color={color} />;
+  };
+}
+
 export default function TabLayout() {
   const { isDark, colors } = useTheme();
-
-  const activeColor = colors.ruby;
-  const inactiveColor = isDark ? '#94A3B8' : '#64748B';
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: activeColor,
-        tabBarInactiveTintColor: inactiveColor,
-        // Floating rounded bar above the content.
+        tabBarActiveTintColor: colors.tabBarActive,
+        tabBarInactiveTintColor: colors.tabBarInactive,
+        // MultiShorts: a floating dark pill; the active tab sits on a darker pill of its own.
+        tabBarActiveBackgroundColor: isDark ? '#0B0B0B' : '#F0F0F2',
         tabBarStyle: {
-          backgroundColor: isDark ? 'rgba(24, 24, 27, 0.94)' : 'rgba(255, 255, 255, 0.96)',
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+          backgroundColor: colors.tabBarBg,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
           borderWidth: 1,
           borderTopWidth: 1,
-          borderRadius: 30,
-          height: 62,
-          paddingBottom: 8,
+          borderRadius: 34,
+          height: 68,
+          paddingHorizontal: 6,
           paddingTop: 6,
+          paddingBottom: 6,
           position: 'absolute',
           left: 16,
           right: 16,
@@ -33,64 +40,23 @@ export default function TabLayout() {
           elevation: 6,
         },
         tabBarItemStyle: {
+          borderRadius: 28,
+          marginHorizontal: 2,
           justifyContent: 'center',
           alignItems: 'center',
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '700',
-          lineHeight: 14,
+          fontSize: 12,
+          fontWeight: '600',
           marginTop: 2,
         },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Trang chủ',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Khám phá',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="schedule"
-        options={{
-          title: 'Lịch Chiếu',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="vip"
-        options={{
-          title: 'Gói VIP',
-          href: null, // hidden in main bottom tab
-        }}
-      />
-
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Tài khoản',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={color} />
-          ),
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Trang chủ', tabBarIcon: tabIcon('play-circle-outline') }} />
+      <Tabs.Screen name="explore" options={{ title: 'Khám phá', tabBarIcon: tabIcon('film-outline') }} />
+      <Tabs.Screen name="schedule" options={{ title: 'Lịch chiếu', tabBarIcon: tabIcon('calendar-outline') }} />
+      <Tabs.Screen name="vip" options={{ title: 'Gói VIP', href: null }} />
+      <Tabs.Screen name="profile" options={{ title: 'Hồ sơ', tabBarIcon: tabIcon('person-circle-outline') }} />
     </Tabs>
   );
 }
