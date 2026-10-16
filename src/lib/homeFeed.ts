@@ -30,6 +30,21 @@ export function collectGenres(movies: Movie[]): string[] {
   return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
 }
 
+export interface GenreShelf {
+  name: string;
+  count: number;
+  /** Poster of the first film in the genre that has one; empty when none does. */
+  cover: string;
+}
+
+/** One shelf per genre for the Khám phá screen, the fullest first. */
+export function genreShelves(movies: Movie[]): GenreShelf[] {
+  return collectGenres(movies).map((name) => {
+    const inGenre = movies.filter((movie) => movie.genre.includes(name));
+    return { name, count: inGenre.length, cover: inGenre.find((movie) => movie.posterUrl)?.posterUrl ?? '' };
+  });
+}
+
 export function filterByGenre(movies: Movie[], genre: string): Movie[] {
   if (genre === ALL_GENRES) return movies;
   return movies.filter((movie) => movie.genre.includes(genre));

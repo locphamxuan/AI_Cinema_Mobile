@@ -3,6 +3,7 @@ import {
   addRecentSearch,
   collectGenres,
   filterByGenre,
+  genreShelves,
   newestFirst,
   suggestionPage,
 } from '../lib/homeFeed';
@@ -29,6 +30,20 @@ describe('home feed', () => {
 
   it('collects genres by how many films use them', () => {
     expect(collectGenres(catalog)).toEqual(['Tình cảm', 'Báo thù', 'Hoạt hình']);
+  });
+
+  it('builds a shelf per genre with its size and the first poster found', () => {
+    const withPosters = [
+      { ...catalog[0], posterUrl: '' },
+      { ...catalog[1], posterUrl: 'b.jpg' },
+      { ...catalog[2], posterUrl: 'c.jpg' },
+    ];
+    expect(genreShelves(withPosters)).toEqual([
+      { name: 'Tình cảm', count: 2, cover: 'b.jpg' },
+      { name: 'Báo thù', count: 2, cover: 'c.jpg' },
+      { name: 'Hoạt hình', count: 1, cover: 'c.jpg' },
+    ]);
+    expect(genreShelves([{ ...catalog[0], posterUrl: '' }])[0].cover).toBe('');
   });
 
   it('filters by genre, and "Tất cả" keeps everything', () => {
