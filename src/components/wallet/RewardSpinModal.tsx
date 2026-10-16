@@ -97,7 +97,7 @@ function SpinDialog() {
           <Text style={[styles.sub, { color: colors.textSecondary }]}>{loading ? 'Đang tải lượt quay...' : `Bạn còn ${spins} lượt quay.`}</Text>
           <Text style={[styles.sub, { color: colors.textSecondary, marginTop: 2 }]}>10 ô gồm 9 mức Coin ngẫu nhiên và 1 gói Tháng 30 ngày (tỉ lệ 2%).</Text>
 
-          {loading && <ActivityIndicator style={{ marginVertical: 30 }} color="#8B5CF6" />}
+          {loading && <ActivityIndicator style={{ marginVertical: 30 }} color="#FF7A45" />}
 
           {wheel && (
             <>
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#E8622E',
     borderWidth: 6,
     borderColor: '#F59E0B',
     alignItems: 'center',
@@ -178,6 +178,6 @@ const styles = StyleSheet.create({
   errorText: { color: '#EF4444', fontSize: 12, marginBottom: 10, textAlign: 'center' },
   errorRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   spinBtn: { width: '100%', paddingVertical: 12, borderRadius: 12, alignItems: 'center', backgroundColor: '#F59E0B' },
-  spinBtnText: { color: '#0F172A', fontWeight: '900', fontSize: 14 },
+  spinBtnText: { color: '#141414', fontWeight: '900', fontSize: 14 },
   footnote: { fontSize: 11, textAlign: 'center', marginTop: 8 },
 });

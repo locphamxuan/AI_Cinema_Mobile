@@ -96,7 +96,7 @@ export const TopUpModal: React.FC = () => {
   return (
     <Modal visible={isTopUpModalOpen} transparent animationType="slide" onRequestClose={close}>
       <View style={styles.backdrop}>
-        <View style={[styles.container, { backgroundColor: isDark ? '#121622' : '#FFFFFF', borderColor: colors.border }]}>
+        <View style={[styles.container, { backgroundColor: isDark ? '#181818' : '#FFFFFF', borderColor: colors.border }]}>
           <View style={styles.header}>
             <View style={styles.titleRow}>
               <FontAwesome5 name="coins" size={18} color="#F59E0B" />
@@ -128,7 +128,7 @@ export const TopUpModal: React.FC = () => {
                 placeholder={options ? `${options.minVnd.toLocaleString('vi-VN')} – ${options.maxVnd.toLocaleString('vi-VN')}` : 'Đang tải…'}
                 placeholderTextColor={colors.textMuted}
                 editable={phase === 'form'}
-                style={[styles.amountInput, { backgroundColor: isDark ? '#1E293B' : '#F8FAFC', color: colors.text, borderColor: colors.border }]}
+                style={[styles.amountInput, { backgroundColor: isDark ? '#232323' : '#F7F7F8', color: colors.text, borderColor: colors.border }]}
               />
               {options && amountVnd > 0 && (
                 <Text style={[styles.hint, { color: inRange ? '#10B981' : '#EF4444' }]}>
@@ -164,7 +164,7 @@ export const TopUpModal: React.FC = () => {
               >
                 {phase === 'waiting' ? (
                   <View style={styles.waitingRow}>
-                    <ActivityIndicator color="#0F172A" />
+                    <ActivityIndicator color="#141414" />
                     <Text style={styles.actionBtnTextDark}>Đang chờ cổng thanh toán…</Text>
                   </View>
                 ) : (
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   errorText: { color: '#EF4444', fontSize: 12, marginBottom: 10 },
   actionBtn: { marginTop: 6, paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
   actionBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
-  actionBtnTextDark: { color: '#0F172A', fontWeight: '800', fontSize: 14 },
+  actionBtnTextDark: { color: '#141414', fontWeight: '800', fontSize: 14 },
   waitingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   center: { alignItems: 'center', gap: 6 },
   successTitle: { fontSize: 17, fontWeight: '800' },

@@ -74,7 +74,7 @@ export default function SearchScreen() {
     router.push({ pathname: '/movie/[id]', params: { id: movie.id } });
   };
 
-  const chipBg = isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9';
+  const chipBg = isDark ? 'rgba(255,255,255,0.08)' : '#F0F0F2';
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: Math.max(insets.top, 10) }]}>

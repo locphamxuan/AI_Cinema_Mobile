@@ -114,8 +114,8 @@ export const ChatModal: React.FC = () => {
                         backgroundColor: isUser
                           ? colors.ruby
                           : isDark
-                          ? '#1E293B'
-                          : '#F1F5F9',
+                          ? '#232323'
+                          : '#F0F0F2',
                         borderBottomRightRadius: isUser ? 2 : 14,
                         borderBottomLeftRadius: !isUser ? 2 : 14,
                       },
@@ -145,7 +145,7 @@ export const ChatModal: React.FC = () => {
                   style={[
                     styles.chip,
                     {
-                      backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                      backgroundColor: isDark ? '#232323' : '#F7F7F8',
                       borderColor: colors.border,
                     },
                   ]}
@@ -174,7 +174,7 @@ export const ChatModal: React.FC = () => {
             style={[
               styles.inputRow,
               {
-                backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                backgroundColor: isDark ? '#232323' : '#F7F7F8',
                 borderColor: colors.border,
               },
             ]}
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#FF7A45',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -20,7 +20,7 @@ const EXPLORE_CATEGORIES = [
   { id: 'chu-de', name: 'Chủ đề', icon: 'grid', color: '#EF4444', route: '/(tabs)/explore' },
   { id: 'phim-bo', name: 'Phim Bộ', icon: 'tv', color: '#3B82F6', route: '/(tabs)/explore' },
   { id: 'phim-le', name: 'Phim Lẻ', icon: 'film', color: '#10B981', route: '/(tabs)/explore' },
-  { id: 'phim-han', name: 'Phim Hàn', icon: 'globe', color: '#8B5CF6', route: '/(tabs)/explore' },
+  { id: 'phim-han', name: 'Phim Hàn', icon: 'globe', color: '#FF7A45', route: '/(tabs)/explore' },
   { id: 'phim-trung', name: 'Phim Trung', icon: 'globe', color: '#EC4899', route: '/(tabs)/explore' },
   { id: 'hoat-hinh', name: 'Hoạt Hình', icon: 'play-circle', color: '#F59E0B', route: '/(tabs)/explore' },
   { id: 'dien-vien', name: 'Diễn viên', icon: 'star', color: '#6366F1', route: '/(tabs)/explore' },
@@ -52,7 +52,7 @@ export const ExploreModal: React.FC<ExploreModalProps> = ({ visible, onClose }) 
           style={[
             styles.container,
             {
-              backgroundColor: isDark ? '#121622' : '#1E293B',
+              backgroundColor: isDark ? '#181818' : '#232323',
               borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)',
             },
           ]}
@@ -64,7 +64,7 @@ export const ExploreModal: React.FC<ExploreModalProps> = ({ visible, onClose }) 
           <View style={styles.header}>
             <Text style={styles.title}>Khám Phá</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={20} color="#94A3B8" />
+              <Ionicons name="close" size={20} color="#8E8E93" />
             </TouchableOpacity>
           </View>
 
@@ -76,7 +76,7 @@ export const ExploreModal: React.FC<ExploreModalProps> = ({ visible, onClose }) 
                 style={[
                   styles.categoryCard,
                   {
-                    backgroundColor: isDark ? 'rgba(30, 41, 59, 0.7)' : 'rgba(15, 23, 42, 0.75)',
+                    backgroundColor: isDark ? 'rgba(35, 35, 35, 0.7)' : 'rgba(18, 18, 18, 0.75)',
                     borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.12)',
                   },
                 ]}
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#64748B',
+    backgroundColor: '#8A8A90',
     alignSelf: 'center',
     marginBottom: 14,
   },
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     textAlign: 'center',
-    color: '#64748B',
+    color: '#8A8A90',
     fontSize: 11,
     marginTop: 8,
   },

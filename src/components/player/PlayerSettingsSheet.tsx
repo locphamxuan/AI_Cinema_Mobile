@@ -22,7 +22,7 @@ function Option({ label, selected, onPress }: { label: string; selected: boolean
   return (
     <TouchableOpacity style={styles.option} onPress={onPress} accessibilityRole="radio" accessibilityState={{ selected }}>
       <Text style={[styles.optionText, selected && styles.optionTextActive]}>{label}</Text>
-      {selected && <Ionicons name="checkmark" size={16} color="#10B981" />}
+      {selected && <Ionicons name="checkmark" size={16} color="#FF3D7F" />}
     </TouchableOpacity>
   );
 }
@@ -67,14 +67,14 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
   sheet: { backgroundColor: '#18181B', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, maxHeight: '70%' },
   handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: '#3F3F46', marginBottom: 8 },
-  heading: { color: '#94A3B8', fontSize: 12, fontWeight: '800', marginTop: 12, marginBottom: 4, textTransform: 'uppercase' },
+  heading: { color: '#8E8E93', fontSize: 12, fontWeight: '800', marginTop: 12, marginBottom: 4, textTransform: 'uppercase' },
   option: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
   optionText: { color: '#E4E4E7', fontSize: 14 },
-  optionTextActive: { color: '#10B981', fontWeight: '700' },
+  optionTextActive: { color: '#FF3D7F', fontWeight: '700' },
   note: { color: '#71717A', fontSize: 12, paddingVertical: 6 },
   rates: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 6 },
   rate: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#27272A' },
-  rateActive: { backgroundColor: '#10B981' },
+  rateActive: { backgroundColor: '#FF3D7F' },
   rateText: { color: '#E4E4E7', fontSize: 13, fontWeight: '700' },
   rateTextActive: { color: '#FFFFFF' },
 });

@@ -60,7 +60,7 @@ export default function NotificationsScreen() {
         </TouchableOpacity>
         <Text style={styles.title}>Thông báo</Text>
         <TouchableOpacity onPress={readAll} accessibilityLabel="Đánh dấu đã đọc hết">
-          <Ionicons name="checkmark-done" size={20} color="#10B981" />
+          <Ionicons name="checkmark-done" size={20} color="#FF3D7F" />
         </TouchableOpacity>
       </View>
 
@@ -82,10 +82,10 @@ export default function NotificationsScreen() {
           onEndReached={() => !loading && page < totalPages && void load(page + 1)}
           onEndReachedThreshold={0.3}
           ListEmptyComponent={loading ? null : <Text style={styles.empty}>Chưa có thông báo nào ở mục này.</Text>}
-          ListFooterComponent={loading ? <ActivityIndicator color="#10B981" style={{ marginVertical: 16 }} /> : null}
+          ListFooterComponent={loading ? <ActivityIndicator color="#FF3D7F" style={{ marginVertical: 16 }} /> : null}
           renderItem={({ item }) => (
             <TouchableOpacity style={[styles.item, !item.readAt && styles.itemUnread]} onPress={() => void open(item)}>
-              <Ionicons name={notificationIcon(item.type) as never} size={20} color={item.readAt ? '#71717A' : '#10B981'} />
+              <Ionicons name={notificationIcon(item.type) as never} size={20} color={item.readAt ? '#71717A' : '#FF3D7F'} />
               <View style={styles.itemBody}>
                 <Text style={[styles.itemTitle, !item.readAt && styles.itemTitleUnread]}>{item.title}</Text>
                 {item.body ? <Text style={styles.itemText}>{item.body}</Text> : null}
@@ -106,8 +106,8 @@ const styles = StyleSheet.create({
   tabsBar: { flexGrow: 0 },
   tabs: { paddingHorizontal: 16, gap: 8, paddingBottom: 8 },
   tab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#18181B', borderWidth: 1, borderColor: '#27272A' },
-  tabActive: { backgroundColor: '#10B981', borderColor: '#10B981' },
-  tabText: { color: '#94A3B8', fontSize: 12, fontWeight: '700' },
+  tabActive: { backgroundColor: '#FF3D7F', borderColor: '#FF3D7F' },
+  tabText: { color: '#8E8E93', fontSize: 12, fontWeight: '700' },
   tabTextActive: { color: '#FFFFFF' },
   list: { paddingHorizontal: 16, paddingBottom: 40, gap: 8 },
   item: { flexDirection: 'row', gap: 10, padding: 12, borderRadius: 12, backgroundColor: '#111113' },
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   itemBody: { flex: 1, gap: 2 },
   itemTitle: { color: '#D4D4D8', fontSize: 13 },
   itemTitleUnread: { color: '#FFFFFF', fontWeight: '800' },
-  itemText: { color: '#94A3B8', fontSize: 12 },
+  itemText: { color: '#8E8E93', fontSize: 12 },
   itemTime: { color: '#71717A', fontSize: 10, marginTop: 2 },
-  empty: { color: '#94A3B8', fontSize: 13, textAlign: 'center', marginTop: 40 },
+  empty: { color: '#8E8E93', fontSize: 13, textAlign: 'center', marginTop: 40 },
 });

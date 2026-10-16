@@ -110,7 +110,7 @@ export const AIComplianceModal: React.FC<AIComplianceModalProps> = ({
               style={[
                 styles.disclaimerBox,
                 {
-                  backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                  backgroundColor: isDark ? '#232323' : '#F7F7F8',
                   borderColor: colors.border,
                 },
               ]}

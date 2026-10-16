@@ -29,7 +29,7 @@ export function EpisodeList({ episodes, currentId, isVIPMode, posterUrl, onSelec
             value={withImages}
             onValueChange={setWithImages}
             accessibilityLabel="Hiện ảnh tập"
-            trackColor={{ false: '#27272A', true: '#10B981' }}
+            trackColor={{ false: '#27272A', true: '#FF3D7F' }}
             thumbColor="#FFFFFF"
             ios_backgroundColor="#27272A"
           />
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   headingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heading: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  switchLabel: { color: '#94A3B8', fontSize: 11, fontWeight: '600' },
+  switchLabel: { color: '#8E8E93', fontSize: 11, fontWeight: '600' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   cell: {
     width: '31%',
@@ -99,15 +99,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
-  cellActive: { backgroundColor: '#10B981', borderColor: '#10B981' },
+  cellActive: { backgroundColor: '#FF3D7F', borderColor: '#FF3D7F' },
   cellText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
   coinTag: { color: '#F59E0B', fontSize: 10, fontWeight: '800' },
   rows: { gap: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 8, borderRadius: 10, backgroundColor: '#18181B', borderWidth: 1, borderColor: '#27272A' },
-  rowActive: { borderColor: '#10B981' },
+  rowActive: { borderColor: '#FF3D7F' },
   thumb: { width: 96, height: 54, borderRadius: 6, backgroundColor: '#27272A' },
   rowBody: { flex: 1, gap: 2 },
   rowTitle: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  rowMeta: { color: '#94A3B8', fontSize: 11 },
-  empty: { color: '#94A3B8', fontSize: 12 },
+  rowMeta: { color: '#8E8E93', fontSize: 11 },
+  empty: { color: '#8E8E93', fontSize: 12 },
 });

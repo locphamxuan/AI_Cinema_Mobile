@@ -36,7 +36,7 @@ interface EpisodePlayerProps {
 function AiLabelOverlay({ text }: { text: string | null }) {
   return (
     <View style={styles.aiBadge} pointerEvents="none" testID="ai-label-overlay">
-      <MaterialCommunityIcons name="robot-outline" size={12} color="#10B981" />
+      <MaterialCommunityIcons name="robot-outline" size={12} color="#FF3D7F" />
       <Text style={styles.aiBadgeText} numberOfLines={1}>
         {text || DEFAULT_AI_LABEL}
       </Text>

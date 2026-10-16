@@ -306,7 +306,7 @@ export const AuthModal: React.FC = () => {
                     style={[
                       styles.input,
                       {
-                        backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                        backgroundColor: isDark ? '#232323' : '#F7F7F8',
                         borderColor: colors.border,
                         color: colors.text,
                       },
@@ -324,7 +324,7 @@ export const AuthModal: React.FC = () => {
                     style={[
                       styles.input,
                       {
-                        backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                        backgroundColor: isDark ? '#232323' : '#F7F7F8',
                         borderColor: colors.border,
                         color: colors.text,
                       },
@@ -346,7 +346,7 @@ export const AuthModal: React.FC = () => {
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                    backgroundColor: isDark ? '#232323' : '#F7F7F8',
                     borderColor: colors.border,
                     color: colors.text,
                   },
@@ -383,7 +383,7 @@ export const AuthModal: React.FC = () => {
                     styles.input,
                     styles.passwordInput,
                     {
-                      backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                      backgroundColor: isDark ? '#232323' : '#F7F7F8',
                       borderColor: colors.border,
                       color: colors.text,
                     },
@@ -422,7 +422,7 @@ export const AuthModal: React.FC = () => {
                       styles.input,
                       styles.passwordInput,
                       {
-                        backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                        backgroundColor: isDark ? '#232323' : '#F7F7F8',
                         borderColor: colors.border,
                         color: colors.text,
                       },
@@ -444,7 +444,7 @@ export const AuthModal: React.FC = () => {
                     styles.checkbox,
                     rememberMe
                       ? { backgroundColor: colors.ruby, borderColor: colors.ruby }
-                      : { backgroundColor: isDark ? '#1E293B' : '#F1F5F9', borderColor: colors.border },
+                      : { backgroundColor: isDark ? '#232323' : '#F0F0F2', borderColor: colors.border },
                   ]}
                 >
                   {rememberMe && <Ionicons name="checkmark" size={13} color="#FFFFFF" />}
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   logoBadge: {
-    backgroundColor: '#E50914',
+    backgroundColor: '#FF3D7F',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -658,16 +658,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    backgroundColor: 'rgba(255, 122, 69, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.25)',
+    borderColor: 'rgba(255, 122, 69, 0.25)',
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 8,
   },
   registerBonusText: {
     fontSize: 11,
-    color: '#A78BFA',
+    color: '#FF9A6B',
   },
   errorBox: {
     flexDirection: 'row',

@@ -126,19 +126,19 @@ export default function ExploreScreen() {
         {!query && (
           <View style={styles.spotlightContainer}>
             <LinearGradient
-              colors={isDark ? ['#2D0B12', '#141824'] : ['#FFF1F2', '#F8FAFC']}
+              colors={isDark ? ['#2A0D1A', '#141414'] : ['#FFE4EE', '#F7F7F8']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={[
                 styles.spotlightCard,
                 {
-                  borderColor: isDark ? 'rgba(229, 9, 20, 0.3)' : 'rgba(229, 9, 20, 0.15)',
+                  borderColor: isDark ? 'rgba(255, 61, 127, 0.3)' : 'rgba(255, 61, 127, 0.15)',
                 },
               ]}
             >
               <View style={styles.spotlightHeader}>
                 <View style={styles.spotlightBadge}>
-                  <Ionicons name="sparkles" size={11} color="#E50914" />
+                  <Ionicons name="sparkles" size={11} color="#FF3D7F" />
                   <Text style={styles.spotlightBadgeText}>VŨ TRỤ ĐIỆN ẢNH AI 2026</Text>
                 </View>
                 <View style={styles.complianceChip}>
@@ -163,7 +163,7 @@ export default function ExploreScreen() {
             style={[
               styles.searchBar,
               {
-                backgroundColor: isDark ? '#181C28' : '#FFFFFF',
+                backgroundColor: isDark ? '#1F1F1F' : '#FFFFFF',
                 borderColor: isSearchFocused ? colors.ruby : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
                 shadowColor: isSearchFocused ? colors.ruby : '#000000',
                 shadowOpacity: isSearchFocused ? 0.25 : 0.06,
@@ -221,7 +221,7 @@ export default function ExploreScreen() {
                           elevation: 3,
                         }
                       : {
-                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9',
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F0F0F2',
                           borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)',
                         },
                   ]}
@@ -258,12 +258,12 @@ export default function ExploreScreen() {
 
           <View style={styles.toolbarRight}>
             {/* Sort pills */}
-            <View style={[styles.sortSegment, { backgroundColor: isDark ? '#1E2333' : '#F1F5F9' }]}>
+            <View style={[styles.sortSegment, { backgroundColor: isDark ? '#262626' : '#F0F0F2' }]}>
               <TouchableOpacity
                 onPress={() => setSortBy('trending')}
                 style={[
                   styles.sortBtn,
-                  sortBy === 'trending' && [styles.sortBtnActive, { backgroundColor: isDark ? '#2E354B' : '#FFFFFF' }],
+                  sortBy === 'trending' && [styles.sortBtnActive, { backgroundColor: isDark ? '#333333' : '#FFFFFF' }],
                 ]}
               >
                 <Text
@@ -283,7 +283,7 @@ export default function ExploreScreen() {
                 onPress={() => setSortBy('rating')}
                 style={[
                   styles.sortBtn,
-                  sortBy === 'rating' && [styles.sortBtnActive, { backgroundColor: isDark ? '#2E354B' : '#FFFFFF' }],
+                  sortBy === 'rating' && [styles.sortBtnActive, { backgroundColor: isDark ? '#333333' : '#FFFFFF' }],
                 ]}
               >
                 <Text
@@ -301,12 +301,12 @@ export default function ExploreScreen() {
             </View>
 
             {/* View Mode Toggle (Grid vs List) */}
-            <View style={[styles.viewModeToggle, { backgroundColor: isDark ? '#1E2333' : '#F1F5F9' }]}>
+            <View style={[styles.viewModeToggle, { backgroundColor: isDark ? '#262626' : '#F0F0F2' }]}>
               <TouchableOpacity
                 onPress={() => setViewMode('grid')}
                 style={[
                   styles.viewModeBtn,
-                  viewMode === 'grid' && [styles.viewModeBtnActive, { backgroundColor: isDark ? '#2E354B' : '#FFFFFF' }],
+                  viewMode === 'grid' && [styles.viewModeBtnActive, { backgroundColor: isDark ? '#333333' : '#FFFFFF' }],
                 ]}
               >
                 <Ionicons
@@ -319,7 +319,7 @@ export default function ExploreScreen() {
                 onPress={() => setViewMode('list')}
                 style={[
                   styles.viewModeBtn,
-                  viewMode === 'list' && [styles.viewModeBtnActive, { backgroundColor: isDark ? '#2E354B' : '#FFFFFF' }],
+                  viewMode === 'list' && [styles.viewModeBtnActive, { backgroundColor: isDark ? '#333333' : '#FFFFFF' }],
                 ]}
               >
                 <Ionicons
@@ -360,7 +360,7 @@ export default function ExploreScreen() {
                   style={[
                     styles.listCard,
                     {
-                      backgroundColor: isDark ? '#151924' : '#FFFFFF',
+                      backgroundColor: isDark ? '#1C1C1C' : '#FFFFFF',
                       borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                     },
                   ]}
@@ -415,7 +415,7 @@ export default function ExploreScreen() {
 
                     <View style={styles.listFooter}>
                       <View style={styles.aiTagPill}>
-                        <Ionicons name="hardware-chip-outline" size={11} color="#8B5CF6" />
+                        <Ionicons name="hardware-chip-outline" size={11} color="#FF7A45" />
                         <Text style={styles.aiTagText} numberOfLines={1}>
                           {movie.aiCompliance?.aiModel ? movie.aiCompliance.aiModel.split('+')[0].trim() : 'GenAI v3.2'}
                         </Text>
@@ -495,13 +495,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(229, 9, 20, 0.12)',
+    backgroundColor: 'rgba(255, 61, 127, 0.12)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
   },
   spotlightBadgeText: {
-    color: '#E50914',
+    color: '#FF3D7F',
     fontSize: 9.5,
     fontWeight: '900',
     letterSpacing: 0.6,
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#232323',
   },
   listPoster: {
     width: '100%',
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: 'rgba(229, 9, 20, 0.85)',
+    backgroundColor: 'rgba(255, 61, 127, 0.85)',
     alignItems: 'center',
     justifyContent: 'center',
     paddingLeft: 2,
@@ -756,14 +756,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    backgroundColor: 'rgba(255, 122, 69, 0.12)',
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 6,
     maxWidth: '65%',
   },
   aiTagText: {
-    color: '#8B5CF6',
+    color: '#FF7A45',
     fontSize: 9.5,
     fontWeight: '700',
   },

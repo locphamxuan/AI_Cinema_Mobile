@@ -114,7 +114,7 @@ export const CheckInModal: React.FC = () => {
                   style={[
                     styles.dayCard,
                     {
-                      backgroundColor: d.state === 'claimed' ? 'rgba(16, 185, 129, 0.12)' : isDark ? '#131B2E' : '#F8FAFC',
+                      backgroundColor: d.state === 'claimed' ? 'rgba(16, 185, 129, 0.12)' : isDark ? '#1C1C1C' : '#F7F7F8',
                       borderColor: d.state === 'next' ? colors.ruby : d.state === 'claimed' ? '#10B981' : colors.border,
                       borderWidth: d.state === 'next' ? 2 : 1,
                     },
@@ -122,7 +122,7 @@ export const CheckInModal: React.FC = () => {
                 >
                   <Text style={[styles.dayLabel, { color: d.state === 'next' ? colors.ruby : colors.textSecondary }]}>N{d.day}</Text>
                   {d.grantsSpin ? (
-                    <Ionicons name="gift" size={14} color="#8B5CF6" />
+                    <Ionicons name="gift" size={14} color="#FF7A45" />
                   ) : (
                     <FontAwesome5 name="coins" size={13} color={d.state === 'claimed' ? '#10B981' : '#F59E0B'} />
                   )}
@@ -151,7 +151,7 @@ export const CheckInModal: React.FC = () => {
           )}
 
           <TouchableOpacity
-            style={[styles.claimBtn, { backgroundColor: doneToday || todayReward <= 0 ? '#64748B' : colors.ruby }]}
+            style={[styles.claimBtn, { backgroundColor: doneToday || todayReward <= 0 ? '#8A8A90' : colors.ruby }]}
             onPress={handleClaim}
             disabled={statusLoading || busy || !dailyReward || doneToday || todayReward <= 0}
           >
@@ -160,7 +160,7 @@ export const CheckInModal: React.FC = () => {
 
           {spins > 0 && (
             <TouchableOpacity style={styles.spinBtn} onPress={openWheel}>
-              <Ionicons name="gift" size={14} color="#8B5CF6" />
+              <Ionicons name="gift" size={14} color="#FF7A45" />
               <Text style={styles.spinBtnText}>Bạn có {spins} lượt quay — quay ngay</Text>
             </TouchableOpacity>
           )}
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   successBox: { backgroundColor: 'rgba(16, 185, 129, 0.12)', borderRadius: 10, padding: 10, marginBottom: 12, alignItems: 'center' },
   successTitle: { color: '#10B981', fontWeight: '800', fontSize: 14 },
   successText: { color: '#10B981', fontSize: 12, marginTop: 2 },
-  spinText: { color: '#8B5CF6', fontSize: 12, fontWeight: '700', marginTop: 4 },
+  spinText: { color: '#FF7A45', fontSize: 12, fontWeight: '700', marginTop: 4 },
   errorText: { color: '#EF4444', fontSize: 12, marginBottom: 10, textAlign: 'center' },
   errorRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   claimBtn: { paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
@@ -204,9 +204,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.4)',
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    borderColor: 'rgba(255, 122, 69, 0.4)',
+    backgroundColor: 'rgba(255, 122, 69, 0.1)',
   },
-  spinBtnText: { color: '#8B5CF6', fontWeight: '800', fontSize: 13 },
+  spinBtnText: { color: '#FF7A45', fontWeight: '800', fontSize: 13 },
   footnote: { fontSize: 11, textAlign: 'center', marginTop: 10 },
 });

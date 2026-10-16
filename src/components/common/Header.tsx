@@ -168,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({ onProfilePress, onSearch }) => {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={[styles.loginBtn, { backgroundColor: '#10B981' }]}
+              style={[styles.loginBtn, { backgroundColor: '#FF3D7F' }]}
               onPress={() => openAuthModal('login')}
             >
               <Text style={styles.loginBtnText}>Đăng nhập</Text>
@@ -196,9 +196,9 @@ export const Header: React.FC<HeaderProps> = ({ onProfilePress, onSearch }) => {
                     styles.dropdownMenu,
                     {
                       top: Math.max(insets.top, 10) + 48,
-                      backgroundColor: isDark ? '#181B26' : '#FFFFFF',
+                      backgroundColor: isDark ? '#1F1F1F' : '#FFFFFF',
                       borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)',
-                      shadowColor: isDark ? '#000000' : '#64748B',
+                      shadowColor: isDark ? '#000000' : '#8A8A90',
                     },
                   ]}
                 >
@@ -229,7 +229,7 @@ export const Header: React.FC<HeaderProps> = ({ onProfilePress, onSearch }) => {
                           styles.planBadge,
                           isVIP
                             ? { backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.4)' }
-                            : { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9', borderColor: 'transparent' },
+                            : { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F0F0F2', borderColor: 'transparent' },
                         ]}
                       >
                         <FontAwesome5
@@ -298,7 +298,7 @@ export const Header: React.FC<HeaderProps> = ({ onProfilePress, onSearch }) => {
                       onPress={handleLogout}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="log-out-outline" size={18} color="#E50914" style={{ marginRight: 8 }} />
+                      <Ionicons name="log-out-outline" size={18} color="#FF3D7F" style={{ marginRight: 8 }} />
                       <Text style={styles.logoutText}>Đăng xuất</Text>
                     </TouchableOpacity>
                   </View>
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   logoBadge: {
-    backgroundColor: '#E50914',
+    backgroundColor: '#FF3D7F',
     paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 4,
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   logoutText: {
-    color: '#E50914',
+    color: '#FF3D7F',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     height: 16,
     paddingHorizontal: 3,
     borderRadius: 8,
-    backgroundColor: '#E11D48',
+    backgroundColor: '#FF2D6F',
     alignItems: 'center',
     justifyContent: 'center',
   },

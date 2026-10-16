@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   time: { color: '#FFFFFF', fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] },
   barTouch: { flex: 1, height: 22, justifyContent: 'center' },
   track: { height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)', overflow: 'hidden' },
-  fill: { height: '100%', backgroundColor: '#10B981' },
+  fill: { height: '100%', backgroundColor: '#FF3D7F' },
   iconBtn: { padding: 4, flexDirection: 'row', alignItems: 'center', gap: 2 },
-  rateTag: { color: '#10B981', fontSize: 10, fontWeight: '800' },
+  rateTag: { color: '#FF3D7F', fontSize: 10, fontWeight: '800' },
 });

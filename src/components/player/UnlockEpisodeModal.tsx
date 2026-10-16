@@ -75,7 +75,7 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
             Mở khóa riêng tập này bằng Coin, hoặc đăng ký gói Tháng để xem mọi tập đã phát hành.
           </Text>
 
-          <View style={[styles.priceBox, { backgroundColor: isDark ? '#1E293B' : '#F8FAFC', borderColor: colors.border }]}>
+          <View style={[styles.priceBox, { backgroundColor: isDark ? '#232323' : '#F7F7F8', borderColor: colors.border }]}>
             <View style={styles.priceRow}>
               <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Giá mở khóa</Text>
               <View style={styles.coinBadge}>
@@ -92,7 +92,7 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
             {enoughCoins ? (
               <View style={styles.priceRow}>
                 <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Sẽ trừ</Text>
-                <Text style={[styles.balanceValue, { color: '#10B981' }]}>
+                <Text style={[styles.balanceValue, { color: '#FF3D7F' }]}>
                   {split.main} Coin chính + {split.bonus} Coin thưởng
                 </Text>
               </View>

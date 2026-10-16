@@ -83,8 +83,8 @@ export default function MovieDetailScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: '#000000', justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#10B981" />
-        <Text style={{ color: '#94A3B8', marginTop: 10, fontSize: 13 }}>Đang tải thông tin phim...</Text>
+        <ActivityIndicator size="large" color="#FF3D7F" />
+        <Text style={{ color: '#8E8E93', marginTop: 10, fontSize: 13 }}>Đang tải thông tin phim...</Text>
       </View>
     );
   }
@@ -178,7 +178,7 @@ export default function MovieDetailScreen() {
               style={styles.iconActionItem}
               onPress={() => toggleMyList(movie.id)}
             >
-              <Ionicons name={isAdded ? 'bookmark' : 'bookmark-outline'} size={18} color={isAdded ? '#10B981' : '#FFFFFF'} />
+              <Ionicons name={isAdded ? 'bookmark' : 'bookmark-outline'} size={18} color={isAdded ? '#FF3D7F' : '#FFFFFF'} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -194,11 +194,11 @@ export default function MovieDetailScreen() {
             style={styles.compliancePill}
             onPress={() => setComplianceModalOpen(true)}
           >
-            <MaterialCommunityIcons name="shield-check" size={14} color="#10B981" />
+            <MaterialCommunityIcons name="shield-check" size={14} color="#FF3D7F" />
             <Text style={styles.compliancePillText}>
               {movie.aiCompliance.complianceArticle || 'Tuân thủ Điều 44 Luật AI'} (Điểm: {movie.aiCompliance.moderationScore}%)
             </Text>
-            <Ionicons name="chevron-forward" size={12} color="#10B981" />
+            <Ionicons name="chevron-forward" size={12} color="#FF3D7F" />
           </TouchableOpacity>
         </View>
 
@@ -216,7 +216,7 @@ export default function MovieDetailScreen() {
         {/* Comments Section (as seen in image 4) */}
         <View style={styles.commentsSection}>
           <View style={styles.commentHeaderRow}>
-            <Ionicons name="chatbubbles" size={16} color="#10B981" />
+            <Ionicons name="chatbubbles" size={16} color="#FF3D7F" />
             <Text style={styles.commentHeading}>Bình luận (1)</Text>
           </View>
 
@@ -264,7 +264,7 @@ export default function MovieDetailScreen() {
             <Text style={styles.commentContent}>Nhịp phim nhanh đã man cứ cgiac như bấm x2 để xem v.</Text>
             <View style={styles.commentFooterRow}>
               <TouchableOpacity style={styles.likeBtn}>
-                <Ionicons name="heart-outline" size={14} color="#94A3B8" />
+                <Ionicons name="heart-outline" size={14} color="#8E8E93" />
                 <Text style={styles.likeCount}>1</Text>
               </TouchableOpacity>
               <TouchableOpacity>
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 240,
     position: 'relative',
-    backgroundColor: '#0B0F19',
+    backgroundColor: '#0F0F0F',
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.2)',
     overflow: 'hidden',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#232323',
     marginBottom: -35,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 6 },
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   fhdBadge: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#FF3D7F',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   yearText: {
-    color: '#94A3B8',
+    color: '#8E8E93',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   },
   movieSubtitle: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#8E8E93',
     textAlign: 'center',
     marginTop: -4,
   },
@@ -396,11 +396,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#10B981',
+    backgroundColor: '#FF3D7F',
     paddingVertical: 12,
     borderRadius: 10,
     gap: 8,
-    shadowColor: '#10B981',
+    shadowColor: '#FF3D7F',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 6,
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#232323',
     paddingVertical: 11,
     borderRadius: 10,
     borderWidth: 1,
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#232323',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -448,16 +448,16 @@ const styles = StyleSheet.create({
   compliancePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: 'rgba(255, 61, 127, 0.12)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.35)',
+    borderColor: 'rgba(255, 61, 127, 0.35)',
     gap: 6,
   },
   compliancePillText: {
-    color: '#10B981',
+    color: '#FF3D7F',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -475,15 +475,15 @@ const styles = StyleSheet.create({
   },
   tabItemActive: {
     borderBottomWidth: 2,
-    borderBottomColor: '#10B981',
+    borderBottomColor: '#FF3D7F',
   },
   tabText: {
-    color: '#94A3B8',
+    color: '#8E8E93',
     fontSize: 12,
     fontWeight: '700',
   },
   tabTextActive: {
-    color: '#10B981',
+    color: '#FF3D7F',
   },
   serverSection: {
     flexDirection: 'row',
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   serverLabel: {
-    color: '#94A3B8',
+    color: '#8E8E93',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -509,11 +509,11 @@ const styles = StyleSheet.create({
     borderColor: '#27272A',
   },
   serverPillActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
+    backgroundColor: '#FF3D7F',
+    borderColor: '#FF3D7F',
   },
   serverPillText: {
-    color: '#94A3B8',
+    color: '#8E8E93',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   switchLabel: {
-    color: '#94A3B8',
+    color: '#8E8E93',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -564,8 +564,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   epGridButtonActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
+    backgroundColor: '#FF3D7F',
+    borderColor: '#FF3D7F',
   },
   epGridButtonText: {
     color: '#FFFFFF',
@@ -605,12 +605,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   commentLoginText: {
-    color: '#94A3B8',
+    color: '#8E8E93',
     fontSize: 12,
     textAlign: 'center',
   },
   commentLoginBtn: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#FF3D7F',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -661,13 +661,13 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   commentEpTag: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: 'rgba(255, 61, 127, 0.15)',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
   },
   commentEpTagText: {
-    color: '#10B981',
+    color: '#FF3D7F',
     fontSize: 9,
     fontWeight: '700',
   },
@@ -683,11 +683,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   likeCount: {
-    color: '#94A3B8',
+    color: '#8E8E93',
     fontSize: 11,
   },
   replyText: {
-    color: '#94A3B8',
+    color: '#8E8E93',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -697,7 +697,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   backBtnFallback: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#FF3D7F',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,

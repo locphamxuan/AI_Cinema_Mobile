@@ -90,7 +90,7 @@ export default function WatchScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#10B981" />
+        <ActivityIndicator size="large" color="#FF3D7F" />
         <Text style={styles.loadingText}>Đang tải thông tin phim...</Text>
       </View>
     );
@@ -134,7 +134,7 @@ export default function WatchScreen() {
             <Text style={[styles.miniToggleText, autoNext && styles.miniToggleTextActive]}>{autoNext ? 'ON' : 'OFF'}</Text>
           </TouchableOpacity>
           <Text style={styles.viewCount}>
-            <Ionicons name="eye-outline" size={12} color="#94A3B8" /> {compactCount(engagement?.viewCount ?? 0)} lượt xem
+            <Ionicons name="eye-outline" size={12} color="#8E8E93" /> {compactCount(engagement?.viewCount ?? 0)} lượt xem
           </Text>
         </View>
 
@@ -154,7 +154,7 @@ export default function WatchScreen() {
           <View style={styles.toolsRow}>
             <LikeButton movieId={movie.id} />
             <TouchableOpacity style={styles.toolBtn} onPress={() => toggleMyList(movie.id)} accessibilityLabel="Lưu phim">
-              <Ionicons name={isAdded ? 'bookmark' : 'bookmark-outline'} size={18} color={isAdded ? '#10B981' : '#FFFFFF'} />
+              <Ionicons name={isAdded ? 'bookmark' : 'bookmark-outline'} size={18} color={isAdded ? '#FF3D7F' : '#FFFFFF'} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.toolBtn} onPress={() => Alert.alert('Chia sẻ', 'Đã sao chép liên kết.')} accessibilityLabel="Chia sẻ">
               <Ionicons name="share-social-outline" size={18} color="#FFFFFF" />
@@ -182,7 +182,7 @@ export default function WatchScreen() {
         {activeEpisode && (
           <View style={styles.episodeInfo}>
             <View style={styles.aiLabelRow}>
-              <MaterialCommunityIcons name="robot-outline" size={14} color="#10B981" />
+              <MaterialCommunityIcons name="robot-outline" size={14} color="#FF3D7F" />
               <Text style={styles.aiLabelText}>{activeEpisode.aiLabel || 'Nội dung được tạo bởi AI'}</Text>
             </View>
             {activeEpisode.duration ? <Text style={styles.episodeInfoText}>Thời lượng: {activeEpisode.duration}</Text> : null}
@@ -199,7 +199,7 @@ export default function WatchScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000000' },
   centered: { justifyContent: 'center', alignItems: 'center' },
-  loadingText: { color: '#94A3B8', marginTop: 10, fontSize: 13 },
+  loadingText: { color: '#8E8E93', marginTop: 10, fontSize: 13 },
   scrollContent: { paddingBottom: 40 },
   playerTogglesRow: {
     flexDirection: 'row',
@@ -211,17 +211,17 @@ const styles = StyleSheet.create({
     borderBottomColor: '#27272A',
     gap: 8,
   },
-  toggleLabel: { color: '#94A3B8', fontSize: 12, fontWeight: '600' },
+  toggleLabel: { color: '#8E8E93', fontSize: 12, fontWeight: '600' },
   miniToggleBtn: { backgroundColor: '#27272A', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
-  miniToggleBtnActive: { backgroundColor: '#10B981' },
-  miniToggleText: { color: '#94A3B8', fontSize: 10, fontWeight: '800' },
+  miniToggleBtnActive: { backgroundColor: '#FF3D7F' },
+  miniToggleText: { color: '#8E8E93', fontSize: 10, fontWeight: '800' },
   miniToggleTextActive: { color: '#FFFFFF' },
-  viewCount: { marginLeft: 'auto', color: '#94A3B8', fontSize: 11, fontWeight: '600' },
+  viewCount: { marginLeft: 'auto', color: '#8E8E93', fontSize: 11, fontWeight: '600' },
   titleActionSection: { paddingHorizontal: 16, paddingTop: 14, gap: 8 },
   backTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   backArrowBtn: { padding: 2 },
   screenMovieTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '900', flex: 1 },
-  screenMovieSub: { color: '#94A3B8', fontSize: 12, marginLeft: 26, marginTop: -2 },
+  screenMovieSub: { color: '#8E8E93', fontSize: 12, marginLeft: 26, marginTop: -2 },
   toolsRow: { flexDirection: 'row', alignItems: 'flex-start', marginLeft: 26, gap: 20, marginTop: 6 },
   toolBtn: {
     width: 36,
@@ -235,9 +235,9 @@ const styles = StyleSheet.create({
   },
   episodeInfo: { marginTop: 14, gap: 6, paddingHorizontal: 16 },
   aiLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  aiLabelText: { color: '#10B981', fontSize: 12, fontWeight: '700' },
-  episodeInfoText: { color: '#94A3B8', fontSize: 12 },
+  aiLabelText: { color: '#FF3D7F', fontSize: 12, fontWeight: '700' },
+  episodeInfoText: { color: '#8E8E93', fontSize: 12 },
   episodeNoticeText: { color: '#F59E0B', fontSize: 12 },
-  backBtnFallback: { backgroundColor: '#10B981', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginTop: 12 },
+  backBtnFallback: { backgroundColor: '#FF3D7F', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginTop: 12 },
   backBtnFallbackText: { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
 });

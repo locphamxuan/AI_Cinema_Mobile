@@ -72,7 +72,7 @@ export const StatementList: React.FC = () => {
               onPress={() => setFilter(f.id)}
               style={[
                 styles.chip,
-                { backgroundColor: selected ? colors.ruby : isDark ? '#1E293B' : '#F1F5F9', borderColor: selected ? colors.ruby : colors.border },
+                { backgroundColor: selected ? colors.ruby : isDark ? '#232323' : '#F0F0F2', borderColor: selected ? colors.ruby : colors.border },
               ]}
             >
               <Text style={[styles.chipText, { color: selected ? '#FFFFFF' : colors.textSecondary }]}>{f.label}</Text>
@@ -110,7 +110,7 @@ export const StatementList: React.FC = () => {
                 <Text style={[styles.amount, { color: line.mainAmount > 0 ? '#10B981' : '#EF4444' }]}>{signed(line.mainAmount)} chính</Text>
               )}
               {line.bonusAmount !== 0 && (
-                <Text style={[styles.amount, { color: line.bonusAmount > 0 ? '#8B5CF6' : '#EF4444' }]}>{signed(line.bonusAmount)} thưởng</Text>
+                <Text style={[styles.amount, { color: line.bonusAmount > 0 ? '#FF7A45' : '#EF4444' }]}>{signed(line.bonusAmount)} thưởng</Text>
               )}
             </View>
           </View>

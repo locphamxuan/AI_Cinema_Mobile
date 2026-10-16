@@ -13,8 +13,8 @@ export const ThemeToggle: React.FC = () => {
       style={[
         styles.container,
         {
-          backgroundColor: isDark ? '#1E293B' : '#E2E8F0',
-          borderColor: isDark ? '#334155' : '#CBD5E1',
+          backgroundColor: isDark ? '#232323' : '#E6E6EA',
+          borderColor: isDark ? '#3A3A3A' : '#C7C7CC',
         },
       ]}
       accessibilityRole="switch"
@@ -24,14 +24,14 @@ export const ThemeToggle: React.FC = () => {
         <Ionicons
           name="sunny"
           size={14}
-          color={isDark ? '#64748B' : '#F59E0B'}
+          color={isDark ? '#8A8A90' : '#F59E0B'}
         />
       </View>
       <View style={styles.iconWrapper}>
         <Ionicons
           name="moon"
           size={13}
-          color={isDark ? '#818CF8' : '#94A3B8'}
+          color={isDark ? '#818CF8' : '#8E8E93'}
         />
       </View>
       <View

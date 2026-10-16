@@ -47,7 +47,7 @@ export function AudioModeTabs({ mode, onModeChange, tracks, trackId, onTrackChan
         {extraTabs}
       </View>
       <View style={styles.info}>
-        <Ionicons name={mode === 'subtitle' ? 'text' : 'volume-high'} size={14} color="#10B981" />
+        <Ionicons name={mode === 'subtitle' ? 'text' : 'volume-high'} size={14} color="#FF3D7F" />
         {mode === 'voiceover' ? (
           <Text style={styles.infoText}>Âm thanh gốc: {languageName(language)} · tắt phụ đề</Text>
         ) : tracks.length === 0 ? (
@@ -69,14 +69,14 @@ export function AudioModeTabs({ mode, onModeChange, tracks, trackId, onTrackChan
 const styles = StyleSheet.create({
   tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#27272A', marginTop: 16, paddingHorizontal: 16 },
   tab: { paddingVertical: 10, marginRight: 20 },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: '#10B981' },
-  tabText: { color: '#94A3B8', fontSize: 12, fontWeight: '700' },
-  tabTextActive: { color: '#10B981' },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: '#FF3D7F' },
+  tabText: { color: '#8E8E93', fontSize: 12, fontWeight: '700' },
+  tabTextActive: { color: '#FF3D7F' },
   info: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, marginTop: 12 },
-  infoText: { color: '#94A3B8', fontSize: 12, flex: 1 },
+  infoText: { color: '#8E8E93', fontSize: 12, flex: 1 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, backgroundColor: '#18181B', borderWidth: 1, borderColor: '#27272A' },
-  chipActive: { backgroundColor: '#10B981', borderColor: '#10B981' },
-  chipText: { color: '#94A3B8', fontSize: 11, fontWeight: '700' },
+  chipActive: { backgroundColor: '#FF3D7F', borderColor: '#FF3D7F' },
+  chipText: { color: '#8E8E93', fontSize: 11, fontWeight: '700' },
   chipTextActive: { color: '#FFFFFF' },
 });

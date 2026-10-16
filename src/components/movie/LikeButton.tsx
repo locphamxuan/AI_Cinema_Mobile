@@ -54,7 +54,7 @@ export function LikeButton({ movieId, compact = false }: { movieId: string; comp
         accessibilityLabel={liked ? 'Bỏ tim' : 'Thả tim'}
         accessibilityState={{ selected: liked }}
       >
-        <Ionicons name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? '#F43F5E' : '#FFFFFF'} />
+        <Ionicons name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? '#FF4D8D' : '#FFFFFF'} />
       </TouchableOpacity>
       {!compact && <Text style={styles.count} testID="like-count">{compactCount(data?.likeCount ?? 0)}</Text>}
     </View>
@@ -73,6 +73,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  btnActive: { borderColor: '#F43F5E' },
-  count: { color: '#94A3B8', fontSize: 10, fontWeight: '700' },
+  btnActive: { borderColor: '#FF4D8D' },
+  count: { color: '#8E8E93', fontSize: 10, fontWeight: '700' },
 });

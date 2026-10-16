@@ -107,7 +107,7 @@ export default function VipScreen() {
     await reload();
   };
 
-  const card = { backgroundColor: isDark ? '#161924' : '#FFFFFF', borderColor: colors.border };
+  const card = { backgroundColor: isDark ? '#1C1C1C' : '#FFFFFF', borderColor: colors.border };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -125,7 +125,7 @@ export default function VipScreen() {
                 <FontAwesome5 name="crown" size={16} color="#F59E0B" />
                 <Text style={[styles.planName, { color: colors.text }]}>{open.plan.name}</Text>
               </View>
-              <Text style={[styles.badge, { color: running ? '#10B981' : '#EF4444' }]}>{running ? 'Đang chạy' : 'Gia hạn lỗi'}</Text>
+              <Text style={[styles.badge, { color: running ? '#FF3D7F' : '#EF4444' }]}>{running ? 'Đang chạy' : 'Gia hạn lỗi'}</Text>
             </View>
             <Text style={[styles.meta, { color: colors.textSecondary }]}>Hết kỳ: {formatDateTime(open.currentPeriodEnd)}</Text>
             {open.status === 'PAST_DUE' && (
@@ -136,12 +136,12 @@ export default function VipScreen() {
             <View style={[styles.rowBetween, { marginTop: 10 }]}>
               <Text style={[styles.meta, { color: colors.text, fontWeight: '700' }]}>Tự gia hạn ({open.priceCoins} Coin / kỳ)</Text>
               {busy === 'renew' ? (
-                <ActivityIndicator color="#10B981" />
+                <ActivityIndicator color="#FF3D7F" />
               ) : (
                 <Switch
                   value={open.autoRenew}
                   onValueChange={(on) => void toggleRenew(on)}
-                  trackColor={{ false: '#475569', true: '#10B981' }}
+                  trackColor={{ false: '#4A4A4F', true: '#FF3D7F' }}
                   thumbColor="#FFFFFF"
                 />
               )}
@@ -172,10 +172,10 @@ export default function VipScreen() {
               <Text style={[styles.meta, { color: colors.textSecondary }]}>Hiện chưa có gói nào được mở bán.</Text>
             ) : null}
             {plans?.map((plan) => (
-              <View key={plan.id} style={[styles.card, card, plan.isFeatured && { borderColor: '#E50914', borderWidth: 2 }]}>
+              <View key={plan.id} style={[styles.card, card, plan.isFeatured && { borderColor: '#FF3D7F', borderWidth: 2 }]}>
                 <View style={styles.rowBetween}>
                   <Text style={[styles.planName, { color: colors.text }]}>{plan.name}</Text>
-                  {plan.isFeatured && <Text style={[styles.badge, { color: '#E50914' }]}>Đề xuất</Text>}
+                  {plan.isFeatured && <Text style={[styles.badge, { color: '#FF3D7F' }]}>Đề xuất</Text>}
                 </View>
                 {plan.description ? <Text style={[styles.meta, { color: colors.textSecondary }]}>{plan.description}</Text> : null}
                 <View style={styles.priceRow}>
@@ -220,10 +220,10 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E50914',
+    backgroundColor: '#FF3D7F',
     paddingVertical: 12,
     borderRadius: 10,
   },
-  retryButton: { alignSelf: 'flex-start', backgroundColor: '#E50914', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14, marginTop: 10 },
+  retryButton: { alignSelf: 'flex-start', backgroundColor: '#FF3D7F', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14, marginTop: 10 },
   joinText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
 });

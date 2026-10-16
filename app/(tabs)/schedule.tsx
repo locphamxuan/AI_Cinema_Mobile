@@ -37,7 +37,7 @@ export default function ScheduleScreen() {
         {/* Title & Header */}
         <View style={styles.sectionHeader}>
           <View style={styles.titleRow}>
-            <Ionicons name="calendar" size={20} color="#10B981" />
+            <Ionicons name="calendar" size={20} color="#FF3D7F" />
             <Text style={[styles.title, { color: colors.text }]}>Lịch Chiếu Phim AI</Text>
           </View>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
@@ -60,11 +60,11 @@ export default function ScheduleScreen() {
                   styles.dayCard,
                   {
                     backgroundColor: isSelected
-                      ? '#10B981'
+                      ? '#FF3D7F'
                       : isDark
-                      ? '#1E293B'
-                      : '#F1F5F9',
-                    borderColor: isSelected ? '#10B981' : colors.border,
+                      ? '#232323'
+                      : '#F0F0F2',
+                    borderColor: isSelected ? '#FF3D7F' : colors.border,
                   },
                 ]}
                 onPress={() => setSelectedDay(idx)}
@@ -89,7 +89,7 @@ export default function ScheduleScreen() {
               style={[
                 styles.scheduleItem,
                 {
-                  backgroundColor: isDark ? '#181B26' : '#FFFFFF',
+                  backgroundColor: isDark ? '#1F1F1F' : '#FFFFFF',
                   borderColor: colors.border,
                 },
               ]}
@@ -99,7 +99,7 @@ export default function ScheduleScreen() {
               <Image source={{ uri: movie.posterUrl }} style={styles.poster} />
               <View style={styles.info}>
                 <View style={styles.timeBadge}>
-                  <Ionicons name="time-outline" size={12} color="#10B981" />
+                  <Ionicons name="time-outline" size={12} color="#FF3D7F" />
                   <Text style={styles.timeText}>20:00 · Tập {index + 5}</Text>
                 </View>
                 <Text style={[styles.movieTitle, { color: colors.text }]} numberOfLines={1}>
@@ -194,14 +194,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: 'rgba(255, 61, 127, 0.12)',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
     alignSelf: 'flex-start',
   },
   timeText: {
-    color: '#10B981',
+    color: '#FF3D7F',
     fontSize: 10.5,
     fontWeight: '700',
   },
@@ -219,13 +219,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   tag: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: 'rgba(255, 61, 127, 0.15)',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
   },
   tagText: {
-    color: '#10B981',
+    color: '#FF3D7F',
     fontSize: 9.5,
     fontWeight: '700',
   },
