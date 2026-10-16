@@ -215,12 +215,12 @@ export const useAppStore = create<AppState>()(
 
           return {
             success: false,
-            error: res.message || 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại!',
+            error: res.message || 'Email hoặc mật khẩu chưa đúng.',
           };
         } catch (e: any) {
           return {
             success: false,
-            error: e?.message || 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau!',
+            error: e?.message || 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
           };
         }
       },
@@ -228,14 +228,14 @@ export const useAppStore = create<AppState>()(
       register: async (name, email, password, dateOfBirth) => {
         const trimmedEmail = email.trim().toLowerCase();
         const trimmedName = name.trim();
-        const trimmedDob = (dateOfBirth || '2003-05-14').trim();
+        const trimmedDob = (dateOfBirth || '').trim();
 
         if (!trimmedEmail || !password || !trimmedName || !trimmedDob) {
-          return { success: false, error: 'Vui lòng điền đầy đủ thông tin đăng ký!' };
+          return { success: false, error: 'Điền đủ họ tên, ngày sinh, email và mật khẩu.' };
         }
 
         if (password.length < 8) {
-          return { success: false, error: 'Mật khẩu phải từ 8 đến 72 ký tự (có ít nhất 1 chữ cái và 1 chữ số)!' };
+          return { success: false, error: 'Mật khẩu cần 8 đến 72 ký tự, có cả chữ và số.' };
         }
 
         try {
@@ -252,12 +252,12 @@ export const useAppStore = create<AppState>()(
 
           return {
             success: false,
-            error: res.message || 'Đăng ký không thành công. Vui lòng thử lại!',
+            error: res.message || 'Chưa tạo được tài khoản. Thử lại sau ít phút.',
           };
         } catch (e: any) {
           return {
             success: false,
-            error: e?.message || 'Lỗi kết nối máy chủ khi đăng ký',
+            error: e?.message || 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
           };
         }
       },
@@ -347,7 +347,7 @@ export const useAppStore = create<AppState>()(
             const botMsg: ChatMessage = {
               id: `msg-${Date.now()}`,
               sender: 'system',
-              content: response.message || 'Không thể gửi tin nhắn. Vui lòng thử lại.',
+              content: response.message || 'Tin nhắn chưa gửi được. Kiểm tra mạng rồi gửi lại.',
               timestamp: new Date().toISOString(),
             };
             set((s) => ({ chatMessages: [...s.chatMessages, botMsg] }));
