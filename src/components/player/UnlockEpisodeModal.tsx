@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../store/useAppStore';
 import { fonts, textStyle, useTheme } from '../../theme';
 import { episodeAccessService } from '../../services/episodeAccessService';
+import { episodeLabel } from '../../lib/episodeLabel';
 import { idempotencyKey } from '../../lib/ids';
 import { Button } from '../common/Button';
 import type { LockedEpisode } from '../../hooks/useEpisodeGate';
@@ -27,7 +28,7 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { setWalletBalance, markEpisodeUnlocked, setTopUpModalOpen } = useAppStore();
+  const { setWalletBalance, markEpisodeUnlocked, setTopUpModalOpen, currentMovie } = useAppStore();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   // One key per opened episode: a double tap or a retry is charged once.
@@ -40,6 +41,8 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
   const canJoinPlan = decision.accessMethods.includes('MONTHLY_PLAN');
   const split = splitPrice(coinPrice, mainBalance);
   const named = episode.title && episode.title !== `Tập ${episode.episodeNumber}`;
+  const siblings = currentMovie?.episodes?.some((ep) => ep.id === episode.id) ? currentMovie.episodes : null;
+  const name = siblings ? episodeLabel(episode, siblings) : `Tập ${episode.episodeNumber}`;
 
   const close = () => {
     setErrorMsg(null);
@@ -75,7 +78,7 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
       <Pressable style={[styles.backdrop, { backgroundColor: colors.overlay }]} onPress={paying ? undefined : close} accessibilityLabel="Đóng" />
       <View style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
         <View style={[styles.handle, { backgroundColor: colors.borderLight }]} />
-        <Text style={[styles.kicker, { color: colors.textMuted }]}>Mở khóa tập {episode.episodeNumber}</Text>
+        <Text style={[styles.kicker, { color: colors.textMuted }]}>Mở khóa {name.charAt(0).toLowerCase() + name.slice(1)}</Text>
         {named ? <Text style={[styles.episodeName, { color: colors.text }]}>{episode.title}</Text> : null}
 
         <View style={styles.priceRow}>

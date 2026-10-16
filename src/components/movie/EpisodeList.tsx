@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { episodeLabel } from '../../lib/episodeLabel';
 import type { Episode } from '../../types/movie';
 import { textStyle, useTheme } from '../../theme';
 
@@ -38,9 +39,11 @@ export function EpisodeList({ episodes, currentId, isVIPMode, posterUrl, onSelec
           const underRevision = ep.availability === 'UNDER_REVISION';
           // A hint only: the BE decides when the episode is opened.
           const locked = !isVIPMode && !ep.isFree && !ep.isUnlocked;
-          const label = `Tập ${ep.episodeNumber}${locked ? `, ${ep.price} Coin` : ''}${underRevision ? ', đang sửa' : ''}`;
+          const name = episodeLabel(ep, episodes);
+          const label = `${name}${locked ? `, ${ep.price} Coin` : ''}${underRevision ? ', đang sửa' : ''}`;
           const picture = ep.thumbnailUrl || posterUrl;
           const named = ep.title && ep.title !== `Tập ${ep.episodeNumber}`;
+          const whole = name !== `Tập ${ep.episodeNumber}`;
 
           return (
             <TouchableOpacity
@@ -57,7 +60,7 @@ export function EpisodeList({ episodes, currentId, isVIPMode, posterUrl, onSelec
               )}
               <View style={styles.rowBody}>
                 <Text style={[styles.rowTitle, { color: isCurrent ? colors.ruby : colors.text }]} numberOfLines={1}>
-                  {named ? `${ep.episodeNumber}. ${ep.title}` : `Tập ${ep.episodeNumber}`}
+                  {whole ? (named ? `${name}: ${ep.title}` : name) : named ? `${ep.episodeNumber}. ${ep.title}` : name}
                 </Text>
                 <Text style={[styles.rowMeta, { color: colors.textMuted }]}>{episodeMeta(ep, locked)}</Text>
               </View>

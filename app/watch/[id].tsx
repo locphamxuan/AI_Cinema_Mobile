@@ -9,6 +9,7 @@ import { movieService } from '../../src/services';
 import { engagementService } from '../../src/services/engagementService';
 import { episodeAccessService } from '../../src/services/episodeAccessService';
 import { Movie, Episode } from '../../src/types/movie';
+import { episodeLabel } from '../../src/lib/episodeLabel';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
 import { EpisodePlayer } from '../../src/components/player/EpisodePlayer';
 import { AudioModeTabs, languageName, trackFor, type AudioMode } from '../../src/components/movie/AudioModeTabs';
@@ -135,7 +136,7 @@ export default function WatchScreen() {
           </TouchableOpacity>
           {ep ? (
             <Text style={[styles.episodeTitle, { color: colors.textSecondary }]} numberOfLines={2}>
-              Tập {ep.episodeNumber}
+              {episodeLabel(ep, episodes)}
               {namedEpisode ? `: ${ep.title}` : ''}
               {ep.duration ? `  (${ep.duration})` : ''}
             </Text>
