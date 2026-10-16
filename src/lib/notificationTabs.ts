@@ -9,7 +9,7 @@ export const MEMBER_NOTIFICATION_TABS: MemberNotificationTab[] = [
   { key: 'all', label: 'Tất cả', types: [] },
   {
     key: 'wallet',
-    label: 'Ví & Coin',
+    label: 'Coin',
     types: [
       'COIN_TOPUP_SUCCESS',
       'COIN_TOPUP_FAILED',
@@ -22,10 +22,10 @@ export const MEMBER_NOTIFICATION_TABS: MemberNotificationTab[] = [
   },
   {
     key: 'plan',
-    label: 'Gói thành viên',
+    label: 'Gói Tháng',
     types: ['SUB_RENEWED', 'SUB_RENEWAL_FAILED', 'SUB_EXPIRING', 'SUBSCRIPTION_CANCELLED'],
   },
-  { key: 'movies', label: 'Phim & thưởng', types: ['EPISODE_ACCESS_REFUNDED', 'REWARD_SPIN_WON'] },
+  { key: 'movies', label: 'Phim và quà', types: ['EPISODE_ACCESS_REFUNDED', 'REWARD_SPIN_WON'] },
 ];
 
 /** Icon of a notification kind (Ionicons). */

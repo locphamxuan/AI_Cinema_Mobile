@@ -19,8 +19,8 @@ export default function SettingsScreen() {
     };
     // Alert buttons are not supported on web.
     if (Platform.OS === 'web') return leave();
-    Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?', [
-      { text: 'Hủy', style: 'cancel' },
+    Alert.alert('Đăng xuất?', 'Ví Coin và gói Tháng vẫn giữ nguyên, bạn đăng nhập lại là thấy.', [
+      { text: 'Ở lại', style: 'cancel' },
       { text: 'Đăng xuất', style: 'destructive', onPress: leave },
     ]);
   };
@@ -30,8 +30,8 @@ export default function SettingsScreen() {
       <ScreenHeader title="Cài đặt" />
       <View style={styles.body}>
         <MenuCard>
-          <MenuRow label="Giao diện" value={isDark ? 'Tối' : 'Sáng'} onPress={toggleTheme} />
-          <MenuRow label="Phiên bản" value={`V ${Constants.expoConfig?.version ?? '1.0.0'}`} last />
+          <MenuRow icon="contrast-outline" label="Giao diện" value={isDark ? 'Tối' : 'Sáng'} onPress={toggleTheme} />
+          <MenuRow icon="information-circle-outline" label="Phiên bản" value={Constants.expoConfig?.version ?? '1.0.0'} last />
         </MenuCard>
         {isAuthenticated && (
           <MenuCard>
