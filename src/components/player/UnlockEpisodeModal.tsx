@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Modal, Pressable, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../store/useAppStore';
-import { fonts, textStyle, useTheme } from '../../theme';
+import { useTheme } from '../../theme';
 import { episodeAccessService } from '../../services/episodeAccessService';
 import { episodeLabel } from '../../lib/episodeLabel';
 import { idempotencyKey } from '../../lib/ids';
 import { Button } from '../common/Button';
 import type { LockedEpisode } from '../../hooks/useEpisodeGate';
 import type { Episode } from '../../types/movie';
+import { styles } from '../../styles/components/player/UnlockEpisodeModal.styles';
 
 interface UnlockEpisodeModalProps {
   /** The episode the BE refused, with its decision; null hides the modal. */
@@ -135,23 +136,3 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  backdrop: { flex: 1 },
-  sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 10, gap: 12 },
-  handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, marginBottom: 4 },
-  kicker: { ...textStyle.labelStrong },
-  episodeName: { ...textStyle.title, marginTop: -6 },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  price: { fontFamily: fonts.displayHeavy, fontSize: 48, lineHeight: 52 },
-  priceUnit: { ...textStyle.title },
-  breakdown: { borderRadius: 14, padding: 14, gap: 10 },
-  line: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  lineLabel: { ...textStyle.label, fontSize: 14 },
-  lineValue: { ...textStyle.bodyStrong, fontSize: 14 },
-  rule: { height: StyleSheet.hairlineWidth },
-  rulesNote: { ...textStyle.caption, marginTop: -4 },
-  error: { ...textStyle.label },
-  planLink: { alignItems: 'center', paddingVertical: 8 },
-  planText: { ...textStyle.labelStrong, textDecorationLine: 'underline' },
-});

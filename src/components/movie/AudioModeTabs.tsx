@@ -1,7 +1,8 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+import { Text, TouchableOpacity, View } from 'react-native';
 import type { SubtitleTrack } from '../../types/movie';
-import { textStyle, useTheme } from '../../theme';
+import { useTheme } from '../../theme';
+import { styles } from '../../styles/components/movie/AudioModeTabs.styles';
 
 /** Phụ đề = the film's audio with subtitles; Thuyết minh = the film's own audio, no subtitles. */
 export type AudioMode = 'subtitle' | 'voiceover';
@@ -75,14 +76,3 @@ export function AudioModeTabs({ mode, onModeChange, tracks, trackId, onTrackChan
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { paddingHorizontal: 16, marginTop: 24, gap: 12 },
-  switch: { flexDirection: 'row', borderRadius: 12, padding: 4 },
-  option: { flex: 1, height: 40, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  optionText: { ...textStyle.labelStrong, fontSize: 14 },
-  info: { ...textStyle.label },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  chipText: { ...textStyle.labelStrong },
-});

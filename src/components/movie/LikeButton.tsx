@@ -1,9 +1,10 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { engagementService, type MovieEngagement } from '../../services/engagementService';
 import { useAppStore } from '../../store/useAppStore';
-import { textStyle, useTheme } from '../../theme';
+import { useTheme } from '../../theme';
+import { styles } from '../../styles/components/movie/LikeButton.styles';
 
 /** Formats 1234 as "1,2K" the way viewers read counts. */
 export function compactCount(n: number): string {
@@ -63,8 +64,3 @@ export function LikeButton({ movieId }: { movieId: string }) {
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  btn: { height: 48, minWidth: 48, borderRadius: 12, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  count: { ...textStyle.labelStrong },
-});

@@ -1,8 +1,9 @@
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { fonts, textStyle, useTheme } from '../../theme';
+import { useTheme } from '../../theme';
 import type { GenreShelf } from '../../lib/homeFeed';
+import { styles } from '../../styles/components/explore/GenreTile.styles';
 
 interface GenreTileProps {
   shelf: GenreShelf;
@@ -32,10 +33,3 @@ export const GenreTile: React.FC<GenreTileProps> = ({ shelf, width, onPress }) =
     </TouchableOpacity>
   );
 };
-
-const styles = StyleSheet.create({
-  tile: { borderRadius: 10, overflow: 'hidden', justifyContent: 'flex-end' },
-  text: { padding: 12, gap: 2 },
-  name: { fontFamily: fonts.displayHeavy, fontSize: 24, lineHeight: 26, color: '#FFFFFF' },
-  count: { ...textStyle.caption, color: 'rgba(255, 255, 255, 0.75)' },
-});

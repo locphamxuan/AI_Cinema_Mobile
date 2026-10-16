@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import { textStyle, useTheme } from '../../theme';
+import { useTheme } from '../../theme';
 import { walletService, STATEMENT_PAGE_SIZE } from '../../services/walletService';
 import { Button } from '../common/Button';
 import type { CoinEntryType, StatementLine } from '../../types/episodeAccess';
+import { styles } from '../../styles/components/wallet/StatementList.styles';
 
 const ENTRY_LABEL: Record<CoinEntryType, string> = {
   TOP_UP: 'Nạp Coin',
@@ -114,18 +115,3 @@ export const StatementList: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  wrap: { gap: 4 },
-  filterRow: { gap: 6, paddingBottom: 8 },
-  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16 },
-  chipText: { ...textStyle.labelStrong },
-  note: { ...textStyle.label, textAlign: 'center', paddingVertical: 16 },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 12 },
-  info: { flex: 1, gap: 2 },
-  title: { ...textStyle.bodyStrong, fontSize: 14 },
-  desc: { ...textStyle.caption },
-  amounts: { alignItems: 'flex-end', gap: 2 },
-  amount: { ...textStyle.labelStrong, fontVariant: ['tabular-nums'] },
-  loading: { marginVertical: 12 },
-});

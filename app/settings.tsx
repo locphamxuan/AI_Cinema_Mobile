@@ -1,11 +1,12 @@
-import React from 'react';
-import { View, StyleSheet, Alert, Platform } from 'react-native';
+
+import { View, Alert, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { MenuCard, MenuRow } from '../src/components/common/MenuRow';
 import { useTheme } from '../src/theme';
 import { useAppStore } from '../src/store/useAppStore';
+import { styles } from '../src/styles/screens/settings.styles';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -42,8 +43,3 @@ export default function SettingsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  body: { gap: 16 },
-});

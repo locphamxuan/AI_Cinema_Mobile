@@ -1,9 +1,10 @@
-import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { episodeLabel } from '../../lib/episodeLabel';
 import type { Episode } from '../../types/movie';
-import { textStyle, useTheme } from '../../theme';
+import { useTheme } from '../../theme';
+import { styles } from '../../styles/components/movie/EpisodeList.styles';
 
 interface EpisodeListProps {
   episodes: Episode[];
@@ -76,15 +77,3 @@ export function EpisodeList({ episodes, currentId, isVIPMode, posterUrl, onSelec
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  section: { paddingHorizontal: 16, marginTop: 28, gap: 14 },
-  heading: { ...textStyle.title },
-  rows: { gap: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8, borderRadius: 12, borderWidth: 1.5 },
-  thumb: { width: 104, height: 58, borderRadius: 6 },
-  rowBody: { flex: 1, gap: 2 },
-  rowTitle: { ...textStyle.labelStrong, fontSize: 14 },
-  rowMeta: { ...textStyle.caption },
-  empty: { ...textStyle.label },
-});

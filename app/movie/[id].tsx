@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Share, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -14,7 +14,8 @@ import { AudioModeTabs, trackFor, type AudioMode } from '../../src/components/mo
 import { EpisodeList } from '../../src/components/movie/EpisodeList';
 import { LikeButton, compactCount, useMovieEngagement } from '../../src/components/movie/LikeButton';
 import { Button } from '../../src/components/common/Button';
-import { fonts, textStyle, useTheme } from '../../src/theme';
+import { useTheme } from '../../src/theme';
+import { styles } from '../../src/styles/screens/movie/id.styles';
 
 export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -199,41 +200,3 @@ export default function MovieDetailScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  centered: { justifyContent: 'center', alignItems: 'center', padding: 32, gap: 8 },
-  missingTitle: { ...textStyle.title },
-  missingText: { ...textStyle.label, textAlign: 'center' },
-  missingBtn: { marginTop: 12, alignSelf: 'center' },
-  head: { paddingHorizontal: 16, marginTop: -72, gap: 12 },
-  title: { fontFamily: fonts.displayHeavy, fontSize: 36, lineHeight: 40 },
-  facts: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 12 },
-  fact: { ...textStyle.labelStrong },
-  age: { borderWidth: 1, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
-  ageText: { ...textStyle.captionStrong },
-  stat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tag: { borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4 },
-  tagText: { ...textStyle.captionStrong },
-  synopsis: { ...textStyle.body, fontSize: 14, lineHeight: 22 },
-  more: { ...textStyle.labelStrong, marginTop: 4 },
-  aiRow: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 4 },
-  aiText: { ...textStyle.label },
-  topBar: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between' },
-  round: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  bottomBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  save: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  play: { flex: 1 },
-});

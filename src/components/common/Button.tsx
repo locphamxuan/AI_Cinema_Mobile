@@ -1,7 +1,8 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { textStyle, useTheme } from '../../theme';
+import { useTheme } from '../../theme';
+import { styles } from '../../styles/components/common/Button.styles';
 
 type Variant = 'primary' | 'secondary' | 'quiet';
 
@@ -49,9 +50,3 @@ export const Button: React.FC<ButtonProps> = ({ label, onPress, variant = 'prima
     </TouchableOpacity>
   );
 };
-
-const styles = StyleSheet.create({
-  base: { minHeight: 48, borderRadius: 12, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  label: { ...textStyle.button },
-});

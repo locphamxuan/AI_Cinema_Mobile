@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, Modal, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Modal, Pressable } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button } from '../common/Button';
-import { textStyle, useTheme } from '../../theme';
+import { useTheme } from '../../theme';
+import { styles } from '../../styles/components/player/AIComplianceModal.styles';
 
 export const DEFAULT_AI_LABEL = 'Nội dung được tạo bởi AI';
 
@@ -48,15 +49,3 @@ export const AIComplianceModal: React.FC<AIComplianceModalProps> = ({ visible, o
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  card: { width: '100%', maxWidth: 420, borderRadius: 18, padding: 22, gap: 12 },
-  title: { ...textStyle.title, fontSize: 19 },
-  body: { ...textStyle.body, fontSize: 14, lineHeight: 21 },
-  facts: { borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 12, gap: 10 },
-  fact: { gap: 2 },
-  factLabel: { ...textStyle.caption },
-  factValue: { ...textStyle.bodyStrong },
-  done: { marginTop: 4 },
-});

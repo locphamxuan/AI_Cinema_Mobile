@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, Modal, Pressable, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, Easing } from 'react-native';
+import { View, Text, Modal, Pressable, TouchableOpacity, ActivityIndicator, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../store/useAppStore';
-import { fonts, textStyle, useTheme } from '../../theme';
+import { useTheme } from '../../theme';
 import { rewardService } from '../../services/rewardService';
 import { idempotencyKey } from '../../lib/ids';
 import { Button } from '../common/Button';
 import type { RewardPrize, RewardWheelStatus, SpinResult } from '../../types/episodeAccess';
+import { styles } from '../../styles/components/wallet/RewardSpinModal.styles';
 
 const SPIN_MS = 2400;
 const LOAD_ERROR = 'Không tải được vòng quay.';
@@ -170,26 +171,3 @@ function SpinDialog() {
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: { flex: 1 },
-  sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 10, gap: 14 },
-  handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontFamily: fonts.displayHeavy, fontSize: 30, lineHeight: 34 },
-  loading: { marginVertical: 30 },
-  wheel: { alignSelf: 'center', width: 128, height: 128, borderRadius: 64, borderWidth: 6, alignItems: 'center', justifyContent: 'center' },
-  note: { ...textStyle.label, textAlign: 'center' },
-  prizes: { gap: 8 },
-  prizesTitle: { ...textStyle.labelStrong },
-  prizeList: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  prize: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
-  prizeText: { ...textStyle.label },
-  won: { borderRadius: 12, padding: 12, gap: 2 },
-  wonTitle: { ...textStyle.bodyStrong },
-  wonText: { ...textStyle.label },
-  errorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  error: { ...textStyle.label, flex: 1 },
-  retry: { ...textStyle.labelStrong },
-  footnote: { ...textStyle.caption, textAlign: 'center' },
-});

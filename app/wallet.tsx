@@ -1,11 +1,12 @@
-import React, { useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { View, Text, ScrollView } from 'react-native';
 import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { MenuCard, MenuRow } from '../src/components/common/MenuRow';
 import { Button } from '../src/components/common/Button';
 import { StatementList } from '../src/components/wallet/StatementList';
-import { fonts, textStyle, useTheme } from '../src/theme';
+import { useTheme } from '../src/theme';
 import { useAppStore } from '../src/store/useAppStore';
+import { styles } from '../src/styles/screens/wallet.styles';
 
 /** "Ví Coin": both balances (BR-01), top-up, check-in and the statement. */
 export default function WalletScreen() {
@@ -53,18 +54,3 @@ export default function WalletScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scroll: { paddingBottom: 40, gap: 16, maxWidth: 600, width: '100%', alignSelf: 'center' },
-  balance: { marginHorizontal: 16, borderRadius: 18, padding: 20, gap: 16 },
-  cols: { flexDirection: 'row', alignItems: 'stretch' },
-  col: { flex: 1, gap: 2, paddingHorizontal: 4 },
-  amount: { fontFamily: fonts.displayHeavy, fontSize: 40, lineHeight: 44 },
-  colLabel: { ...textStyle.labelStrong, fontSize: 14 },
-  colNote: { ...textStyle.caption },
-  divider: { width: StyleSheet.hairlineWidth, marginHorizontal: 12 },
-  rule: { ...textStyle.caption },
-  section: { ...textStyle.title, marginHorizontal: 16, marginTop: 8 },
-  statement: { paddingHorizontal: 16 },
-});

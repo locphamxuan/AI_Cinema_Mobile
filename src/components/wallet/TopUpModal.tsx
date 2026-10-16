@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, Modal, Pressable, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Modal, Pressable, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../store/useAppStore';
-import { fonts, textStyle, useTheme } from '../../theme';
+import { useTheme } from '../../theme';
 import { walletService } from '../../services/walletService';
 import { Button } from '../common/Button';
 import type { PaymentProvider, TopUpOptions, TopUpStatus } from '../../types/episodeAccess';
+import { styles } from '../../styles/components/wallet/TopUpModal.styles';
 
 const PROVIDERS: { id: PaymentProvider; name: string }[] = [
   { id: 'VNPAY', name: 'VNPay' },
@@ -189,24 +190,3 @@ export const TopUpModal: React.FC = () => {
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 10, gap: 10 },
-  handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  title: { fontFamily: fonts.displayHeavy, fontSize: 30, lineHeight: 34 },
-  label: { ...textStyle.labelStrong, marginTop: 6 },
-  amountInput: { fontFamily: fonts.display, fontSize: 24, height: 56, borderRadius: 12, paddingHorizontal: 14 },
-  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  preset: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
-  presetText: { ...textStyle.labelStrong },
-  hint: { ...textStyle.label },
-  methods: { flexDirection: 'row', gap: 10, marginBottom: 6 },
-  method: { flex: 1, borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  methodName: { ...textStyle.bodyStrong },
-  error: { ...textStyle.label },
-  paid: { alignItems: 'center', gap: 8, paddingVertical: 8 },
-  paidTitle: { ...textStyle.title, fontSize: 20 },
-  fullWidth: { alignSelf: 'stretch', marginTop: 8 },
-});

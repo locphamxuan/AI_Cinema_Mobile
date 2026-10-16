@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { textStyle, useTheme } from '../../theme';
+import { useTheme } from '../../theme';
+import { styles } from '../../styles/components/common/ScreenHeader.styles';
 
 interface ScreenHeaderProps {
   title: string;
@@ -32,10 +33,3 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, right }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12 },
-  back: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  title: { ...textStyle.title, flex: 1, textAlign: 'center' },
-  side: { width: 40, alignItems: 'flex-end' },
-});

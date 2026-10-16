@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { textStyle, useTheme } from '../../theme';
+import { useTheme } from '../../theme';
+import { styles } from '../../styles/components/common/MenuRow.styles';
 
 interface MenuRowProps {
   icon?: keyof typeof Ionicons.glyphMap;
@@ -47,13 +48,3 @@ export const MenuCard: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const { colors } = useTheme();
   return <View style={[styles.card, { backgroundColor: colors.card }]}>{children}</View>;
 };
-
-const styles = StyleSheet.create({
-  card: { borderRadius: 16, paddingHorizontal: 16, marginHorizontal: 16 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, gap: 12 },
-  icon: { width: 24 },
-  label: { ...textStyle.body, flex: 1 },
-  value: { ...textStyle.label },
-  count: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center' },
-  countText: { ...textStyle.captionStrong, fontSize: 11, color: '#FFFFFF' },
-});

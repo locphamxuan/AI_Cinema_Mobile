@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,17 +7,11 @@ import { HomeTopBar } from '../../src/components/home/HomeTopBar';
 import { HomeTabBar } from '../../src/components/home/HomeTabBar';
 import { PosterGrid } from '../../src/components/home/PosterGrid';
 import { RankingList } from '../../src/components/home/RankingList';
-import { textStyle, useTheme } from '../../src/theme';
+import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
-import {
-  ALL_GENRES,
-  collectGenres,
-  filterByGenre,
-  newestFirst,
-  suggestionPage,
-  type HomeTabKey,
-} from '../../src/lib/homeFeed';
+import { ALL_GENRES, collectGenres, filterByGenre, newestFirst, suggestionPage, type HomeTabKey } from '../../src/lib/homeFeed';
 import { Movie } from '../../src/types/movie';
+import { styles } from '../../src/styles/screens/tabs/index.styles';
 
 const RECOMMEND_SIZE = 9;
 
@@ -132,19 +126,3 @@ export default function HomeScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  tint: { position: 'absolute', top: 0, left: 0, right: 0 },
-  // Room for the floating tab bar.
-  scrollContent: { paddingTop: 4, paddingBottom: 120 },
-  moreRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginTop: 24 },
-  moreBtn: { flex: 1, height: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  moreText: { ...textStyle.bodyStrong },
-  genreScroll: { flexGrow: 0 },
-  genreRow: { paddingHorizontal: 16, paddingBottom: 14, gap: 6 },
-  genrePill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
-  genreOn: { ...textStyle.bodyStrong },
-  genreOff: { ...textStyle.body },
-  empty: { ...textStyle.label, textAlign: 'center', marginTop: 48, paddingHorizontal: 32 },
-});

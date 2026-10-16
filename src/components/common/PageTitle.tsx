@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { textStyle, useTheme } from '../../theme';
+import { useTheme } from '../../theme';
+import { styles } from '../../styles/components/common/PageTitle.styles';
 
 interface PageTitleProps {
   title: string;
@@ -27,10 +28,3 @@ export const PageTitle: React.FC<PageTitleProps> = ({ title, note, right }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  wrap: { paddingHorizontal: 16, paddingBottom: 12, gap: 4 },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  title: { ...textStyle.display, fontSize: 28, lineHeight: 32 },
-  note: { ...textStyle.label },
-});

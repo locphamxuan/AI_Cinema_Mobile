@@ -1,8 +1,9 @@
-import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+import { Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { SubtitleTrack } from '../../types/movie';
-import { textStyle, useTheme } from '../../theme';
+import { useTheme } from '../../theme';
+import { styles } from '../../styles/components/player/PlayerSettingsSheet.styles';
 
 export const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
@@ -64,16 +65,3 @@ export function PlayerSettingsSheet(props: PlayerSettingsSheetProps) {
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: { flex: 1 },
-  sheet: { borderTopLeftRadius: 18, borderTopRightRadius: 18, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 28, maxHeight: '70%' },
-  handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, marginBottom: 8 },
-  heading: { ...textStyle.labelStrong, marginTop: 14, marginBottom: 2 },
-  option: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
-  optionText: { ...textStyle.body },
-  note: { ...textStyle.label, paddingVertical: 6 },
-  rates: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 8 },
-  rate: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
-  rateText: { ...textStyle.labelStrong },
-});
