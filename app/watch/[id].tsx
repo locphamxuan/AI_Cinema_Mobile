@@ -1,23 +1,27 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../src/store/useAppStore';
 import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
 import { movieService } from '../../src/services';
 import { engagementService } from '../../src/services/engagementService';
 import { episodeAccessService } from '../../src/services/episodeAccessService';
 import { Movie, Episode } from '../../src/types/movie';
-import { Header } from '../../src/components/common/Header';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
 import { EpisodePlayer } from '../../src/components/player/EpisodePlayer';
 import { AudioModeTabs, languageName, trackFor, type AudioMode } from '../../src/components/movie/AudioModeTabs';
 import { EpisodeList } from '../../src/components/movie/EpisodeList';
 import { LikeButton, compactCount, useMovieEngagement } from '../../src/components/movie/LikeButton';
+import { Button } from '../../src/components/common/Button';
+import { textStyle, useTheme } from '../../src/theme';
 
 export default function WatchScreen() {
   const { id, episodeId, mode } = useLocalSearchParams<{ id: string; episodeId?: string; mode?: AudioMode }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const { currentMovie, setCurrentMovie, movies, myList, toggleMyList, isVIPMode } = useAppStore();
 
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
@@ -27,7 +31,6 @@ export default function WatchScreen() {
   const [activeEpisode, setActiveEpisode] = useState<Episode | null>(foundMovie?.episodes?.[0] || null);
   const [audioMode, setAudioMode] = useState<AudioMode>(mode === 'voiceover' ? 'voiceover' : 'subtitle');
   const [chosenTrack, setChosenTrack] = useState<string | null>(null);
-  const [autoNext, setAutoNext] = useState(false);
   const [engagement, setEngagement] = useMovieEngagement(id);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -87,78 +90,76 @@ export default function WatchScreen() {
     setAudioMode(trackId ? 'subtitle' : 'voiceover');
   };
 
-  if (loading) {
+  if (loading || !movie) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#FF3D7F" />
-        <Text style={styles.loadingText}>Đang tải thông tin phim...</Text>
+      <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.ruby} />
+        ) : (
+          <>
+            <Text style={[styles.missingTitle, { color: colors.text }]}>Không tìm thấy phim này</Text>
+            <Button label="Quay lại" variant="secondary" onPress={() => router.back()} style={styles.missingBtn} />
+          </>
+        )}
       </View>
     );
   }
 
-  if (!movie) {
-    return (
-      <View style={[styles.container, styles.centered, { padding: 20 }]}>
-        <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-        <Text style={[styles.screenMovieTitle, { marginTop: 12 }]}>Không tìm thấy phim</Text>
-        <TouchableOpacity style={styles.backBtnFallback} onPress={() => router.back()}>
-          <Text style={styles.backBtnFallbackText}>Quay lại trang chủ</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  const isAdded = myList.includes(movie.id);
+  const saved = myList.includes(movie.id);
+  const ep = currentActiveEpisode;
+  const namedEpisode = ep?.title && ep.title !== `Tập ${ep.episodeNumber}`;
 
   return (
-    <View style={styles.container}>
-      <Header />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={{ height: Math.max(insets.top, 10), backgroundColor: '#000000' }} />
+      <EpisodePlayer
+        streamUrl={ep?.hlsUrl || ''}
+        posterUrl={ep?.thumbnailUrl || movie.bannerUrl || movie.posterUrl}
+        aiLabel={ep?.aiLabel ?? null}
+        checking={gate.checkingId !== null}
+        onRequestPlay={() => ep && handleSelectEpisode(ep)}
+        subtitles={tracks}
+        subtitleTrackId={subtitleTrackId}
+        onSubtitleChange={changeTrack}
+        audioLabel={languageName(movie.language)}
+        onStarted={countView}
+      />
 
-      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <EpisodePlayer
-          streamUrl={currentActiveEpisode?.hlsUrl || ''}
-          posterUrl={currentActiveEpisode?.thumbnailUrl || movie.bannerUrl || movie.posterUrl}
-          aiLabel={currentActiveEpisode?.aiLabel ?? null}
-          checking={gate.checkingId !== null}
-          onRequestPlay={() => currentActiveEpisode && handleSelectEpisode(currentActiveEpisode)}
-          subtitles={tracks}
-          subtitleTrackId={subtitleTrackId}
-          onSubtitleChange={changeTrack}
-          audioLabel={languageName(movie.language)}
-          onStarted={countView}
-        />
-
-        <View style={styles.playerTogglesRow}>
-          <Text style={styles.toggleLabel}>Chuyển tập</Text>
-          <TouchableOpacity style={[styles.miniToggleBtn, autoNext && styles.miniToggleBtnActive]} onPress={() => setAutoNext(!autoNext)}>
-            <Text style={[styles.miniToggleText, autoNext && styles.miniToggleTextActive]}>{autoNext ? 'ON' : 'OFF'}</Text>
-          </TouchableOpacity>
-          <Text style={styles.viewCount}>
-            <Ionicons name="eye-outline" size={12} color="#8E8E93" /> {compactCount(engagement?.viewCount ?? 0)} lượt xem
-          </Text>
-        </View>
-
-        <View style={styles.titleActionSection}>
-          <View style={styles.backTitleRow}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backArrowBtn} accessibilityLabel="Quay lại">
-              <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            <Text style={styles.screenMovieTitle} numberOfLines={1}>
+      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
+        <View style={styles.head}>
+          <TouchableOpacity style={styles.titleRow} onPress={() => router.back()} accessibilityLabel={`Quay lại ${movie.title}`}>
+            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+            <Text style={[styles.movieTitle, { color: colors.text }]} numberOfLines={1}>
               {movie.title}
             </Text>
-          </View>
-          <Text style={styles.screenMovieSub} numberOfLines={2}>
-            {movie.description || 'AI Cinema Original'}
-          </Text>
+          </TouchableOpacity>
+          {ep ? (
+            <Text style={[styles.episodeTitle, { color: colors.textSecondary }]} numberOfLines={2}>
+              Tập {ep.episodeNumber}
+              {namedEpisode ? `: ${ep.title}` : ''}
+              {ep.duration ? `  (${ep.duration})` : ''}
+            </Text>
+          ) : null}
+          {ep?.notice ? <Text style={[styles.notice, { color: colors.coin }]}>{ep.notice}</Text> : null}
 
-          <View style={styles.toolsRow}>
+          <View style={styles.actions}>
             <LikeButton movieId={movie.id} />
-            <TouchableOpacity style={styles.toolBtn} onPress={() => toggleMyList(movie.id)} accessibilityLabel="Lưu phim">
-              <Ionicons name={isAdded ? 'bookmark' : 'bookmark-outline'} size={18} color={isAdded ? '#FF3D7F' : '#FFFFFF'} />
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: colors.cardAlt }]}
+              onPress={() => toggleMyList(movie.id)}
+              accessibilityLabel={saved ? 'Bỏ lưu phim' : 'Lưu phim'}
+              accessibilityState={{ selected: saved }}
+            >
+              <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? colors.ruby : colors.text} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.toolBtn} onPress={() => Alert.alert('Chia sẻ', 'Đã sao chép liên kết.')} accessibilityLabel="Chia sẻ">
-              <Ionicons name="share-social-outline" size={18} color="#FFFFFF" />
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: colors.cardAlt }]}
+              onPress={() => void Share.share({ message: `Xem "${movie.title}" trên AI Cinema` })}
+              accessibilityLabel="Chia sẻ"
+            >
+              <Ionicons name="share-outline" size={20} color={colors.text} />
             </TouchableOpacity>
+            <Text style={[styles.views, { color: colors.textMuted }]}>{compactCount(engagement?.viewCount ?? 0)} lượt xem</Text>
           </View>
         </View>
 
@@ -173,22 +174,18 @@ export default function WatchScreen() {
 
         <EpisodeList
           episodes={episodes}
-          currentId={currentActiveEpisode?.id}
+          currentId={ep?.id}
           isVIPMode={isVIPMode}
           posterUrl={movie.posterUrl}
           onSelect={handleSelectEpisode}
         />
 
-        {activeEpisode && (
-          <View style={styles.episodeInfo}>
-            <View style={styles.aiLabelRow}>
-              <MaterialCommunityIcons name="robot-outline" size={14} color="#FF3D7F" />
-              <Text style={styles.aiLabelText}>{activeEpisode.aiLabel || 'Nội dung được tạo bởi AI'}</Text>
-            </View>
-            {activeEpisode.duration ? <Text style={styles.episodeInfoText}>Thời lượng: {activeEpisode.duration}</Text> : null}
-            {activeEpisode.notice ? <Text style={styles.episodeNoticeText}>{activeEpisode.notice}</Text> : null}
+        {ep?.synopsis ? (
+          <View style={styles.about}>
+            <Text style={[styles.aboutTitle, { color: colors.text }]}>Nội dung tập {ep.episodeNumber}</Text>
+            <Text style={[styles.aboutText, { color: colors.textSecondary }]}>{ep.synopsis}</Text>
           </View>
-        )}
+        ) : null}
       </ScrollView>
 
       <UnlockEpisodeModal locked={gate.locked} onClose={gate.close} onUnlocked={play} />
@@ -197,47 +194,19 @@ export default function WatchScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
-  centered: { justifyContent: 'center', alignItems: 'center' },
-  loadingText: { color: '#8E8E93', marginTop: 10, fontSize: 13 },
-  scrollContent: { paddingBottom: 40 },
-  playerTogglesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#121212',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#27272A',
-    gap: 8,
-  },
-  toggleLabel: { color: '#8E8E93', fontSize: 12, fontWeight: '600' },
-  miniToggleBtn: { backgroundColor: '#27272A', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
-  miniToggleBtnActive: { backgroundColor: '#FF3D7F' },
-  miniToggleText: { color: '#8E8E93', fontSize: 10, fontWeight: '800' },
-  miniToggleTextActive: { color: '#FFFFFF' },
-  viewCount: { marginLeft: 'auto', color: '#8E8E93', fontSize: 11, fontWeight: '600' },
-  titleActionSection: { paddingHorizontal: 16, paddingTop: 14, gap: 8 },
-  backTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  backArrowBtn: { padding: 2 },
-  screenMovieTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '900', flex: 1 },
-  screenMovieSub: { color: '#8E8E93', fontSize: 12, marginLeft: 26, marginTop: -2 },
-  toolsRow: { flexDirection: 'row', alignItems: 'flex-start', marginLeft: 26, gap: 20, marginTop: 6 },
-  toolBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#18181B',
-    borderWidth: 1,
-    borderColor: '#27272A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  episodeInfo: { marginTop: 14, gap: 6, paddingHorizontal: 16 },
-  aiLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  aiLabelText: { color: '#FF3D7F', fontSize: 12, fontWeight: '700' },
-  episodeInfoText: { color: '#8E8E93', fontSize: 12 },
-  episodeNoticeText: { color: '#F59E0B', fontSize: 12 },
-  backBtnFallback: { backgroundColor: '#FF3D7F', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginTop: 12 },
-  backBtnFallbackText: { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
+  container: { flex: 1 },
+  centered: { justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12 },
+  missingTitle: { ...textStyle.title },
+  missingBtn: { alignSelf: 'center' },
+  head: { paddingHorizontal: 16, paddingTop: 14, gap: 6 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: -4 },
+  movieTitle: { ...textStyle.title, fontSize: 19, flex: 1 },
+  episodeTitle: { ...textStyle.label, fontSize: 14 },
+  notice: { ...textStyle.labelStrong },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 },
+  iconBtn: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  views: { ...textStyle.label, marginLeft: 'auto' },
+  about: { paddingHorizontal: 16, marginTop: 28, gap: 8 },
+  aboutTitle: { ...textStyle.title },
+  aboutText: { ...textStyle.body, fontSize: 14, lineHeight: 22 },
 });

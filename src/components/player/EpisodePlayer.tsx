@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { fonts } from '../../theme';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
@@ -10,8 +11,7 @@ import { cueAt } from '../../lib/vtt';
 import type { SubtitleTrack } from '../../types/movie';
 import { PlayerControls } from './PlayerControls';
 import { PlayerSettingsSheet } from './PlayerSettingsSheet';
-
-const DEFAULT_AI_LABEL = 'Nội dung được tạo bởi AI';
+import { DEFAULT_AI_LABEL } from './AIComplianceModal';
 const HIDE_CONTROLS_MS = 3000;
 
 interface EpisodePlayerProps {
@@ -182,7 +182,7 @@ export function EpisodePlayer({
 }
 
 const styles = StyleSheet.create({
-  container: { width: '100%', height: 220, backgroundColor: '#000000' },
+  container: { width: '100%', aspectRatio: 16 / 9, maxHeight: 360, backgroundColor: '#000000' },
   fill: { width: '100%', height: '100%', position: 'absolute' },
   fullscreen: { flex: 1, backgroundColor: '#000000' },
   posterShade: {
@@ -203,8 +203,9 @@ const styles = StyleSheet.create({
   subtitleRaised: { bottom: 40 },
   subtitle: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+    lineHeight: 21,
     textAlign: 'center',
     backgroundColor: 'rgba(0,0,0,0.6)',
     paddingHorizontal: 8,
@@ -212,7 +213,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: 'hidden',
   },
-  subtitleLarge: { fontSize: 20 },
+  subtitleLarge: { fontSize: 20, lineHeight: 28 },
   aiBadge: {
     position: 'absolute',
     top: 10,
@@ -226,5 +227,5 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
-  aiBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
+  aiBadgeText: { color: '#FFFFFF', fontFamily: fonts.semibold, fontSize: 11, lineHeight: 14 },
 });

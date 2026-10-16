@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import type { SubtitleTrack } from '../../types/movie';
+import { textStyle, useTheme } from '../../theme';
 
 /** Phụ đề = the film's audio with subtitles; Thuyết minh = the film's own audio, no subtitles. */
 export type AudioMode = 'subtitle' | 'voiceover';
@@ -24,59 +24,65 @@ interface AudioModeTabsProps {
   trackId: string | null;
   onTrackChange: (trackId: string) => void;
   language: string;
-  extraTabs?: React.ReactNode;
 }
 
-export function AudioModeTabs({ mode, onModeChange, tracks, trackId, onTrackChange, language, extraTabs }: AudioModeTabsProps) {
-  const tab = (key: AudioMode, label: string) => (
-    <TouchableOpacity
-      style={[styles.tab, mode === key && styles.tabActive]}
-      onPress={() => onModeChange(key)}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: mode === key }}
-    >
-      <Text style={[styles.tabText, mode === key && styles.tabTextActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
+/** A two-way switch between subtitles and the film's own audio, then the subtitle languages. */
+export function AudioModeTabs({ mode, onModeChange, tracks, trackId, onTrackChange, language }: AudioModeTabsProps) {
+  const { colors } = useTheme();
+  const option = (key: AudioMode, label: string) => {
+    const on = mode === key;
+    return (
+      <TouchableOpacity
+        style={[styles.option, on && { backgroundColor: colors.background }]}
+        onPress={() => onModeChange(key)}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: on }}
+      >
+        <Text style={[styles.optionText, { color: on ? colors.text : colors.textMuted }]}>{label}</Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <View>
-      <View style={styles.tabs}>
-        {tab('subtitle', 'PHỤ ĐỀ')}
-        {tab('voiceover', 'THUYẾT MINH')}
-        {extraTabs}
+    <View style={styles.wrap}>
+      <View style={[styles.switch, { backgroundColor: colors.card }]}>
+        {option('subtitle', 'Phụ đề')}
+        {option('voiceover', 'Thuyết minh')}
       </View>
-      <View style={styles.info}>
-        <Ionicons name={mode === 'subtitle' ? 'text' : 'volume-high'} size={14} color="#FF3D7F" />
-        {mode === 'voiceover' ? (
-          <Text style={styles.infoText}>Âm thanh gốc: {languageName(language)} · tắt phụ đề</Text>
-        ) : tracks.length === 0 ? (
-          <Text style={styles.infoText}>Tập này chưa có phụ đề · đang phát âm thanh gốc ({languageName(language)})</Text>
-        ) : (
-          <View style={styles.chips}>
-            {tracks.map((t) => (
-              <TouchableOpacity key={t.id} style={[styles.chip, trackId === t.id && styles.chipActive]} onPress={() => onTrackChange(t.id)}>
-                <Text style={[styles.chipText, trackId === t.id && styles.chipTextActive]}>{t.label}</Text>
+      {mode === 'voiceover' ? (
+        <Text style={[styles.info, { color: colors.textMuted }]}>Phát âm thanh gốc ({languageName(language)}), không có phụ đề.</Text>
+      ) : tracks.length === 0 ? (
+        <Text style={[styles.info, { color: colors.textMuted }]}>
+          Tập này chưa có phụ đề, nên sẽ phát âm thanh gốc ({languageName(language)}).
+        </Text>
+      ) : (
+        <View style={styles.chips}>
+          {tracks.map((t) => {
+            const on = trackId === t.id;
+            return (
+              <TouchableOpacity
+                key={t.id}
+                style={[styles.chip, { backgroundColor: on ? colors.rubySoft : colors.card }]}
+                onPress={() => onTrackChange(t.id)}
+                accessibilityState={{ selected: on }}
+              >
+                <Text style={[styles.chipText, { color: on ? colors.ruby : colors.textSecondary }]}>{t.label}</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </View>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#27272A', marginTop: 16, paddingHorizontal: 16 },
-  tab: { paddingVertical: 10, marginRight: 20 },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: '#FF3D7F' },
-  tabText: { color: '#8E8E93', fontSize: 12, fontWeight: '700' },
-  tabTextActive: { color: '#FF3D7F' },
-  info: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, marginTop: 12 },
-  infoText: { color: '#8E8E93', fontSize: 12, flex: 1 },
+  wrap: { paddingHorizontal: 16, marginTop: 24, gap: 12 },
+  switch: { flexDirection: 'row', borderRadius: 12, padding: 4 },
+  option: { flex: 1, height: 40, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  optionText: { ...textStyle.labelStrong, fontSize: 14 },
+  info: { ...textStyle.label },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, backgroundColor: '#18181B', borderWidth: 1, borderColor: '#27272A' },
-  chipActive: { backgroundColor: '#FF3D7F', borderColor: '#FF3D7F' },
-  chipText: { color: '#8E8E93', fontSize: 11, fontWeight: '700' },
-  chipTextActive: { color: '#FFFFFF' },
+  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  chipText: { ...textStyle.labelStrong },
 });
