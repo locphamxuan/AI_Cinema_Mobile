@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, Modal, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { View, Text, TextInput, Modal, Pressable, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../store/useAppStore';
-import { useTheme } from '../../theme';
+import { fonts, textStyle, useTheme } from '../../theme';
 import { walletService } from '../../services/walletService';
+import { Button } from '../common/Button';
 import type { PaymentProvider, TopUpOptions, TopUpStatus } from '../../types/episodeAccess';
 
 const PROVIDERS: { id: PaymentProvider; name: string }[] = [
@@ -16,16 +18,19 @@ const POLL_LIMIT = 24;
 const FINAL: TopUpStatus[] = ['PAID', 'FAILED', 'CANCELLED', 'EXPIRED'];
 
 const STATUS_TEXT: Record<Exclude<TopUpStatus, 'PENDING' | 'PAID'>, string> = {
-  FAILED: 'Thanh toán thất bại.',
-  CANCELLED: 'Bạn đã huỷ thanh toán.',
-  EXPIRED: 'Đơn nạp đã hết hạn.',
+  FAILED: 'Thanh toán không thành công. Bạn có thể tạo đơn nạp mới.',
+  CANCELLED: 'Bạn đã hủy thanh toán.',
+  EXPIRED: 'Đơn nạp đã hết hạn. Tạo đơn mới để nạp.',
 };
+
+const vnd = (n: number) => `${n.toLocaleString('vi-VN')}đ`;
 
 /** Main Coins a top-up of `amountVnd` buys at the Admin's rate; the BE credits the same. */
 export const coinsFor = (amountVnd: number, rateVnd: number) => (rateVnd > 0 ? Math.floor(amountVnd / rateVnd) : 0);
 
 /** MF-2 top-up: a VNPay / MoMo order; the gateway's IPN credits main Coins, the app waits for it. */
 export const TopUpModal: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { isTopUpModalOpen, setTopUpModalOpen, wallet, loadAccountData } = useAppStore();
   const [options, setOptions] = useState<TopUpOptions | null>(null);
@@ -72,7 +77,7 @@ export const TopUpModal: React.FC = () => {
         poll(topUpId, round + 1);
       } else {
         setPhase('form');
-        setErrorMsg('Chưa nhận được kết quả thanh toán. Số dư sẽ tự cập nhật khi cổng thanh toán xác nhận.');
+        setErrorMsg('Chưa nhận được kết quả từ cổng thanh toán. Số dư sẽ tự cập nhật khi cổng xác nhận.');
       }
     }, POLL_MS);
   };
@@ -84,7 +89,7 @@ export const TopUpModal: React.FC = () => {
     const res = await walletService.createTopUp(provider, amountVnd);
     if (!res.success || !res.data?.redirectUrl) {
       setPhase('form');
-      setErrorMsg(res.message || 'Không tạo được đơn nạp Coin.');
+      setErrorMsg(res.message || 'Chưa tạo được đơn nạp. Kiểm tra kết nối rồi thử lại.');
       return;
     }
     // The backend returns to the web wallet page. Keep the auth session open until the member
@@ -93,53 +98,66 @@ export const TopUpModal: React.FC = () => {
     poll(res.data.topUpId);
   };
 
+  const presets = options ? [options.minVnd, 50_000, 100_000, 200_000].filter((v, i, all) => v >= options.minVnd && v <= options.maxVnd && all.indexOf(v) === i) : [];
+
   return (
     <Modal visible={isTopUpModalOpen} transparent animationType="slide" onRequestClose={close}>
-      <View style={styles.backdrop}>
-        <View style={[styles.container, { backgroundColor: isDark ? '#181818' : '#FFFFFF', borderColor: colors.border }]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
+        <Pressable style={[styles.flex, { backgroundColor: colors.overlay }]} onPress={phase === 'waiting' ? undefined : close} accessibilityLabel="Đóng" />
+        <View style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+          <View style={[styles.handle, { backgroundColor: colors.borderLight }]} />
           <View style={styles.header}>
-            <View style={styles.titleRow}>
-              <FontAwesome5 name="coins" size={18} color="#F59E0B" />
-              <Text style={[styles.title, { color: colors.text }]}>Nạp Coin</Text>
-            </View>
-            <TouchableOpacity onPress={close} accessibilityLabel="Đóng">
-              <Ionicons name="close" size={20} color={colors.textSecondary} />
+            <Text style={[styles.title, { color: colors.text }]}>Nạp Coin</Text>
+            <TouchableOpacity onPress={close} hitSlop={10} accessibilityLabel="Đóng">
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           {phase === 'paid' ? (
-            <View style={styles.center}>
-              <Ionicons name="checkmark-circle" size={56} color="#10B981" />
-              <Text style={[styles.successTitle, { color: colors.text }]}>Nạp Coin thành công</Text>
+            <View style={styles.paid}>
+              <Ionicons name="checkmark-circle" size={52} color={colors.verified} />
+              <Text style={[styles.paidTitle, { color: colors.text }]}>Đã nạp xong</Text>
               <Text style={[styles.hint, { color: colors.textSecondary }]}>
-                Số dư: {wallet.mainCoin} Coin chính · {wallet.bonusCoin} Coin thưởng
+                Ví hiện có {wallet.mainCoin} Coin chính và {wallet.bonusCoin} Coin thưởng.
               </Text>
-              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#10B981' }]} onPress={close}>
-                <Text style={styles.actionBtnText}>Xong</Text>
-              </TouchableOpacity>
+              <Button label="Xong" onPress={close} style={styles.fullWidth} />
             </View>
           ) : (
             <>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Số tiền (VND)</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Số tiền nạp</Text>
               <TextInput
                 value={amount}
                 onChangeText={(value) => setAmount(value.replace(/\D/g, ''))}
                 keyboardType="numeric"
-                placeholder={options ? `${options.minVnd.toLocaleString('vi-VN')} – ${options.maxVnd.toLocaleString('vi-VN')}` : 'Đang tải…'}
+                placeholder={options ? `Từ ${vnd(options.minVnd)} đến ${vnd(options.maxVnd)}` : 'Đang tải…'}
                 placeholderTextColor={colors.textMuted}
                 editable={phase === 'form'}
-                style={[styles.amountInput, { backgroundColor: isDark ? '#232323' : '#F7F7F8', color: colors.text, borderColor: colors.border }]}
+                style={[styles.amountInput, { backgroundColor: isDark ? colors.cardAlt : colors.card, color: colors.text }]}
               />
+              {presets.length > 0 && (
+                <View style={styles.presets}>
+                  {presets.map((v) => (
+                    <TouchableOpacity
+                      key={v}
+                      style={[styles.preset, { backgroundColor: amountVnd === v ? colors.rubySoft : colors.card }]}
+                      onPress={() => setAmount(String(v))}
+                      disabled={phase !== 'form'}
+                    >
+                      <Text style={[styles.presetText, { color: amountVnd === v ? colors.ruby : colors.textSecondary }]}>{vnd(v)}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
               {options && amountVnd > 0 && (
-                <Text style={[styles.hint, { color: inRange ? '#10B981' : '#EF4444' }]}>
+                <Text style={[styles.hint, { color: inRange ? colors.textSecondary : colors.danger }]}>
                   {inRange
-                    ? `Nhận ${coinsFor(amountVnd, options.rateVnd).toLocaleString('vi-VN')} Coin chính (1 Coin = ${options.rateVnd.toLocaleString('vi-VN')}đ)`
-                    : `Mỗi lần nạp từ ${options.minVnd.toLocaleString('vi-VN')}đ đến ${options.maxVnd.toLocaleString('vi-VN')}đ`}
+                    ? `Bạn nhận ${coinsFor(amountVnd, options.rateVnd).toLocaleString('vi-VN')} Coin chính (1 Coin = ${vnd(options.rateVnd)}).`
+                    : `Mỗi lần nạp từ ${vnd(options.minVnd)} đến ${vnd(options.maxVnd)}.`}
                 </Text>
               )}
 
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Cổng thanh toán</Text>
-              <View style={styles.methodRow}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Thanh toán qua</Text>
+              <View style={styles.methods}>
                 {PROVIDERS.map((p) => {
                   const selected = provider === p.id;
                   return (
@@ -147,7 +165,9 @@ export const TopUpModal: React.FC = () => {
                       key={p.id}
                       onPress={() => setProvider(p.id)}
                       disabled={phase !== 'form'}
-                      style={[styles.methodCard, { borderColor: selected ? '#F59E0B' : colors.border, backgroundColor: selected ? 'rgba(245, 158, 11, 0.1)' : 'transparent' }]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      style={[styles.method, { backgroundColor: colors.card, borderColor: selected ? colors.ruby : 'transparent' }]}
                     >
                       <Text style={[styles.methodName, { color: colors.text }]}>{p.name}</Text>
                     </TouchableOpacity>
@@ -155,47 +175,38 @@ export const TopUpModal: React.FC = () => {
                 })}
               </View>
 
-              {errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
+              {errorMsg && <Text style={[styles.error, { color: colors.danger }]}>{errorMsg}</Text>}
 
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: '#F59E0B', opacity: inRange && phase === 'form' ? 1 : 0.5 }]}
+              <Button
+                label={phase === 'waiting' ? 'Đang chờ cổng thanh toán…' : inRange ? `Thanh toán ${vnd(amountVnd)}` : 'Thanh toán'}
                 onPress={handleTopUp}
                 disabled={!inRange || phase !== 'form'}
-              >
-                {phase === 'waiting' ? (
-                  <View style={styles.waitingRow}>
-                    <ActivityIndicator color="#141414" />
-                    <Text style={styles.actionBtnTextDark}>Đang chờ cổng thanh toán…</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.actionBtnTextDark}>Thanh toán</Text>
-                )}
-              </TouchableOpacity>
+              />
             </>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', justifyContent: 'flex-end' },
-  container: { borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, padding: 20, paddingBottom: 32 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { fontSize: 17, fontWeight: '800' },
-  label: { fontSize: 12, fontWeight: '700', marginBottom: 6, marginTop: 6 },
-  amountInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, fontWeight: '700' },
-  hint: { fontSize: 12, marginTop: 6 },
-  methodRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  methodCard: { flex: 1, borderWidth: 1.5, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  methodName: { fontSize: 14, fontWeight: '800' },
-  errorText: { color: '#EF4444', fontSize: 12, marginBottom: 10 },
-  actionBtn: { marginTop: 6, paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
-  actionBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
-  actionBtnTextDark: { color: '#141414', fontWeight: '800', fontSize: 14 },
-  waitingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  center: { alignItems: 'center', gap: 6 },
-  successTitle: { fontSize: 17, fontWeight: '800' },
+  flex: { flex: 1 },
+  sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 10, gap: 10 },
+  handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  title: { fontFamily: fonts.displayHeavy, fontSize: 30, lineHeight: 34 },
+  label: { ...textStyle.labelStrong, marginTop: 6 },
+  amountInput: { fontFamily: fonts.display, fontSize: 24, height: 56, borderRadius: 12, paddingHorizontal: 14 },
+  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  preset: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
+  presetText: { ...textStyle.labelStrong },
+  hint: { ...textStyle.label },
+  methods: { flexDirection: 'row', gap: 10, marginBottom: 6 },
+  method: { flex: 1, borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  methodName: { ...textStyle.bodyStrong },
+  error: { ...textStyle.label },
+  paid: { alignItems: 'center', gap: 8, paddingVertical: 8 },
+  paidTitle: { ...textStyle.title, fontSize: 20 },
+  fullWidth: { alignSelf: 'stretch', marginTop: 8 },
 });

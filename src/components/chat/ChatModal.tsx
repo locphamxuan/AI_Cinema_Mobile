@@ -1,197 +1,115 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, Modal, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../store/useAppStore';
-import { useTheme } from '../../theme';
+import { fonts, textStyle, useTheme } from '../../theme';
 
 const quickActions = [
-  { id: 'coin-error', label: 'Lỗi Coin' },
-  { id: 'cancel-renew', label: 'Hủy gia hạn' },
-  { id: 'report', label: 'Báo cáo vi phạm' },
+  { id: 'coin-error', label: 'Bị trừ Coin sai' },
+  { id: 'cancel-renew', label: 'Tắt tự gia hạn' },
+  { id: 'report', label: 'Báo nội dung vi phạm' },
 ];
 
 export const ChatModal: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const {
-    chatIsOpen,
-    toggleChat,
-    chatMessages,
-    sendMessage,
-    handleQuickAction,
-    escalateToAgent,
-    chatPhase,
-    chatTicket,
-  } = useAppStore();
-
+  const { chatIsOpen, toggleChat, chatMessages, sendMessage, handleQuickAction, escalateToAgent, chatPhase, chatTicket } = useAppStore();
   const [input, setInput] = useState('');
+  const list = useRef<ScrollView>(null);
 
   const handleSend = () => {
     if (!input.trim()) return;
-    sendMessage(input.trim());
+    void sendMessage(input.trim());
     setInput('');
   };
 
   return (
-    <Modal
-      visible={chatIsOpen}
-      transparent
-      animationType="slide"
-      onRequestClose={toggleChat}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.backdrop}
-      >
-        <View
-          style={[
-            styles.container,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerInfo}>
-              <View style={styles.avatarCircle}>
-                <Ionicons name="chatbubbles" size={16} color="#FFFFFF" />
-              </View>
-              <View>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Trợ Lý AI Cinema</Text>
-                <Text style={[styles.headerSub, { color: '#10B981' }]}>
-                  {chatPhase === 'waiting' ? 'Đang kết nối nhân viên...' : 'Trực tuyến 24/7'}
-                </Text>
-              </View>
+    <Modal visible={chatIsOpen} transparent animationType="slide" onRequestClose={toggleChat}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.backdrop, { backgroundColor: colors.overlay }]}>
+        <View style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <View style={styles.headerText}>
+              <Text style={[styles.title, { color: colors.text }]}>Hỗ trợ</Text>
+              <Text style={[styles.status, { color: colors.textMuted }]}>
+                {chatTicket
+                  ? `Đã gửi phiếu #${chatTicket.id} cho nhân viên`
+                  : chatPhase === 'waiting'
+                    ? 'Đang chuyển cho nhân viên…'
+                    : 'Cần người thật xử lý thì bấm "Gặp nhân viên"'}
+              </Text>
             </View>
-            <TouchableOpacity onPress={toggleChat} style={styles.closeBtn}>
-              <Ionicons name="close" size={22} color={colors.textSecondary} />
+            <TouchableOpacity onPress={toggleChat} hitSlop={10} accessibilityLabel="Đóng">
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          {/* Messages list */}
           <ScrollView
-            style={styles.messageList}
+            ref={list}
+            style={styles.messages}
             contentContainerStyle={styles.messageContent}
             showsVerticalScrollIndicator={false}
+            onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })}
           >
+            {chatMessages.length === 0 && (
+              <Text style={[styles.empty, { color: colors.textMuted }]}>Bạn cần giúp gì? Chọn một chủ đề bên dưới hoặc gõ câu hỏi.</Text>
+            )}
             {chatMessages.map((msg) => {
-              const isUser = msg.sender === 'user';
-              const isSystem = msg.sender === 'system';
-
-              if (isSystem) {
+              if (msg.sender === 'system') {
                 return (
-                  <View key={msg.id} style={styles.systemMessage}>
-                    <Text style={[styles.systemText, { color: colors.textMuted }]}>
-                      {msg.content}
-                    </Text>
-                  </View>
+                  <Text key={msg.id} style={[styles.system, { color: colors.textMuted }]}>
+                    {msg.content}
+                  </Text>
                 );
               }
-
+              const mine = msg.sender === 'user';
               return (
-                <View
-                  key={msg.id}
-                  style={[
-                    styles.bubbleRow,
-                    { justifyContent: isUser ? 'flex-end' : 'flex-start' },
-                  ]}
-                >
+                <View key={msg.id} style={[styles.bubbleRow, { justifyContent: mine ? 'flex-end' : 'flex-start' }]}>
                   <View
                     style={[
                       styles.bubble,
-                      {
-                        backgroundColor: isUser
-                          ? colors.ruby
-                          : isDark
-                          ? '#232323'
-                          : '#F0F0F2',
-                        borderBottomRightRadius: isUser ? 2 : 14,
-                        borderBottomLeftRadius: !isUser ? 2 : 14,
-                      },
+                      mine
+                        ? { backgroundColor: colors.ruby, borderBottomRightRadius: 4 }
+                        : { backgroundColor: isDark ? colors.cardAlt : colors.card, borderBottomLeftRadius: 4 },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.bubbleText,
-                        { color: isUser ? '#FFFFFF' : colors.text },
-                      ]}
-                    >
-                      {msg.content}
-                    </Text>
+                    <Text style={[styles.bubbleText, { color: mine ? '#FFFFFF' : colors.text }]}>{msg.content}</Text>
                   </View>
                 </View>
               );
             })}
           </ScrollView>
 
-          {/* Quick reply chips */}
-          <View style={styles.quickReplyContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-              {quickActions.map((action) => (
-                <TouchableOpacity
-                  key={action.id}
-                  activeOpacity={0.8}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: isDark ? '#232323' : '#F7F7F8',
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  onPress={() => handleQuickAction(action.id)}
-                >
-                  <Text style={[styles.chipText, { color: colors.textSecondary }]}>
-                    {action.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.chipsBar} keyboardShouldPersistTaps="handled">
+            {quickActions.map((action) => (
+              <TouchableOpacity key={action.id} style={[styles.chip, { backgroundColor: colors.card }]} onPress={() => handleQuickAction(action.id)}>
+                <Text style={[styles.chipText, { color: colors.textSecondary }]}>{action.label}</Text>
+              </TouchableOpacity>
+            ))}
+            {chatPhase !== 'waiting' && !chatTicket && (
+              <TouchableOpacity style={[styles.chip, { backgroundColor: colors.rubySoft }]} onPress={escalateToAgent}>
+                <Text style={[styles.chipText, { color: colors.ruby, fontFamily: fonts.semibold }]}>Gặp nhân viên</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
 
-              {chatPhase !== 'waiting' && !chatTicket && (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  style={[styles.chip, styles.escalateChip]}
-                  onPress={escalateToAgent}
-                >
-                  <Text style={styles.escalateChipText}>🚨 Gặp Chuyên viên</Text>
-                </TouchableOpacity>
-              )}
-            </ScrollView>
-          </View>
-
-          {/* Input row */}
-          <View
-            style={[
-              styles.inputRow,
-              {
-                backgroundColor: isDark ? '#232323' : '#F7F7F8',
-                borderColor: colors.border,
-              },
-            ]}
-          >
+          <View style={[styles.inputRow, { backgroundColor: isDark ? colors.cardAlt : colors.card }]}>
             <TextInput
               value={input}
               onChangeText={setInput}
-              placeholder="Nhập câu hỏi cần hỗ trợ..."
+              placeholder="Viết tin nhắn"
               placeholderTextColor={colors.textMuted}
               style={[styles.input, { color: colors.text }]}
               onSubmitEditing={handleSend}
+              returnKeyType="send"
             />
             <TouchableOpacity
-              style={[styles.sendBtn, { backgroundColor: colors.ruby }]}
+              style={[styles.send, { backgroundColor: input.trim() ? colors.ruby : 'transparent' }]}
               onPress={handleSend}
+              disabled={!input.trim()}
+              accessibilityLabel="Gửi"
             >
-              <Ionicons name="send" size={16} color="#FFFFFF" />
+              <Ionicons name="arrow-up" size={18} color={input.trim() ? '#FFFFFF' : colors.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
@@ -201,127 +119,24 @@ export const ChatModal: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    justifyContent: 'flex-end',
-  },
-  container: {
-    height: '75%',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderTopWidth: 1,
-    padding: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
-  },
-  headerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  avatarCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FF7A45',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  headerSub: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  messageList: {
-    flex: 1,
-    paddingVertical: 10,
-  },
-  messageContent: {
-    gap: 8,
-    paddingBottom: 8,
-  },
-  systemMessage: {
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-    marginVertical: 4,
-  },
-  systemText: {
-    fontSize: 11,
-    fontStyle: 'italic',
-  },
-  bubbleRow: {
-    flexDirection: 'row',
-  },
-  bubble: {
-    maxWidth: '80%',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
-  },
-  bubbleText: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  quickReplyContainer: {
-    paddingVertical: 6,
-  },
-  chipRow: {
-    gap: 6,
-  },
-  chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  chipText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  escalateChip: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-  },
-  escalateChipText: {
-    color: '#EF4444',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 24,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    height: 38,
-    fontSize: 13,
-  },
-  sendBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  backdrop: { flex: 1, justifyContent: 'flex-end' },
+  sheet: { height: '80%', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16, paddingTop: 16 },
+  header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  headerText: { flex: 1, gap: 2 },
+  title: { fontFamily: fonts.displayHeavy, fontSize: 26, lineHeight: 30 },
+  status: { ...textStyle.caption },
+  messages: { flex: 1 },
+  messageContent: { gap: 8, paddingVertical: 12 },
+  empty: { ...textStyle.label, textAlign: 'center', marginTop: 24, paddingHorizontal: 24 },
+  system: { ...textStyle.caption, textAlign: 'center', marginVertical: 4 },
+  bubbleRow: { flexDirection: 'row' },
+  bubble: { maxWidth: '80%', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16 },
+  bubbleText: { ...textStyle.body, fontSize: 14, lineHeight: 20 },
+  chipsBar: { flexGrow: 0 },
+  chips: { gap: 6, paddingVertical: 8 },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16 },
+  chipText: { ...textStyle.label },
+  inputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 24, paddingLeft: 16, paddingRight: 5, gap: 8 },
+  input: { ...textStyle.body, flex: 1, height: 46 },
+  send: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 });
