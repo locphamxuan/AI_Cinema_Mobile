@@ -5,9 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/theme';
 
 export default function TabLayout() {
-  const { isDark } = useTheme();
+  const { isDark, colors } = useTheme();
 
-  const activeColor = '#10B981'; // Green active color as requested
+  const activeColor = colors.ruby;
   const inactiveColor = isDark ? '#94A3B8' : '#64748B';
 
   return (
@@ -16,15 +16,21 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: activeColor,
         tabBarInactiveTintColor: inactiveColor,
+        // Floating rounded bar above the content.
         tabBarStyle: {
-          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.88)' : 'rgba(255, 255, 255, 0.9)',
-          borderTopColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+          backgroundColor: isDark ? 'rgba(24, 24, 27, 0.94)' : 'rgba(255, 255, 255, 0.96)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+          borderWidth: 1,
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 86 : 64,
-          paddingBottom: Platform.OS === 'ios' ? 26 : 8,
+          borderRadius: 30,
+          height: 62,
+          paddingBottom: 8,
           paddingTop: 6,
           position: 'absolute',
-          elevation: 0,
+          left: 16,
+          right: 16,
+          bottom: Platform.OS === 'ios' ? 24 : 14,
+          elevation: 6,
         },
         tabBarItemStyle: {
           justifyContent: 'center',
