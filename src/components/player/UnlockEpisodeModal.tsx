@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, Pressable, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../../theme';
 import { episodeAccessService } from '../../services/episodeAccessService';
+import { episodeLabel } from '../../lib/episodeLabel';
 import { idempotencyKey } from '../../lib/ids';
+import { Button } from '../common/Button';
 import type { LockedEpisode } from '../../hooks/useEpisodeGate';
 import type { Episode } from '../../types/movie';
+import { styles } from '../../styles/components/player/UnlockEpisodeModal.styles';
 
 interface UnlockEpisodeModalProps {
   /** The episode the BE refused, with its decision; null hides the modal. */
@@ -24,8 +27,9 @@ export function splitPrice(price: number, mainCoin: number) {
 
 export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, onClose, onUnlocked }) => {
   const router = useRouter();
-  const { colors, isDark } = useTheme();
-  const { setWalletBalance, markEpisodeUnlocked, setTopUpModalOpen } = useAppStore();
+  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const { setWalletBalance, markEpisodeUnlocked, setTopUpModalOpen, currentMovie } = useAppStore();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   // One key per opened episode: a double tap or a retry is charged once.
@@ -37,6 +41,9 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
   const canBuy = decision.accessMethods.includes('UNLOCK_EPISODE');
   const canJoinPlan = decision.accessMethods.includes('MONTHLY_PLAN');
   const split = splitPrice(coinPrice, mainBalance);
+  const named = episode.title && episode.title !== `Tập ${episode.episodeNumber}`;
+  const siblings = currentMovie?.episodes?.some((ep) => ep.id === episode.id) ? currentMovie.episodes : null;
+  const name = siblings ? episodeLabel(episode, siblings) : `Tập ${episode.episodeNumber}`;
 
   const close = () => {
     setErrorMsg(null);
@@ -51,7 +58,7 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
     const res = await episodeAccessService.purchaseEpisode(episode.id, value);
     setPaying(false);
     if (!res.success || !res.data) {
-      setErrorMsg(res.message || 'Mở khóa không thành công.');
+      setErrorMsg(res.message || 'Chưa mở được tập này. Bấm lại để thử, Coin sẽ không bị trừ hai lần.');
       return;
     }
     setWalletBalance(res.data.mainBalance, res.data.bonusBalance);
@@ -60,144 +67,72 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
     close();
   };
 
+  const line = (label: string, value: string, tone?: string) => (
+    <View style={styles.line}>
+      <Text style={[styles.lineLabel, { color: colors.textSecondary }]}>{label}</Text>
+      <Text style={[styles.lineValue, { color: tone ?? colors.text }]}>{value}</Text>
+    </View>
+  );
+
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={close}>
-      <View style={styles.backdrop}>
-        <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[styles.iconCircle, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-            <FontAwesome5 name="lock" size={22} color="#F59E0B" />
-          </View>
+    <Modal visible transparent animationType="slide" onRequestClose={close}>
+      <Pressable style={[styles.backdrop, { backgroundColor: colors.overlay }]} onPress={paying ? undefined : close} accessibilityLabel="Đóng" />
+      <View style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        <View style={[styles.handle, { backgroundColor: colors.borderLight }]} />
+        <Text style={[styles.kicker, { color: colors.textMuted }]}>Mở khóa {name.charAt(0).toLowerCase() + name.slice(1)}</Text>
+        {named ? <Text style={[styles.episodeName, { color: colors.text }]}>{episode.title}</Text> : null}
 
-          <Text style={[styles.title, { color: colors.text }]}>
-            Tập {episode.episodeNumber}: {episode.title}
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Mở khóa riêng tập này bằng Coin, hoặc đăng ký gói Tháng để xem mọi tập đã phát hành.
-          </Text>
+        <View style={styles.priceRow}>
+          <Text style={[styles.price, { color: colors.text }]}>{coinPrice}</Text>
+          <Text style={[styles.priceUnit, { color: colors.textSecondary }]}>Coin</Text>
+        </View>
 
-          <View style={[styles.priceBox, { backgroundColor: isDark ? '#1E293B' : '#F8FAFC', borderColor: colors.border }]}>
-            <View style={styles.priceRow}>
-              <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Giá mở khóa</Text>
-              <View style={styles.coinBadge}>
-                <FontAwesome5 name="coins" size={12} color="#F59E0B" />
-                <Text style={styles.coinAmount}>{coinPrice} Coin</Text>
-              </View>
-            </View>
-            <View style={styles.priceRow}>
-              <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Số dư</Text>
-              <Text style={[styles.balanceValue, { color: colors.text }]}>
-                {mainBalance} chính · {bonusBalance} thưởng
-              </Text>
-            </View>
-            {enoughCoins ? (
-              <View style={styles.priceRow}>
-                <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Sẽ trừ</Text>
-                <Text style={[styles.balanceValue, { color: '#10B981' }]}>
-                  {split.main} Coin chính + {split.bonus} Coin thưởng
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.priceRow}>
-                <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Còn thiếu</Text>
-                <Text style={[styles.balanceValue, { color: '#EF4444' }]}>{missingCoins} Coin</Text>
-              </View>
-            )}
-          </View>
-
-          {errorMsg && (
-            <View style={styles.errorBox}>
-              <Ionicons name="alert-circle" size={16} color="#EF4444" />
-              <Text style={styles.errorText}>{errorMsg}</Text>
-            </View>
-          )}
-
-          <View style={styles.btnRow}>
-            <TouchableOpacity style={[styles.cancelBtn, { borderColor: colors.border }]} onPress={close} disabled={paying}>
-              <Text style={[styles.cancelBtnText, { color: colors.textSecondary }]}>Đóng</Text>
-            </TouchableOpacity>
-
-            {canBuy && enoughCoins ? (
-              <TouchableOpacity
-                style={[styles.confirmBtn, { backgroundColor: colors.ruby, opacity: paying ? 0.6 : 1 }]}
-                onPress={handleUnlock}
-                disabled={paying}
-              >
-                {paying ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.confirmBtnText}>Mở khóa {coinPrice} Coin</Text>}
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.confirmBtn, { backgroundColor: '#F59E0B' }]}
-                onPress={() => {
-                  close();
-                  setTopUpModalOpen(true);
-                }}
-              >
-                <Text style={styles.confirmBtnText}>Nạp thêm Coin</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {canJoinPlan && (
-            <TouchableOpacity
-              style={[
-                styles.membershipBtn,
-                { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.4)' },
-              ]}
-              onPress={() => {
-                close();
-                router.push('/(tabs)/vip');
-              }}
-            >
-              <FontAwesome5 name="crown" size={14} color="#F59E0B" />
-              <Text style={styles.membershipBtnText}>
-                Gói Tháng{monthlyPlanCoinPrice ? ` · ${monthlyPlanCoinPrice} Coin` : ''} — xem trọn bộ
-              </Text>
-            </TouchableOpacity>
+        <View style={[styles.breakdown, { backgroundColor: colors.card }]}>
+          {enoughCoins ? (
+            <>
+              {line('Trừ Coin chính', `${split.main}`)}
+              {line('Trừ Coin thưởng', `${split.bonus}`)}
+              <View style={[styles.rule, { backgroundColor: colors.border }]} />
+              {line('Còn lại', `${mainBalance - split.main} chính, ${bonusBalance - split.bonus} thưởng`, colors.textSecondary)}
+            </>
+          ) : (
+            <>
+              {line('Trong ví', `${mainBalance} chính, ${bonusBalance} thưởng`)}
+              {line('Còn thiếu', `${missingCoins} Coin`, colors.danger)}
+            </>
           )}
         </View>
+        <Text style={[styles.rulesNote, { color: colors.textMuted }]}>Coin chính được trừ trước, Coin thưởng bù phần còn thiếu.</Text>
+
+        {errorMsg && <Text style={[styles.error, { color: colors.danger }]}>{errorMsg}</Text>}
+
+        {canBuy && enoughCoins ? (
+          <Button label={`Mở khóa với ${coinPrice} Coin`} onPress={handleUnlock} loading={paying} />
+        ) : (
+          <Button
+            label="Nạp Coin"
+            onPress={() => {
+              close();
+              setTopUpModalOpen(true);
+            }}
+          />
+        )}
+
+        {canJoinPlan && (
+          <TouchableOpacity
+            style={styles.planLink}
+            disabled={paying}
+            onPress={() => {
+              close();
+              router.push('/(tabs)/vip');
+            }}
+          >
+            <Text style={[styles.planText, { color: colors.textSecondary }]}>
+              Hoặc dùng Gói Tháng{monthlyPlanCoinPrice ? ` (${monthlyPlanCoinPrice} Coin)` : ''} để xem mọi tập
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  container: { width: '100%', borderRadius: 16, borderWidth: 1, padding: 20, alignItems: 'center' },
-  iconCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  title: { fontSize: 16, fontWeight: '800', textAlign: 'center', marginBottom: 6 },
-  subtitle: { fontSize: 12, textAlign: 'center', lineHeight: 16, marginBottom: 16 },
-  priceBox: { width: '100%', borderRadius: 10, borderWidth: 1, padding: 12, gap: 8, marginBottom: 16 },
-  priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  priceLabel: { fontSize: 12 },
-  coinBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  coinAmount: { fontSize: 14, fontWeight: '800', color: '#F59E0B' },
-  balanceValue: { fontSize: 12, fontWeight: '700' },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    padding: 8,
-    borderRadius: 6,
-    marginBottom: 12,
-    width: '100%',
-  },
-  errorText: { color: '#EF4444', fontSize: 12, flex: 1 },
-  btnRow: { flexDirection: 'row', gap: 10, width: '100%' },
-  cancelBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, borderWidth: 1, alignItems: 'center' },
-  cancelBtnText: { fontSize: 13, fontWeight: '600' },
-  confirmBtn: { flex: 2, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
-  confirmBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  membershipBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    width: '100%',
-    marginTop: 10,
-    paddingVertical: 11,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  membershipBtnText: { color: '#F59E0B', fontSize: 13, fontWeight: '700' },
-});

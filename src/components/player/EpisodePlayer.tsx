@@ -1,16 +1,17 @@
 import React from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
 import { useSubtitleCues } from '../../hooks/useSubtitleCues';
 import { lockLandscape, lockPortrait } from '../../lib/orientation';
+import { seekTarget } from '../../lib/seek';
 import { cueAt } from '../../lib/vtt';
 import type { SubtitleTrack } from '../../types/movie';
 import { PlayerControls } from './PlayerControls';
 import { PlayerSettingsSheet } from './PlayerSettingsSheet';
-
-const DEFAULT_AI_LABEL = 'Nội dung được tạo bởi AI';
+import { DEFAULT_AI_LABEL } from './AIComplianceModal';
+import { styles } from '../../styles/components/player/EpisodePlayer.styles';
 const HIDE_CONTROLS_MS = 3000;
 
 interface EpisodePlayerProps {
@@ -35,7 +36,7 @@ interface EpisodePlayerProps {
 function AiLabelOverlay({ text }: { text: string | null }) {
   return (
     <View style={styles.aiBadge} pointerEvents="none" testID="ai-label-overlay">
-      <MaterialCommunityIcons name="robot-outline" size={12} color="#10B981" />
+      <MaterialCommunityIcons name="robot-outline" size={12} color="#FF3D7F" />
       <Text style={styles.aiBadgeText} numberOfLines={1}>
         {text || DEFAULT_AI_LABEL}
       </Text>
@@ -81,7 +82,8 @@ function StreamPlayer(props: Required<Omit<EpisodePlayerProps, 'posterUrl' | 'ch
     void (next ? lockLandscape() : lockPortrait());
   };
   const seekTo = (seconds: number) => {
-    player.currentTime = Math.max(0, Math.min(duration || seconds, seconds));
+    const target = seekTarget(seconds, duration);
+    if (target !== null) player.currentTime = target;
   };
 
   const stage = (
@@ -178,51 +180,3 @@ export function EpisodePlayer({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { width: '100%', height: 220, backgroundColor: '#000000' },
-  fill: { width: '100%', height: '100%', position: 'absolute' },
-  fullscreen: { flex: 1, backgroundColor: '#000000' },
-  posterShade: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playBtn: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  subtitleBox: { position: 'absolute', left: 12, right: 12, bottom: 10, alignItems: 'center' },
-  subtitleRaised: { bottom: 40 },
-  subtitle: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  subtitleLarge: { fontSize: 20 },
-  aiBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    maxWidth: '70%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  aiBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
-});

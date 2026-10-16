@@ -1,7 +1,10 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { barRatio } from '../../lib/seek';
 import { clock } from '../../lib/vtt';
+import { styles } from '../../styles/components/player/PlayerControls.styles';
+
 
 export const SEEK_SECONDS = 10;
 
@@ -21,10 +24,19 @@ interface PlayerControlsProps {
 /** YouTube-like controls: back / forward 10 s around play, a seek bar, settings and fullscreen. */
 export function PlayerControls(props: PlayerControlsProps) {
   const { currentTime, duration, playing, fullscreen, rate, onTogglePlay, onSeekBy, onSeekTo, onSettings, onToggleFullscreen } = props;
+  const bar = React.useRef<React.ElementRef<typeof TouchableOpacity>>(null);
   const [barWidth, setBarWidth] = React.useState(0);
   const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
   const seekOnBar = (e: GestureResponderEvent) => {
-    if (barWidth > 0 && duration > 0) onSeekTo((e.nativeEvent.locationX / barWidth) * duration);
+    if (!(duration > 0)) return;
+    const { locationX, pageX } = e.nativeEvent;
+    const ratio = barRatio(locationX, barWidth);
+    if (ratio !== null) return onSeekTo(ratio * duration);
+    // react-native-web may leave locationX out of a press; measure the bar on the page instead.
+    bar.current?.measureInWindow((x, _y, width) => {
+      const measured = barRatio(pageX - x, width);
+      if (measured !== null) onSeekTo(measured * duration);
+    });
   };
 
   return (
@@ -46,6 +58,7 @@ export function PlayerControls(props: PlayerControlsProps) {
           {clock(currentTime)} / {clock(duration)}
         </Text>
         <TouchableOpacity
+          ref={bar}
           style={styles.barTouch}
           activeOpacity={1}
           onPress={seekOnBar}
@@ -67,16 +80,3 @@ export function PlayerControls(props: PlayerControlsProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 36 },
-  seekBtn: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' },
-  playBtn: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)' },
-  bottom: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, paddingBottom: 6, paddingTop: 4, backgroundColor: 'rgba(0,0,0,0.45)' },
-  time: { color: '#FFFFFF', fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  barTouch: { flex: 1, height: 22, justifyContent: 'center' },
-  track: { height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)', overflow: 'hidden' },
-  fill: { height: '100%', backgroundColor: '#10B981' },
-  iconBtn: { padding: 4, flexDirection: 'row', alignItems: 'center', gap: 2 },
-  rateTag: { color: '#10B981', fontSize: 10, fontWeight: '800' },
-});

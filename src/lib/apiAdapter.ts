@@ -107,5 +107,6 @@ export function adaptApiEpisodeToEpisode(api: any, defaultIndex = 1): Episode {
       : [],
     isUnlocked: Boolean(api.isUnlocked),
     synopsis: api.description || api.synopsis || '',
+    publishedAt: api.publishedAt || null,
   };
 }

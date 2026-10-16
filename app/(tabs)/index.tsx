@@ -1,36 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  RefreshControl,
-} from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Header } from '../../src/components/common/Header';
-import { HeroBanner } from '../../src/components/home/HeroBanner';
-import { ContinueWatchingSection } from '../../src/components/home/ContinueWatchingSection';
-import { CategoryPills } from '../../src/components/home/CategoryPills';
-import { TopRankRow } from '../../src/components/home/TopRankRow';
-import { MovieRow } from '../../src/components/home/MovieRow';
-import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { HomeTopBar } from '../../src/components/home/HomeTopBar';
+import { HomeTabBar } from '../../src/components/home/HomeTabBar';
+import { PosterGrid } from '../../src/components/home/PosterGrid';
+import { RankingList } from '../../src/components/home/RankingList';
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
+import { ALL_GENRES, collectGenres, filterByGenre, newestFirst, suggestionPage, type HomeTabKey } from '../../src/lib/homeFeed';
 import { Movie } from '../../src/types/movie';
+import { styles } from '../../src/styles/screens/tabs/index.styles';
+
+const RECOMMEND_SIZE = 9;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { movies, currentMovie, loadInitialData, fetchMovies } = useAppStore();
+  const { movies, loadInitialData, isAuthenticated, loadDailyReward } = useAppStore();
 
-  const [selectedCategory, setSelectedCategory] = useState('Tất cả');
+  const [tab, setTab] = useState<HomeTabKey>('recommend');
+  const [genre, setGenre] = useState(ALL_GENRES);
+  const [page, setPage] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [complianceModalVisible, setComplianceModalVisible] = useState(false);
 
   useEffect(() => {
-    loadInitialData();
+    void loadInitialData();
   }, [loadInitialData]);
 
-  const movieList = movies;
+  // The gift on the top bar shows whether a check-in or a spin is waiting.
+  useEffect(() => {
+    if (isAuthenticated) void loadDailyReward();
+  }, [isAuthenticated, loadDailyReward]);
+
+  const genres = useMemo(() => [ALL_GENRES, ...collectGenres(movies)], [movies]);
+  const newest = useMemo(() => newestFirst(movies), [movies]);
+  const byGenre = useMemo(() => filterByGenre(movies, genre), [movies, genre]);
+  const recommended = useMemo(() => suggestionPage(movies, page, RECOMMEND_SIZE), [movies, page]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -38,175 +46,83 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
-  const handleMoviePress = (movie: Movie) => {
-    router.push({
-      pathname: '/movie/[id]',
-      params: { id: movie.id },
-    });
-  };
-
-  const handleSeeAll = (category?: string) => {
-    router.push('/(tabs)/explore');
+  const openMovie = (movie: Movie) => {
+    router.push({ pathname: '/movie/[id]', params: { id: movie.id } });
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Top Header */}
-      <Header onProfilePress={() => router.push('/profile')} />
+      {/* Wine tint behind the search bar and tabs, fading into the page. */}
+      <LinearGradient
+        colors={[colors.topTint, colors.background]}
+        style={[styles.tint, { height: insets.top + 220 }]}
+        pointerEvents="none"
+      />
+      <View style={{ paddingTop: Math.max(insets.top, 10) }}>
+        <HomeTopBar hint={movies[0]?.title} />
+        <HomeTabBar active={tab} onChange={setTab} />
+      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.ruby}
-          />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ruby} />}
       >
-        {/* Featured Hero Banner Carousel */}
-        <HeroBanner
-          movies={movieList.slice(0, 5)}
-          onPlayPress={handleMoviePress}
-          onDetailPress={handleMoviePress}
-        />
+        {tab === 'recommend' && (
+          <>
+            <PosterGrid movies={recommended} onMoviePress={openMovie} />
+            {movies.length > 0 && (
+              <View style={styles.moreRow}>
+                <TouchableOpacity style={[styles.moreBtn, { backgroundColor: colors.card }]} onPress={() => setTab('new')}>
+                  <Text style={[styles.moreText, { color: colors.textSecondary }]}>Xem thêm</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.moreBtn, { backgroundColor: colors.card, opacity: movies.length <= RECOMMEND_SIZE ? 0.45 : 1 }]}
+                  onPress={() => setPage((p) => p + 1)}
+                  disabled={movies.length <= RECOMMEND_SIZE}
+                >
+                  <Text style={[styles.moreText, { color: colors.textSecondary }]}>Đổi mới</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
+        )}
 
-        {/* Continue Watching Section (Đang Xem Dở) */}
-        <ContinueWatchingSection />
+        {tab === 'ranking' && <RankingList movies={movies} onMoviePress={openMovie} />}
 
-        {/* Categories Bar */}
-        <CategoryPills
-          selectedCategory={selectedCategory}
-          onSelectCategory={(category) => {
-            setSelectedCategory(category);
-            void fetchMovies({ genre: category === 'Tất cả' ? undefined : category });
-          }}
-        />
+        {tab === 'new' && <PosterGrid movies={newest} onMoviePress={openMovie} />}
 
-        {/* Top 5 Ranked Row */}
-        <TopRankRow movies={movieList} onMoviePress={handleMoviePress} />
+        {tab === 'genre' && (
+          <>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.genreRow} style={styles.genreScroll}>
+              {genres.map((name) => {
+                const selected = name === genre;
+                return (
+                  <TouchableOpacity
+                    key={name}
+                    onPress={() => setGenre(name)}
+                    style={[styles.genrePill, selected && { backgroundColor: colors.rubySoft }]}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected }}
+                  >
+                    <Text style={[selected ? styles.genreOn : styles.genreOff, { color: selected ? colors.ruby : colors.textMuted }]}>
+                      {name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <PosterGrid movies={byGenre} onMoviePress={openMovie} />
+          </>
+        )}
 
-        {/* Trending Movies Row */}
-        <MovieRow
-          title="Danh sách phim"
-          iconName="flame"
-          movies={movieList}
-          onMoviePress={handleMoviePress}
-          onSeeAllPress={() => handleSeeAll('Phim Mới')}
-        />
-
-        {/* Cyberpunk Collection Row */}
-        <View style={styles.bottomSpacer} />
+        {movies.length === 0 && (
+          <Text style={[styles.empty, { color: colors.textMuted }]}>Chưa tải được phim. Kéo xuống để thử lại.</Text>
+        )}
+        {movies.length > 0 && tab === 'genre' && byGenre.length === 0 && (
+          <Text style={[styles.empty, { color: colors.textMuted }]}>Thể loại này chưa có phim.</Text>
+        )}
       </ScrollView>
-
-      {/* AI Compliance Modal */}
-      {currentMovie && (
-        <AIComplianceModal
-          visible={complianceModalVisible}
-          onClose={() => setComplianceModalVisible(false)}
-          compliance={currentMovie.aiCompliance}
-        />
-      )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 24,
-  },
-  guestBannerWrapper: {
-    marginHorizontal: 16,
-    marginTop: 10,
-    marginBottom: 6,
-    borderRadius: 14,
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  guestBanner: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  guestLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-  },
-  guestIconGradient: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  guestTextContainer: {
-    flex: 1,
-    gap: 3,
-  },
-  guestBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
-  guestTag: {
-    backgroundColor: '#EF4444',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  guestTagText: {
-    color: '#FFFFFF',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 0.4,
-  },
-  guestTitle: {
-    fontSize: 12.5,
-    fontWeight: '700',
-  },
-  guestSubtitle: {
-    fontSize: 10.5,
-    fontWeight: '500',
-  },
-  guestBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  guestBtnText: {
-    color: '#FFFFFF',
-    fontSize: 11.5,
-    fontWeight: '800',
-  },
-  bottomSpacer: {
-    height: 36,
-  },
-});

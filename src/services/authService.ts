@@ -11,7 +11,7 @@ const AUTH_CALL = { skipAuthRefresh: true } as const;
 // The mobile app is for viewers only (BE `UserRole.MEMBER`).
 const MEMBER_ROLE = 'MEMBER';
 const STAFF_ON_MOBILE_MESSAGE =
-  'Tài khoản Sản xuất, Kiểm duyệt và Quản trị chỉ hỗ trợ trên phiên bản Web Studio máy tính. Ứng dụng di động chỉ dành riêng cho Khán giả!';
+  'Tài khoản Sản xuất, Kiểm duyệt và Quản trị dùng trên Web Studio ở máy tính. App điện thoại chỉ dành cho người xem.';
 
 class AuthService {
   async login(dto: LoginRequestDto): Promise<ApiResponse<AuthResponseDto>> {
@@ -49,7 +49,7 @@ class AuthService {
     return {
       success: false,
       data: null as unknown as AuthResponseDto,
-      message: res.message || 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại!',
+      message: res.message || 'Email hoặc mật khẩu chưa đúng.',
       statusCode: res.statusCode || 401,
     };
   }
@@ -73,7 +73,7 @@ class AuthService {
     return {
       success: false,
       data: null as unknown as AuthResponseDto,
-      message: res.message || 'Đăng ký không thành công. Vui lòng thử lại!',
+      message: res.message || 'Chưa tạo được tài khoản. Thử lại sau ít phút.',
       statusCode: res.statusCode || 400,
     };
   }

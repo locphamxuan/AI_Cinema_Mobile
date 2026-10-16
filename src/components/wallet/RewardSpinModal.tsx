@@ -1,16 +1,21 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, Easing } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, Modal, Pressable, TouchableOpacity, ActivityIndicator, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../../theme';
 import { rewardService } from '../../services/rewardService';
 import { idempotencyKey } from '../../lib/ids';
+import { Button } from '../common/Button';
 import type { RewardPrize, RewardWheelStatus, SpinResult } from '../../types/episodeAccess';
+import { styles } from '../../styles/components/wallet/RewardSpinModal.styles';
 
 const SPIN_MS = 2400;
+const LOAD_ERROR = 'Không tải được vòng quay.';
 
-const prizeLabel =(p: Pick<RewardPrize, 'type' | 'bonusCoins' | 'planDays' | 'chancePercent'>) =>
-  `${p.type === 'BONUS_COIN' ? `+${p.bonusCoins} Coin thưởng` : `Gói Tháng ${p.planDays} ngày`} · ${p.chancePercent ?? 0}%`;
+/** "+20 Coin thưởng (15%)" or "Gói Tháng 30 ngày (2%)". */
+export const prizeLabel = (p: Pick<RewardPrize, 'type' | 'bonusCoins' | 'planDays' | 'chancePercent'>) =>
+  `${p.type === 'BONUS_COIN' ? `+${p.bonusCoins} Coin thưởng` : `Gói Tháng ${p.planDays} ngày`} (${p.chancePercent ?? 0}%)`;
 
 /** BR-09: a milestone check-in earns a spin; the BE draws the prize and pays it out. */
 export const RewardSpinModal: React.FC = () => {
@@ -20,6 +25,7 @@ export const RewardSpinModal: React.FC = () => {
 };
 
 function SpinDialog() {
+  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { setRewardSpinOpen, setWalletBalance, loadAccountData, loadDailyReward } = useAppStore();
   const [wheel, setWheel] = useState<RewardWheelStatus | null>(null);
@@ -30,12 +36,24 @@ function SpinDialog() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const turn = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    rewardService.getWheel().then((res) => {
-      if (res.success && res.data) setWheel(res.data);
-      else setErrorMsg(res.message || 'Không tải được vòng quay.');
-    }).catch(() => setErrorMsg('Không tải được vòng quay.')).finally(() => setLoading(false));
+  const loadWheel = useCallback(() => {
+    setLoading(true);
+    setErrorMsg(null);
+    void rewardService
+      .getWheel()
+      .then((res) => {
+        if (res.success && res.data) setWheel(res.data);
+        else setErrorMsg(res.message || LOAD_ERROR);
+      })
+      .catch(() => setErrorMsg(LOAD_ERROR))
+      .finally(() => setLoading(false));
   }, []);
+
+  useEffect(loadWheel, [loadWheel]);
+
+  const spins = wheel?.availableSpins ?? 0;
+  const prizes = wheel?.prizes ?? [];
+  const cannotSpin = loading || spinning || (spins <= 0 && !pendingSpinKey) || prizes.length === 0;
 
   const close = () => {
     if (spinning) return;
@@ -44,7 +62,7 @@ function SpinDialog() {
   };
 
   const spin = async () => {
-    if (spinning || (spins <= 0 && !pendingSpinKey) || prizes.length === 0) return;
+    if (cannotSpin) return;
     setSpinning(true);
     setErrorMsg(null);
     setWon(null);
@@ -54,7 +72,7 @@ function SpinDialog() {
       const res = await rewardService.spin(key);
       if (!res.success || !res.data) {
         setSpinning(false);
-        setErrorMsg(res.message || 'Không quay được, vui lòng thử lại.');
+        setErrorMsg(res.message || 'Chưa quay được. Bấm lại để thử, lượt quay không bị trừ hai lần.');
         return;
       }
       setPendingSpinKey(null);
@@ -70,7 +88,7 @@ function SpinDialog() {
       });
     } catch {
       setSpinning(false);
-      setErrorMsg('Chưa nhận được kết quả. Hãy thử lại để kiểm tra lượt quay vừa rồi.');
+      setErrorMsg('Chưa nhận được kết quả. Bấm "Xem kết quả" để hỏi lại lượt vừa quay.');
       try {
         const refreshed = await rewardService.getWheel();
         if (refreshed.success && refreshed.data) setWheel(refreshed.data);
@@ -81,103 +99,75 @@ function SpinDialog() {
   };
 
   const rotate = turn.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '1800deg'] });
-  const spins = wheel?.availableSpins ?? 0;
-  const prizes = wheel?.prizes ?? [];
+
+  let spinLabel = spins > 0 ? `Quay (còn ${spins} lượt)` : 'Hết lượt quay';
+  if (loading) spinLabel = 'Đang tải…';
+  else if (spinning) spinLabel = 'Đang quay…';
+  else if (pendingSpinKey) spinLabel = 'Xem kết quả';
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={close}>
-      <View style={styles.backdrop}>
-        <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Vòng Quay May Mắn</Text>
-            <TouchableOpacity onPress={close} disabled={spinning} accessibilityLabel="Đóng">
-              <Ionicons name="close" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          <Text style={[styles.sub, { color: colors.textSecondary }]}>{loading ? 'Đang tải lượt quay...' : `Bạn còn ${spins} lượt quay.`}</Text>
-          <Text style={[styles.sub, { color: colors.textSecondary, marginTop: 2 }]}>10 ô gồm 9 mức Coin ngẫu nhiên và 1 gói Tháng 30 ngày (tỉ lệ 2%).</Text>
+    <Modal visible transparent animationType="slide" onRequestClose={close}>
+      <Pressable style={[styles.backdrop, { backgroundColor: colors.overlay }]} onPress={close} accessibilityLabel="Đóng" />
+      <View style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        <View style={[styles.handle, { backgroundColor: colors.borderLight }]} />
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>Vòng quay</Text>
+          <TouchableOpacity onPress={close} disabled={spinning} hitSlop={10} accessibilityLabel="Đóng">
+            <Ionicons name="close" size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
 
-          {loading && <ActivityIndicator style={{ marginVertical: 30 }} color="#8B5CF6" />}
+        {loading && !wheel ? <ActivityIndicator style={styles.loading} color={colors.ruby} /> : null}
 
-          {wheel && (
-            <>
-              <Animated.View style={[styles.wheel, { transform: [{ rotate }] }]}>
-                <Ionicons name="gift" size={46} color="#FFFFFF" />
-              </Animated.View>
-              {prizes.length === 0 ? (
-                <Text style={[styles.sub, { color: colors.textSecondary, textAlign: 'center' }]}>Chưa có giải thưởng phù hợp cho tài khoản này.</Text>
-              ) : (
+        {wheel && (
+          <>
+            <Animated.View style={[styles.wheel, { borderColor: colors.coin, backgroundColor: colors.rubySoft, transform: [{ rotate }] }]}>
+              <Ionicons name="gift" size={44} color={colors.ruby} />
+            </Animated.View>
+            {prizes.length === 0 ? (
+              <Text style={[styles.note, { color: colors.textSecondary }]}>Vòng quay chưa có giải nào dành cho tài khoản này.</Text>
+            ) : (
+              <View style={styles.prizes}>
+                <Text style={[styles.prizesTitle, { color: colors.textMuted }]}>Giải có thể trúng</Text>
                 <View style={styles.prizeList}>
                   {prizes.map((p) => (
-                    <View key={p.id} style={[styles.prizePill, { borderColor: colors.border }]}>
+                    <View key={p.id} style={[styles.prize, { backgroundColor: colors.card }]}>
                       <Text style={[styles.prizeText, { color: colors.text }]}>{prizeLabel(p)}</Text>
                     </View>
                   ))}
                 </View>
-              )}
-            </>
-          )}
+              </View>
+            )}
+          </>
+        )}
 
-          {won && (
-            <View style={styles.wonBox}>
-              <Text style={styles.wonTitle}>Chúc mừng! {won.prize.name}</Text>
-              <Text style={styles.wonText}>
-                {won.bonusCoins
-                  ? `+${won.bonusCoins} Coin thưởng đã vào ví.`
-                  : `Chúc mừng! Gói Tháng 30 ngày đã được kích hoạt${won.planActiveUntil ? `, hiệu lực đến ${new Date(won.planActiveUntil).toLocaleDateString('vi-VN')}` : ''}.`}
-              </Text>
-            </View>
-          )}
+        {won && (
+          <View style={[styles.won, { backgroundColor: colors.verifiedSoft }]}>
+            <Text style={[styles.wonTitle, { color: colors.text }]}>Bạn trúng {won.prize.name}</Text>
+            <Text style={[styles.wonText, { color: colors.textSecondary }]}>
+              {won.bonusCoins
+                ? `+${won.bonusCoins} Coin thưởng đã vào ví.`
+                : `Gói Tháng đã bật${won.planActiveUntil ? `, dùng được đến ${new Date(won.planActiveUntil).toLocaleDateString('vi-VN')}` : ''}.`}
+            </Text>
+          </View>
+        )}
 
-          {errorMsg && (
-            <View style={styles.errorRow}>
-              <Text style={styles.errorText}>{errorMsg}</Text>
-              {!pendingSpinKey && <TouchableOpacity onPress={() => { setLoading(true); setErrorMsg(null); void rewardService.getWheel().then((res) => { if (res.success && res.data) setWheel(res.data); else setErrorMsg(res.message || 'Không tải được vòng quay.'); }).catch(() => setErrorMsg('Không tải được vòng quay.')).finally(() => setLoading(false)); }}><Text style={styles.errorText}>Thử tải lại</Text></TouchableOpacity>}
-            </View>
-          )}
+        {errorMsg && (
+          <View style={styles.errorRow}>
+            <Text style={[styles.error, { color: colors.danger }]}>{errorMsg}</Text>
+            {!pendingSpinKey && (
+              <TouchableOpacity onPress={loadWheel} hitSlop={8}>
+                <Text style={[styles.retry, { color: colors.text }]}>Tải lại</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
-          <TouchableOpacity
-            style={[styles.spinBtn, { opacity: loading || spinning || (spins <= 0 && !pendingSpinKey) || prizes.length === 0 ? 0.5 : 1 }]}
-            onPress={spin}
-            disabled={loading || spinning || (spins <= 0 && !pendingSpinKey) || prizes.length === 0}
-          >
-            <Text style={styles.spinBtnText}>{loading ? 'Đang tải vòng quay...' : spinning ? 'Đang quay...' : pendingSpinKey ? 'Lấy kết quả lần quay' : spins > 0 ? `Quay ngay (${spins})` : 'Hết lượt quay'}</Text>
-          </TouchableOpacity>
-          {spins <= 0 && !spinning && (
-            <Text style={[styles.footnote, { color: colors.textMuted }]}>Điểm danh tới ngày mốc của chuỗi để nhận thêm lượt quay.</Text>
-          )}
-        </View>
+        <Button label={spinLabel} onPress={spin} disabled={cannotSpin} loading={spinning} />
+        {spins <= 0 && !spinning && !loading && (
+          <Text style={[styles.footnote, { color: colors.textMuted }]}>Điểm danh đủ tới ngày mốc của chuỗi để có thêm lượt quay.</Text>
+        )}
       </View>
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.7)', justifyContent: 'center', alignItems: 'center', padding: 16 },
-  container: { width: '100%', borderRadius: 16, borderWidth: 1, padding: 18, alignItems: 'center' },
-  header: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 17, fontWeight: '900' },
-  sub: { fontSize: 12, marginTop: 4, marginBottom: 12, alignSelf: 'flex-start' },
-  wheel: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#7C3AED',
-    borderWidth: 6,
-    borderColor: '#F59E0B',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 12,
-  },
-  prizeList: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 12 },
-  prizePill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  prizeText: { fontSize: 11, fontWeight: '700' },
-  wonBox: { width: '100%', backgroundColor: 'rgba(16, 185, 129, 0.12)', borderRadius: 10, padding: 10, marginBottom: 12, alignItems: 'center' },
-  wonTitle: { color: '#10B981', fontWeight: '800', fontSize: 14, textAlign: 'center' },
-  wonText: { color: '#10B981', fontSize: 12, marginTop: 2, textAlign: 'center' },
-  errorText: { color: '#EF4444', fontSize: 12, marginBottom: 10, textAlign: 'center' },
-  errorRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
-  spinBtn: { width: '100%', paddingVertical: 12, borderRadius: 12, alignItems: 'center', backgroundColor: '#F59E0B' },
-  spinBtnText: { color: '#0F172A', fontWeight: '900', fontSize: 14 },
-  footnote: { fontSize: 11, textAlign: 'center', marginTop: 8 },
-});

@@ -30,7 +30,7 @@ export const API_ROUTES = {
     READ: (id: string) => `/notifications/${id}/read`,
   },
 
-  // MF-2 — wallet & Coin top-ups
+  // MF-2 - wallet & Coin top-ups
   WALLET: {
     INFO: '/wallet',
     AFFORDABILITY: '/wallet/affordability',
@@ -41,13 +41,13 @@ export const API_ROUTES = {
     TRANSACTION_DETAIL: (transactionId: string) => `/wallet/transactions/${transactionId}`,
   },
 
-  // MF-2 — episode access decision and single-episode purchase
+  // MF-2 - episode access decision and single-episode purchase
   ACCESS: {
     DECISION: (episodeId: string) => `/episodes/${episodeId}/access`,
     PURCHASE: (episodeId: string) => `/episodes/${episodeId}/purchase`,
   },
 
-  // MF-2 — monthly plan
+  // MF-2 - monthly plan
   SUBSCRIPTION: {
     PLANS: '/membership-plans',
     MINE: '/subscriptions/me',
@@ -58,7 +58,7 @@ export const API_ROUTES = {
     CYCLES: (id: string) => `/subscriptions/${id}/cycles`,
   },
 
-  // MF-2 — daily check-in and reward wheel
+  // MF-2 - daily check-in and reward wheel
   REWARDS: {
     STATUS: '/daily-rewards/status',
     CHECK_IN: '/daily-rewards/check-in',

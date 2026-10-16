@@ -1,5 +1,5 @@
 /**
- * Main Flow 2 — episode access, Coin wallet, monthly plan, daily check-in and reward wheel.
+ * Main Flow 2 - episode access, Coin wallet, monthly plan, daily check-in and reward wheel.
  * Mirrors the BE responses of AI_Cinema_BE src/modules/episode-access; field names are the BE ones.
  */
 
@@ -97,7 +97,7 @@ export type CoinEntryType =
   | 'BONUS_EXPIRY'
   | 'ADJUSTMENT';
 
-/** GET /wallet/statements — one ledger line with the balances right after it. */
+/** GET /wallet/statements - one ledger line with the balances right after it. */
 export interface StatementLine {
   id: string;
   entryType: CoinEntryType;
@@ -141,7 +141,7 @@ export interface MembershipPlan {
   priceCoins: number | null;
 }
 
-/** POST /subscriptions — a quote; no Coin has moved yet. */
+/** POST /subscriptions - a quote; no Coin has moved yet. */
 export interface SubscriptionIntent {
   id: string;
   status: string;
@@ -150,7 +150,7 @@ export interface SubscriptionIntent {
   missingCoins: number;
 }
 
-/** POST /subscriptions/:id/activate — the first cycle is paid. */
+/** POST /subscriptions/:id/activate - the first cycle is paid. */
 export interface SubscriptionActivation {
   id: string;
   status: string;
@@ -162,7 +162,7 @@ export interface SubscriptionActivation {
   nextRenewalAt: string | null;
 }
 
-/** GET /subscriptions/me — the open plan (PENDING = quoted, not paid), or null. */
+/** GET /subscriptions/me - the open plan (PENDING = quoted, not paid), or null. */
 export interface MySubscription {
   id: string;
   status: 'PENDING' | 'ACTIVE' | 'PAST_DUE';

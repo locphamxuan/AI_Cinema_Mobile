@@ -39,6 +39,8 @@ export interface Episode {
   subtitles: SubtitleTrack[];
   isUnlocked: boolean;
   synopsis: string;
+  /** When the episode went out (ISO), from its latest publication; null if the BE does not say. */
+  publishedAt: string | null;
 }
 
 export interface Movie {

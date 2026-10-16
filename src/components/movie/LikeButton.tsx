@@ -1,8 +1,10 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { engagementService, type MovieEngagement } from '../../services/engagementService';
 import { useAppStore } from '../../store/useAppStore';
+import { useTheme } from '../../theme';
+import { styles } from '../../styles/components/movie/LikeButton.styles';
 
 /** Formats 1234 as "1,2K" the way viewers read counts. */
 export function compactCount(n: number): string {
@@ -28,7 +30,9 @@ export function useMovieEngagement(movieId: string | undefined) {
   return [data, setData] as const;
 }
 
-export function LikeButton({ movieId, compact = false }: { movieId: string; compact?: boolean }) {
+/** Heart with its count beside it. */
+export function LikeButton({ movieId }: { movieId: string }) {
+  const { colors } = useTheme();
   const { isAuthenticated, openAuthModal } = useAppStore();
   const [data, setData] = useMovieEngagement(movieId);
   const [busy, setBusy] = React.useState(false);
@@ -46,33 +50,17 @@ export function LikeButton({ movieId, compact = false }: { movieId: string; comp
   };
 
   return (
-    <View style={styles.wrap}>
-      <TouchableOpacity
-        style={[styles.btn, liked && styles.btnActive]}
-        onPress={toggle}
-        disabled={busy}
-        accessibilityLabel={liked ? 'Bỏ tim' : 'Thả tim'}
-        accessibilityState={{ selected: liked }}
-      >
-        <Ionicons name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? '#F43F5E' : '#FFFFFF'} />
-      </TouchableOpacity>
-      {!compact && <Text style={styles.count} testID="like-count">{compactCount(data?.likeCount ?? 0)}</Text>}
-    </View>
+    <TouchableOpacity
+      style={[styles.btn, { backgroundColor: colors.cardAlt }]}
+      onPress={toggle}
+      disabled={busy}
+      accessibilityLabel={liked ? 'Bỏ tim' : 'Thả tim'}
+      accessibilityState={{ selected: liked }}
+    >
+      <Ionicons name={liked ? 'heart' : 'heart-outline'} size={20} color={liked ? colors.hot : colors.text} />
+      <Text style={[styles.count, { color: colors.textSecondary }]} testID="like-count">
+        {compactCount(data?.likeCount ?? 0)}
+      </Text>
+    </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', gap: 2 },
-  btn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#18181B',
-    borderWidth: 1,
-    borderColor: '#27272A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnActive: { borderColor: '#F43F5E' },
-  count: { color: '#94A3B8', fontSize: 10, fontWeight: '700' },
-});
