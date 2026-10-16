@@ -5,6 +5,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
 import { useSubtitleCues } from '../../hooks/useSubtitleCues';
 import { lockLandscape, lockPortrait } from '../../lib/orientation';
+import { seekTarget } from '../../lib/seek';
 import { cueAt } from '../../lib/vtt';
 import type { SubtitleTrack } from '../../types/movie';
 import { PlayerControls } from './PlayerControls';
@@ -81,7 +82,8 @@ function StreamPlayer(props: Required<Omit<EpisodePlayerProps, 'posterUrl' | 'ch
     void (next ? lockLandscape() : lockPortrait());
   };
   const seekTo = (seconds: number) => {
-    player.currentTime = Math.max(0, Math.min(duration || seconds, seconds));
+    const target = seekTarget(seconds, duration);
+    if (target !== null) player.currentTime = target;
   };
 
   const stage = (

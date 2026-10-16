@@ -14,7 +14,9 @@ export function usePlayerClock(player: VideoPlayer): PlayerClock {
   useEffect(() => {
     const read = () =>
       setClock((prev) => {
-        const next = { currentTime: player.currentTime || 0, duration: player.duration || 0, playing: player.playing };
+        // The web video reports NaN before metadata loads; the controls only ever see finite numbers.
+        const finite = (n: number) => (Number.isFinite(n) ? n : 0);
+        const next = { currentTime: finite(player.currentTime), duration: finite(player.duration), playing: player.playing };
         return prev.currentTime === next.currentTime && prev.duration === next.duration && prev.playing === next.playing
           ? prev
           : next;

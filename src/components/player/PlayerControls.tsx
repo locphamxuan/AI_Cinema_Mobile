@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { barRatio } from '../../lib/seek';
 import { clock } from '../../lib/vtt';
 
 export const SEEK_SECONDS = 10;
@@ -21,10 +22,19 @@ interface PlayerControlsProps {
 /** YouTube-like controls: back / forward 10 s around play, a seek bar, settings and fullscreen. */
 export function PlayerControls(props: PlayerControlsProps) {
   const { currentTime, duration, playing, fullscreen, rate, onTogglePlay, onSeekBy, onSeekTo, onSettings, onToggleFullscreen } = props;
+  const bar = React.useRef<React.ElementRef<typeof TouchableOpacity>>(null);
   const [barWidth, setBarWidth] = React.useState(0);
   const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
   const seekOnBar = (e: GestureResponderEvent) => {
-    if (barWidth > 0 && duration > 0) onSeekTo((e.nativeEvent.locationX / barWidth) * duration);
+    if (!(duration > 0)) return;
+    const { locationX, pageX } = e.nativeEvent;
+    const ratio = barRatio(locationX, barWidth);
+    if (ratio !== null) return onSeekTo(ratio * duration);
+    // react-native-web may leave locationX out of a press; measure the bar on the page instead.
+    bar.current?.measureInWindow((x, _y, width) => {
+      const measured = barRatio(pageX - x, width);
+      if (measured !== null) onSeekTo(measured * duration);
+    });
   };
 
   return (
@@ -46,6 +56,7 @@ export function PlayerControls(props: PlayerControlsProps) {
           {clock(currentTime)} / {clock(duration)}
         </Text>
         <TouchableOpacity
+          ref={bar}
           style={styles.barTouch}
           activeOpacity={1}
           onPress={seekOnBar}
