@@ -8,6 +8,8 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   timeoutMs?: number;
   /** Set on the retry after a token refresh (and on auth calls) so a 401 is not retried again. */
   skipAuthRefresh?: boolean;
+  /** Keep a paginated `{ data, meta }` body whole instead of unwrapping it to the rows. */
+  keepEnvelope?: boolean;
 }
 
 interface SessionTokens {
@@ -153,6 +155,7 @@ class ApiClient {
       timeoutMs = API_CONFIG.TIMEOUT_MS,
       headers: customHeaders,
       skipAuthRefresh = false,
+      keepEnvelope = false,
       ...restOptions
     } = options;
     const url = this.buildUrl(endpoint, params);
@@ -204,7 +207,7 @@ class ApiClient {
       const data = text ? JSON.parse(text) : null;
       return {
         success: true,
-        data: data?.data !== undefined ? data.data : data,
+        data: data?.data !== undefined && !keepEnvelope ? data.data : data,
         statusCode: response.status,
       };
     } catch (err: any) {

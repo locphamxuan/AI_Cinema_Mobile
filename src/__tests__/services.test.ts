@@ -299,6 +299,13 @@ describe('apiClient success bodies', () => {
     const res = await apiClient.get('/movies');
     expect(res.data).toEqual([{ id: 'm1' }]);
   });
+
+  it('keeps the page whole when the caller pages on (the notifications screen reads meta)', async () => {
+    const page = { data: [{ id: 'n1' }], meta: { totalItems: 1, currentPage: 1, totalPages: 3 } };
+    jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, status: 200, text: async () => JSON.stringify(page) } as Response);
+    const res = await apiClient.get('/notifications', { keepEnvelope: true });
+    expect(res.data).toEqual(page);
+  });
 });
 
 describe('session tokens', () => {

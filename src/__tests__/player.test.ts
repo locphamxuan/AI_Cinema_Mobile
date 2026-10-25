@@ -91,6 +91,7 @@ describe('hearts, plays and notifications', () => {
     await notificationService.list(wallet.types, 2);
     expect(get).toHaveBeenCalledWith('/notifications', {
       params: expect.objectContaining({ page: 2, 'filter.type': `$in:${wallet.types.join(',')}` }),
+      keepEnvelope: true,
     });
   });
 });

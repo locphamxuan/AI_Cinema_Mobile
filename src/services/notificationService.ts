@@ -22,6 +22,8 @@ export const notificationService = {
   list(types: string[], page = 1, limit = 20): Promise<ApiResponse<NotificationPage>> {
     return apiClient.get<NotificationPage>(API_ROUTES.NOTIFICATIONS.LIST, {
       params: { page, limit, ...(types.length ? { 'filter.type': `$in:${types.join(',')}` } : {}) },
+      // The screen pages on, so it needs `meta` as well as the rows.
+      keepEnvelope: true,
     });
   },
   unreadCount: () => apiClient.get<{ unread: number }>(API_ROUTES.NOTIFICATIONS.UNREAD_COUNT),
