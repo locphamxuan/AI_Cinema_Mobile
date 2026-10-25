@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,8 +7,9 @@ import { useAppStore } from '../../src/store/useAppStore';
 import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
 import { movieService } from '../../src/services';
 import { engagementService } from '../../src/services/engagementService';
-import { episodeAccessService } from '../../src/services/episodeAccessService';
+import { playbackService } from '../../src/services/playbackService';
 import { Movie, Episode } from '../../src/types/movie';
+import type { StreamingSession } from '../../src/types/playback';
 import { episodeLabel } from '../../src/lib/episodeLabel';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
 import { EpisodePlayer } from '../../src/components/player/EpisodePlayer';
@@ -33,6 +34,8 @@ export default function WatchScreen() {
   const [activeEpisode, setActiveEpisode] = useState<Episode | null>(foundMovie?.episodes?.[0] || null);
   const [audioMode, setAudioMode] = useState<AudioMode>(mode === 'voiceover' ? 'voiceover' : 'subtitle');
   const [chosenTrack, setChosenTrack] = useState<string | null>(null);
+  const [session, setSession] = useState<StreamingSession | null>(null);
+  const [opening, setOpening] = useState(false);
   const [engagement, setEngagement] = useMovieEngagement(id);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -70,10 +73,17 @@ export default function WatchScreen() {
   const tracks = currentActiveEpisode?.subtitles ?? [];
   const subtitleTrackId = trackFor(audioMode, tracks, chosenTrack);
 
+  // MF-3: a granted episode plays through a streaming session (ads, stream limit, progress).
   const play = async (ep: Episode) => {
-    // After a purchase the episode carries no stream yet: ask the BE again, it decides.
-    const streamUrl = ep.hlsUrl || (await episodeAccessService.checkAccess(ep.id)).data?.streamUrl || '';
-    setActiveEpisode({ ...ep, hlsUrl: streamUrl, isUnlocked: true });
+    setOpening(true);
+    const res = await playbackService.openSession(ep.id);
+    setOpening(false);
+    if (!res.success || !res.data) {
+      Alert.alert('Không phát được tập', res.message || 'Vui lòng thử lại.');
+      return;
+    }
+    setSession(res.data);
+    setActiveEpisode({ ...ep, isUnlocked: true });
     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
   // Every episode is opened through the BE access decision (free starter, plan, purchase).
@@ -109,16 +119,18 @@ export default function WatchScreen() {
 
   const saved = myList.includes(movie.id);
   const ep = currentActiveEpisode;
+  const playing = session && session.episodeId === ep?.id ? session : undefined;
   const namedEpisode = ep?.title && ep.title !== `Tập ${ep.episodeNumber}`;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={{ height: Math.max(insets.top, 10), backgroundColor: '#000000' }} />
       <EpisodePlayer
-        streamUrl={ep?.hlsUrl || ''}
+        streamUrl={playing?.stream.masterUrl ?? ''}
+        session={playing}
         posterUrl={ep?.thumbnailUrl || movie.bannerUrl || movie.posterUrl}
-        aiLabel={ep?.aiLabel ?? null}
-        checking={gate.checkingId !== null}
+        aiLabel={playing?.aiLabel?.text ?? ep?.aiLabel ?? null}
+        checking={gate.checkingId !== null || opening}
         onRequestPlay={() => ep && handleSelectEpisode(ep)}
         subtitles={tracks}
         subtitleTrackId={subtitleTrackId}
