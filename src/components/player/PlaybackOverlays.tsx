@@ -7,20 +7,21 @@ import type { AdScheduleItem } from '../../types/playback';
 import { styles } from '../../styles/components/player/PlaybackOverlays.styles';
 
 /**
- * The mid-roll ad over the paused episode. It cannot be skipped (BR-33); it ends by itself and an ad
- * that fails to load hands the picture back at once instead of blocking the episode.
+ * The mid-roll ad over the paused episode (BR-33). It plays to the end; only then does "Bỏ qua quảng cáo"
+ * appear to go back to the episode. An ad that fails to load hands the picture back at once.
  */
 export function AdBreakOverlay({ cue, onDone }: { cue: AdScheduleItem; onDone: (watched: boolean) => void }) {
   const ad = useVideoPlayer({ uri: cue.ad.mediaUrl }, (p) => p.play());
   const { currentTime } = usePlayerClock(ad);
+  const [ended, setEnded] = React.useState(false);
   const done = React.useRef(onDone);
   done.current = onDone;
 
   React.useEffect(() => {
-    const ended = ad.addListener('playToEnd', () => done.current(true));
+    const finished = ad.addListener('playToEnd', () => setEnded(true));
     const failed = ad.addListener('statusChange', ({ status }) => status === 'error' && done.current(false));
     return () => {
-      ended.remove();
+      finished.remove();
       failed.remove();
     };
   }, [ad]);
@@ -30,15 +31,22 @@ export function AdBreakOverlay({ cue, onDone }: { cue: AdScheduleItem; onDone: (
   return (
     <View style={styles.ad} testID="ad-break">
       <VideoView style={styles.fill} player={ad} nativeControls={false} contentFit="contain" />
-      <Text style={styles.adBadge}>Quảng cáo · {clock(left)}</Text>
+      <Text style={styles.adBadge}>{ended ? 'Quảng cáo đã kết thúc' : `Quảng cáo · ${clock(left)}`}</Text>
       <Text style={styles.adTitle} numberOfLines={1}>
         {cue.ad.title}
       </Text>
-      {clickUrl ? (
-        <TouchableOpacity style={styles.adLink} onPress={() => void Linking.openURL(clickUrl)} accessibilityRole="link">
-          <Text style={styles.adLinkText}>Tìm hiểu thêm</Text>
-        </TouchableOpacity>
-      ) : null}
+      <View style={styles.adActions}>
+        {clickUrl ? (
+          <TouchableOpacity style={styles.adLink} onPress={() => void Linking.openURL(clickUrl)} accessibilityRole="link">
+            <Text style={styles.adLinkText}>Tìm hiểu thêm</Text>
+          </TouchableOpacity>
+        ) : null}
+        {ended ? (
+          <TouchableOpacity style={styles.adSkip} onPress={() => onDone(true)} accessibilityRole="button" testID="ad-skip">
+            <Text style={styles.adSkipText}>Bỏ qua quảng cáo ›</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </View>
   );
 }
