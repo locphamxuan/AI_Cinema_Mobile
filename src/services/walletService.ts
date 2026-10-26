@@ -44,9 +44,12 @@ class WalletService {
     return apiClient.post<CoinTopUp>(API_ROUTES.WALLET.TOP_UPS, { provider, amountVnd });
   }
 
-  /** GET /wallet/top-ups - this member's paginated order history. */
+  /** GET /wallet/top-ups - this member's order history, newest first; the page keeps its meta. */
   getTopUps(page = 1): Promise<ApiResponse<Page<CoinTopUp>>> {
-    return apiClient.get<Page<CoinTopUp>>(API_ROUTES.WALLET.TOP_UPS, { params: { page, limit: STATEMENT_PAGE_SIZE } });
+    return apiClient.get<Page<CoinTopUp>>(API_ROUTES.WALLET.TOP_UPS, {
+      params: { page, limit: STATEMENT_PAGE_SIZE },
+      keepEnvelope: true,
+    });
   }
 
   /** GET /wallet/top-ups/:topUpId - the IPN settles the order in the background. */

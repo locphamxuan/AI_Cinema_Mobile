@@ -7,6 +7,8 @@ export interface ApiResponse<T = any> {
   data: T;
   message?: string;
   statusCode?: number;
+  /** The BE `error.details.reason` of a refusal, e.g. DEVICE_LIMIT_REACHED. */
+  reason?: string;
   errors?: Record<string, string[]>;
 }
 

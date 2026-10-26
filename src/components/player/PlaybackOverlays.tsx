@@ -2,17 +2,18 @@ import React from 'react';
 import { Linking, Text, TouchableOpacity, View } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
+import { adSecondsLeft } from '../../lib/playback';
 import { clock } from '../../lib/vtt';
 import type { AdScheduleItem } from '../../types/playback';
 import { styles } from '../../styles/components/player/PlaybackOverlays.styles';
 
 /**
- * The mid-roll ad over the paused episode (BR-33). It plays to the end; only then does "Bỏ qua quảng cáo"
- * appear to go back to the episode. An ad that fails to load hands the picture back at once.
+ * The mid-roll ad over the paused episode (BR-33). It plays to the end: "Bỏ qua quảng cáo" counts down
+ * and only takes a tap once the ad is over. An ad that fails to load hands the picture back at once.
  */
 export function AdBreakOverlay({ cue, onDone }: { cue: AdScheduleItem; onDone: (watched: boolean) => void }) {
   const ad = useVideoPlayer({ uri: cue.ad.mediaUrl }, (p) => p.play());
-  const { currentTime } = usePlayerClock(ad);
+  const { currentTime, duration } = usePlayerClock(ad);
   const [ended, setEnded] = React.useState(false);
   const done = React.useRef(onDone);
   done.current = onDone;
@@ -26,12 +27,13 @@ export function AdBreakOverlay({ cue, onDone }: { cue: AdScheduleItem; onDone: (
     };
   }, [ad]);
 
-  const left = Math.max(0, Math.ceil(cue.ad.durationSeconds - currentTime));
+  const left = adSecondsLeft(currentTime, duration, cue.ad.durationSeconds, ended);
+  const over = left === 0;
   const clickUrl = cue.ad.clickUrl;
   return (
     <View style={styles.ad} testID="ad-break">
       <VideoView style={styles.fill} player={ad} nativeControls={false} contentFit="contain" />
-      <Text style={styles.adBadge}>{ended ? 'Quảng cáo đã kết thúc' : `Quảng cáo · ${clock(left)}`}</Text>
+      <Text style={styles.adBadge}>{over ? 'Quảng cáo đã kết thúc' : `Quảng cáo · ${clock(left)}`}</Text>
       <Text style={styles.adTitle} numberOfLines={1}>
         {cue.ad.title}
       </Text>
@@ -41,11 +43,18 @@ export function AdBreakOverlay({ cue, onDone }: { cue: AdScheduleItem; onDone: (
             <Text style={styles.adLinkText}>Tìm hiểu thêm</Text>
           </TouchableOpacity>
         ) : null}
-        {ended ? (
-          <TouchableOpacity style={styles.adSkip} onPress={() => onDone(true)} accessibilityRole="button" testID="ad-skip">
-            <Text style={styles.adSkipText}>Bỏ qua quảng cáo ›</Text>
-          </TouchableOpacity>
-        ) : null}
+        <TouchableOpacity
+          style={[styles.adSkip, !over && styles.adSkipWaiting]}
+          onPress={() => onDone(true)}
+          disabled={!over}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !over }}
+          testID="ad-skip"
+        >
+          <Text style={[styles.adSkipText, !over && styles.adSkipTextWaiting]}>
+            {over ? 'Bỏ qua quảng cáo ›' : `Bỏ qua sau ${left}s`}
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

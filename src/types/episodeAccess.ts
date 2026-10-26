@@ -70,6 +70,8 @@ export interface CoinTopUp {
   failureReason: string | null;
   paidAt: string | null;
   expiresAt: string | null;
+  /** When the order was placed. */
+  createdAt: string;
 }
 
 /** Paginated endpoint result returned by Nest's pagination wrapper. */

@@ -16,16 +16,20 @@ import { EpisodePlayer } from '../../src/components/player/EpisodePlayer';
 import { AudioModeTabs, languageName, trackFor, type AudioMode } from '../../src/components/movie/AudioModeTabs';
 import { EpisodeList } from '../../src/components/movie/EpisodeList';
 import { LikeButton, compactCount, useMovieEngagement } from '../../src/components/movie/LikeButton';
+import { SaveButton } from '../../src/components/movie/SaveButton';
 import { Button } from '../../src/components/common/Button';
 import { useTheme } from '../../src/theme';
 import { styles } from '../../src/styles/screens/watch/id.styles';
+
+/** MF-4 refusals the member clears by removing a device or ending a stream elsewhere. */
+const DEVICE_LIMITS = new Set(['DEVICE_LIMIT_REACHED', 'CONCURRENT_LIMIT_REACHED']);
 
 export default function WatchScreen() {
   const { id, episodeId, mode } = useLocalSearchParams<{ id: string; episodeId?: string; mode?: AudioMode }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { currentMovie, setCurrentMovie, movies, myList, toggleMyList, isVIPMode } = useAppStore();
+  const { currentMovie, setCurrentMovie, movies, isVIPMode } = useAppStore();
 
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
 
@@ -75,11 +79,20 @@ export default function WatchScreen() {
 
   // MF-3: a granted episode plays through a streaming session (ads, stream limit, progress).
   const play = async (ep: Episode) => {
+    // Unmounting the current player stops its session (with its position) before the next one opens.
+    setSession(null);
     setOpening(true);
     const res = await playbackService.openSession(ep.id);
     setOpening(false);
     if (!res.success || !res.data) {
-      Alert.alert('Không phát được tập', res.message || 'Vui lòng thử lại.');
+      if (res.reason && DEVICE_LIMITS.has(res.reason)) {
+        Alert.alert('Đã đạt giới hạn thiết bị', res.message, [
+          { text: 'Để sau', style: 'cancel' },
+          { text: 'Quản lý thiết bị', onPress: () => router.push('/devices') },
+        ]);
+      } else {
+        Alert.alert('Không phát được tập', res.message || 'Vui lòng thử lại.');
+      }
       return;
     }
     setSession(res.data);
@@ -117,7 +130,6 @@ export default function WatchScreen() {
     );
   }
 
-  const saved = myList.includes(movie.id);
   const ep = currentActiveEpisode;
   const playing = session && session.episodeId === ep?.id ? session : undefined;
   const namedEpisode = ep?.title && ep.title !== `Tập ${ep.episodeNumber}`;
@@ -158,14 +170,7 @@ export default function WatchScreen() {
 
           <View style={styles.actions}>
             <LikeButton movieId={movie.id} />
-            <TouchableOpacity
-              style={[styles.iconBtn, { backgroundColor: colors.cardAlt }]}
-              onPress={() => toggleMyList(movie.id)}
-              accessibilityLabel={saved ? 'Bỏ lưu phim' : 'Lưu phim'}
-              accessibilityState={{ selected: saved }}
-            >
-              <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? colors.ruby : colors.text} />
-            </TouchableOpacity>
+            <SaveButton movieId={movie.id} />
             <TouchableOpacity
               style={[styles.iconBtn, { backgroundColor: colors.cardAlt }]}
               onPress={() => void Share.share({ message: `Xem "${movie.title}" trên AI Cinema` })}

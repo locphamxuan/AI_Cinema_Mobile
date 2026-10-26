@@ -25,6 +25,8 @@ const joinMessage = (value: unknown): string | undefined => {
 /** Refusals the viewer can act on, keyed by the BE `details.reason` (Main Flow 3). */
 const REASON_MESSAGES: Record<string, string> = {
   CONCURRENT_LIMIT_REACHED: 'Tài khoản đang xem trên quá nhiều thiết bị cùng lúc. Hãy dừng xem ở thiết bị khác rồi thử lại.',
+  DEVICE_LIMIT_REACHED: 'Tài khoản đã đăng ký đủ số thiết bị của gói. Hãy gỡ bớt một thiết bị để xem trên máy này.',
+  DEVICE_ID_REQUIRED: 'Không nhận diện được thiết bị. Hãy mở lại ứng dụng rồi thử lại.',
   MEDIA_NOT_READY: 'Tập phim chưa sẵn sàng để phát. Vui lòng quay lại sau.',
   EPISODE_UNDER_REVISION: 'Tập phim đang được chỉnh sửa, vui lòng quay lại sau.',
   PLAYBACK_ACCESS_REQUIRED: 'Bạn chưa có quyền xem tập này. Hãy mở khóa tập hoặc đăng ký gói.',
@@ -187,9 +189,11 @@ class ApiClient {
 
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
+        let reason: string | undefined;
         try {
           const errJson = await response.json();
           errorMessage = extractErrorMessage(errJson) || errorMessage;
+          reason = errJson?.error?.details?.reason;
         } catch {
           // Keep the returned status/message useful without logging response bodies or URLs.
         }
@@ -199,6 +203,7 @@ class ApiClient {
           data: null as unknown as T,
           message: errorMessage,
           statusCode: response.status,
+          reason,
         };
       }
 

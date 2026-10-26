@@ -35,6 +35,5 @@ export const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  save: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   play: { flex: 1 },
 });

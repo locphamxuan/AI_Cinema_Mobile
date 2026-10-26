@@ -1,5 +1,6 @@
 import { apiClient } from './apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
+import { deviceIdentity, deviceKey } from '../lib/device';
 import { idempotencyKey } from '../lib/ids';
 import { uuidV4 } from '../lib/playback';
 import { storage, STORAGE_KEYS } from '../lib/storage';
@@ -17,16 +18,26 @@ export async function guestKey(): Promise<string> {
   return key;
 }
 
-/** A session belongs to a member (bearer token) or a guest (X-Guest-Key), never both. */
+const isMember = async () => !!(await storage.getString(STORAGE_KEYS.AUTH_TOKEN));
+
+/**
+ * A session belongs to a member (bearer token) or a guest (X-Guest-Key), never both. A member
+ * plays from a registered device, named by X-Device-Id (MF-4).
+ */
 async function owner(headers: Record<string, string> = {}) {
-  const member = !!(await storage.getString(STORAGE_KEYS.AUTH_TOKEN));
-  return { headers: member ? headers : { ...headers, 'X-Guest-Key': await guestKey() } };
+  return {
+    headers: (await isMember())
+      ? { ...headers, 'X-Device-Id': await deviceKey() }
+      : { ...headers, 'X-Guest-Key': await guestKey() },
+  };
 }
 
 class PlaybackService {
   /** POST /playback/sessions - re-verifies access and hands back the stream, ads and resume point. */
   async openSession(episodeId: string, key = idempotencyKey('play-')): Promise<ApiResponse<StreamingSession>> {
-    return apiClient.post<StreamingSession>(PLAYBACK.SESSIONS, { episodeId }, await owner({ 'Idempotency-Key': key }));
+    // The name and platform label this device on the member's device list.
+    const body = (await isMember()) ? { episodeId, ...deviceIdentity() } : { episodeId };
+    return apiClient.post<StreamingSession>(PLAYBACK.SESSIONS, body, await owner({ 'Idempotency-Key': key }));
   }
 
   /** `watchedSeconds` is what actually played since the last beat: 0 keeps a paused session alive without credit. */

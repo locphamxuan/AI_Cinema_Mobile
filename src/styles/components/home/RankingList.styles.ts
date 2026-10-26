@@ -9,6 +9,8 @@ export const styles = StyleSheet.create({
   image: { width: '100%', height: '100%' },
   info: { flex: 1, gap: 8, paddingTop: 2 },
   title: { ...textStyle.subtitle, fontSize: 16 },
+  views: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  viewsText: { ...textStyle.captionStrong },
   tag: { alignSelf: 'flex-start', borderRadius: 4, paddingHorizontal: 7, paddingVertical: 3 },
   tagText: { ...textStyle.captionStrong },
   synopsis: { ...textStyle.label, lineHeight: 19 },

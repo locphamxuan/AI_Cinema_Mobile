@@ -13,6 +13,7 @@ import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeMod
 import { AudioModeTabs, trackFor, type AudioMode } from '../../src/components/movie/AudioModeTabs';
 import { EpisodeList } from '../../src/components/movie/EpisodeList';
 import { LikeButton, compactCount, useMovieEngagement } from '../../src/components/movie/LikeButton';
+import { SaveButton } from '../../src/components/movie/SaveButton';
 import { Button } from '../../src/components/common/Button';
 import { useTheme } from '../../src/theme';
 import { styles } from '../../src/styles/screens/movie/id.styles';
@@ -23,7 +24,7 @@ export default function MovieDetailScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { colors } = useTheme();
-  const { currentMovie, setCurrentMovie, movies, myList, toggleMyList, isVIPMode, watchHistory } = useAppStore();
+  const { currentMovie, setCurrentMovie, movies, isVIPMode, watchHistory } = useAppStore();
 
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
 
@@ -91,7 +92,6 @@ export default function MovieDetailScreen() {
   const lastSeen = watchHistory.find((item) => item.movieId === movie.id);
   const resume = lastSeen ? episodes.find((ep) => ep.id === lastSeen.episodeId) : undefined;
   const next = resume ?? episodes[0];
-  const saved = myList.includes(movie.id);
   const heroHeight = Math.min(Math.round(width * 1.1), 520);
 
   return (
@@ -172,14 +172,7 @@ export default function MovieDetailScreen() {
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12), backgroundColor: colors.background, borderTopColor: colors.border }]}>
         <LikeButton movieId={movie.id} />
-        <TouchableOpacity
-          style={[styles.save, { backgroundColor: colors.cardAlt }]}
-          onPress={() => toggleMyList(movie.id)}
-          accessibilityLabel={saved ? 'Bỏ lưu phim' : 'Lưu phim'}
-          accessibilityState={{ selected: saved }}
-        >
-          <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? colors.ruby : colors.text} />
-        </TouchableOpacity>
+        <SaveButton movieId={movie.id} />
         <Button
           label={next ? (resume ? `Xem tiếp tập ${next.episodeNumber}` : `Xem tập ${next.episodeNumber}`) : 'Chưa có tập'}
           icon={next ? 'play' : undefined}

@@ -9,6 +9,7 @@ import { PosterGrid } from '../../src/components/home/PosterGrid';
 import { RankingList } from '../../src/components/home/RankingList';
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
+import { movieService } from '../../src/services';
 import { ALL_GENRES, collectGenres, filterByGenre, newestFirst, suggestionPage, type HomeTabKey } from '../../src/lib/homeFeed';
 import { Movie } from '../../src/types/movie';
 import { styles } from '../../src/styles/screens/tabs/index.styles';
@@ -25,10 +26,21 @@ export default function HomeScreen() {
   const [genre, setGenre] = useState(ALL_GENRES);
   const [page, setPage] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [ranked, setRanked] = useState<Movie[]>([]);
+
+  const loadRanking = async () => {
+    const res = await movieService.ranking();
+    if (res.success) setRanked(res.data);
+  };
 
   useEffect(() => {
     void loadInitialData();
   }, [loadInitialData]);
+
+  // Plays change all the time: the ranking is read from the BE each time the tab opens.
+  useEffect(() => {
+    if (tab === 'ranking') void loadRanking();
+  }, [tab]);
 
   // The gift on the top bar shows whether a check-in or a spin is waiting.
   useEffect(() => {
@@ -42,7 +54,7 @@ export default function HomeScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadInitialData();
+    await Promise.all([loadInitialData(), tab === 'ranking' ? loadRanking() : undefined]);
     setRefreshing(false);
   };
 
@@ -88,7 +100,7 @@ export default function HomeScreen() {
           </>
         )}
 
-        {tab === 'ranking' && <RankingList movies={movies} onMoviePress={openMovie} />}
+        {tab === 'ranking' && <RankingList movies={ranked} onMoviePress={openMovie} />}
 
         {tab === 'new' && <PosterGrid movies={newest} onMoviePress={openMovie} />}
 

@@ -26,7 +26,9 @@ export const styles = StyleSheet.create({
   },
   adLinkText: { color: '#FFFFFF', fontFamily: fonts.semibold, fontSize: 12 },
   adSkip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#FFFFFF' },
+  adSkipWaiting: { backgroundColor: 'rgba(0,0,0,0.6)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' },
   adSkipText: { color: '#0F172A', fontFamily: fonts.semibold, fontSize: 13 },
+  adSkipTextWaiting: { color: 'rgba(255,255,255,0.85)' },
   resume: {
     position: 'absolute',
     left: 12,
