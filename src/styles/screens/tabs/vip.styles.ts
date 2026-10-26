@@ -1,0 +1,32 @@
+import { StyleSheet } from 'react-native';
+import { fonts, textStyle } from '../../../theme';
+
+export const styles = StyleSheet.create({
+  container: { flex: 1 },
+  scroll: { paddingHorizontal: 16, paddingBottom: 120, gap: 14, maxWidth: 600, width: '100%', alignSelf: 'center' },
+  pass: { borderRadius: 16, padding: 20, gap: 6 },
+  passName: { fontFamily: fonts.displayHeavy, fontSize: 30, lineHeight: 34 },
+  passLine: { ...textStyle.labelStrong },
+  notice: { borderRadius: 12, padding: 14, gap: 12 },
+  noticeText: { ...textStyle.label, lineHeight: 19 },
+  noticeBtn: { alignSelf: 'flex-start', minHeight: 40 },
+  renew: { borderRadius: 14, padding: 16, gap: 10 },
+  renewRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  renewText: { flex: 1, gap: 2 },
+  renewTitle: { ...textStyle.bodyStrong },
+  renewPrice: { ...textStyle.caption },
+  window: { ...textStyle.label, lineHeight: 19 },
+  lead: { ...textStyle.body, fontSize: 17, lineHeight: 25 },
+  balance: { ...textStyle.label, marginTop: -6 },
+  loading: { marginTop: 24 },
+  failed: { gap: 10 },
+  retry: { alignSelf: 'flex-start', minHeight: 40 },
+  plan: { borderRadius: 14, borderWidth: 1.5, padding: 16, gap: 10 },
+  planHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  planName: { ...textStyle.title },
+  featured: { ...textStyle.captionStrong },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  price: { fontFamily: fonts.displayHeavy, fontSize: 40, lineHeight: 44 },
+  per: { ...textStyle.label },
+  desc: { ...textStyle.label, lineHeight: 19 },
+});

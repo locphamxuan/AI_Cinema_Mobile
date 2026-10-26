@@ -1,8 +1,5 @@
-import type { Movie, Episode, EpisodeVersion, AIComplianceInfo } from '../types/movie';
-import type { WalletState, CheckInStreak } from '../types/wallet';
-import type { Project, ProductionEpisode, Scene } from '../types/production';
+import type { Movie, Episode, AIComplianceInfo } from '../types/movie';
 import type { UserProfile } from '../types/auth';
-import { getTodayDayIndex, getTodayDateString, VN_DAY_LABELS } from '../utils/date';
 
 export function adaptUserProfile(api: any): UserProfile {
   if (!api) {
@@ -35,7 +32,7 @@ export function adaptUserProfile(api: any): UserProfile {
 export function adaptApiMovieToMovie(api: any): Movie {
   if (!api) api = {};
 
-  const episodes: Episode[] = Array.isArray(api.episodes)
+  const episodes: Episode[] = Array.isArray(api.episodes) && api.episodes.length > 0
     ? api.episodes.map((ep: any, index: number) => adaptApiEpisodeToEpisode(ep, index + 1))
     : [];
 
@@ -63,9 +60,10 @@ export function adaptApiMovieToMovie(api: any): Movie {
     bannerUrl: api.bannerUrl || api.posterUrl || '',
     description: api.description || api.synopsis || '',
     year: Number(api.releaseYear || api.year) || 0,
+    language: api.defaultLanguage || api.language || 'vi',
     episodes,
     aiCompliance,
-    totalEpisodes: Number(api.totalEpisodes) || episodes.length,
+    totalEpisodes: Number(api.totalEpisodes ?? api.episodeCount) || episodes.length,
     matchScore: api.matchScore,
     quality: api.quality || '',
     audioQuality: api.audioQuality || '',
@@ -74,137 +72,41 @@ export function adaptApiMovieToMovie(api: any): Movie {
   };
 }
 
-export function adaptApiEpisodeToEpisode(api: any, defaultIndex = 1): Episode {
-  const versions: EpisodeVersion[] = Array.isArray(api.versions) && api.versions.length > 0
-    ? api.versions.map((v: any, vIdx: number) => ({
-        id: v.id || `v-${api.id}-${vIdx}`,
-          versionNumber: v.versionNumber || '',
-          versionTitle: v.versionTitle || '',
-        releaseDate: v.releaseDate || v.createdAt || new Date().toISOString(),
-          author: v.author || '',
-          aiModel: v.aiModel || '',
-        status: v.status || 'published',
-        statusLabel: v.status === 'archived' ? 'Đã lưu trữ' : 'Đang phát hành',
-        isCurrent: vIdx === 0,
-          moderationScore: Number(v.moderationScore) || 0,
-          changelog: Array.isArray(v.changelog) ? v.changelog : [],
-          hlsUrl: v.videoUrl || v.hlsUrl || '',
-          duration: v.duration || api.duration || '',
-      }))
-    : [];
+/** 3725 -> "1:02:05", 60 -> "1:00"; empty when the length is unknown. */
+export function formatDuration(totalSeconds: unknown): string {
+  const seconds = Number(totalSeconds);
+  if (!Number.isFinite(seconds) || seconds <= 0) return '';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
 
+export function adaptApiEpisodeToEpisode(api: any, defaultIndex = 1): Episode {
   return {
     id: api.id || '',
+    seasonNumber: Number(api.seasonNumber) || 1,
     episodeNumber: api.episodeNumber || defaultIndex,
     title: api.title || '',
-    duration: api.duration || '',
+    duration: formatDuration(api.durationSeconds) || api.duration || '',
     hlsUrl: api.videoUrl || api.hlsUrl || '',
     thumbnailUrl: api.thumbnailUrl || '',
-    price: Number(api.tokenCost ?? api.price) || 0,
-    isFree: Boolean(api.isFree),
-    isPreview: Boolean(api.isPreview),
+    price: Number(api.coinPrice ?? api.price) || 0,
+    isFree: Boolean(api.isFreeStarter ?? api.isFree),
+    availability: api.availability === 'UNDER_REVISION' ? 'UNDER_REVISION' : 'AVAILABLE',
+    notice: api.notice || null,
+    aiLabel: api.aiLabel?.labelText || null,
+    subtitles: Array.isArray(api.subtitles)
+      ? api.subtitles.map((s: any) => ({
+          id: String(s.id),
+          language: String(s.language),
+          label: String(s.label || s.language),
+          isDefault: Boolean(s.isDefault),
+        }))
+      : [],
     isUnlocked: Boolean(api.isUnlocked),
     synopsis: api.description || api.synopsis || '',
-    currentVersion: versions[0]?.versionNumber,
-    versions,
-  };
-}
-
-export function adaptApiWalletToWallet(api: any): WalletState {
-  if (!api) return { mainCoin: 0, bonusCoin: 0 };
-  return {
-    mainCoin: Number(api.mainBalance ?? api.mainCoin) || 0,
-    bonusCoin: Number(api.bonusBalance ?? api.bonusCoin) || 0,
-  };
-}
-
-export function adaptApiCheckInToStreak(api: any): CheckInStreak {
-  const todayIdx = getTodayDayIndex();
-  const todayStr = getTodayDateString();
-
-  api = api || {};
-
-  const currentDay = typeof api.currentDay === 'number' ? api.currentDay : todayIdx;
-  const isClaimedToday = Boolean(
-    api.todayClaimed ?? (api.lastCheckInDate === todayStr || api.canClaimToday === false)
-  );
-
-  return {
-    days: VN_DAY_LABELS.map((dayLabel, idx) => {
-      const isToday = idx === currentDay;
-      const claimed = Array.isArray(api.claimedDays)
-        ? api.claimedDays.includes(idx)
-        : isToday && isClaimedToday;
-      return {
-        dayIndex: idx,
-        dayLabel,
-        reward: Number(api.dailyRewards?.[idx] ?? api.rewards?.[idx]) || 0,
-        claimed,
-        isToday,
-      };
-    }),
-    currentStreak: Number(api.streakCount) || 0,
-    lastCheckInDate: api.lastCheckInDate || (isClaimedToday ? todayStr : null),
-    todayClaimed: isClaimedToday,
-  };
-}
-
-export function adaptApiProjectToProject(api: any): Project {
-  const episodes: ProductionEpisode[] = Array.isArray(api.episodes) && api.episodes.length > 0
-    ? api.episodes.map((ep: any, index: number) => {
-        const scenes: Scene[] = Array.isArray(ep.scenes)
-            ? ep.scenes.map((sc: any, sIdx: number) => ({
-              id: sc.id || '',
-              title: sc.title || '',
-              prompt: sc.prompt || sc.description || '',
-              status: sc.status || 'pending',
-              duration: sc.duration || '',
-              model: sc.model || '',
-              progress: Number(sc.progress) || 0,
-              videoUrl: sc.videoUrl || sc.assetUrl,
-              resolution: sc.resolution || '',
-              audioTrack: sc.audioTrack || '',
-              voiceOver: sc.voiceOver || '',
-            }))
-          : [];
-
-        return {
-          id: ep.id || `ep-pkg-${index + 1}`,
-          title: ep.title || `Tập ${index + 1}`,
-          episodeNumber: ep.episodeNumber || index + 1,
-          status: ep.status || (index === 0 ? 'published' : 'draft'),
-          quotaAllocated: Number(ep.quotaAllocated ?? ep.quota_allocated) || 0,
-          tokensUsed: Number(ep.tokensUsed ?? ep.actual_tokens_used) || 0,
-          scenes,
-          plan: {
-            title: ep.title || '',
-            synopsis: ep.synopsis || '',
-            targetDuration: Number(ep.targetDuration) || 0,
-            estimatedTokens: Number(ep.estimatedTokens) || 0,
-            approach: ep.productionApproach || '',
-            status: ep.status || 'approved',
-          },
-          videoDraftUrl: ep.videoDraftUrl || ep.video_draft_url,
-        };
-      })
-    : [];
-
-  return {
-    id: api.id || '',
-    title: api.title || '',
-    synopsis: api.synopsis || api.description || '',
-    totalEpisodes: episodes.length || Number(api.episodeCount) || 0,
-    deadline: api.deadline || '',
-    plannedReleaseDate: api.plannedReleaseDate || '',
-    creatorName: api.assignedCreator?.fullName || '',
-    reviewerName: api.createdBy?.fullName || '',
-    genre: Array.isArray(api.genre) ? api.genre : [],
-    status: api.status === 'PUBLISHED' ? 'completed' : api.status === 'IN_PRODUCTION' ? 'in_production' : 'planning',
-    totalBudgetTokens: Number(api.totalAiQuotaBudget) || 0,
-    allocatedTokens: Math.max(0, Number(api.totalAiQuotaBudget || 0) - Number(api.remainingAiQuotaBudget || 0)),
-    consumedTokens: Number(api.consumedTokens) || 0,
-    episodes,
-    createdAt: api.createdAt || new Date().toISOString(),
-    updatedAt: api.updatedAt || new Date().toISOString(),
+    publishedAt: api.publishedAt || null,
   };
 }

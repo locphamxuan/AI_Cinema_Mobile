@@ -1,532 +1,196 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-} from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
-import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
-import { Episode } from '../../src/types/movie';
-import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
+import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
+import { movieService } from '../../src/services';
+import { engagementService } from '../../src/services/engagementService';
+import { episodeAccessService } from '../../src/services/episodeAccessService';
+import { Movie, Episode } from '../../src/types/movie';
+import { episodeLabel } from '../../src/lib/episodeLabel';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
+import { EpisodePlayer } from '../../src/components/player/EpisodePlayer';
+import { AudioModeTabs, languageName, trackFor, type AudioMode } from '../../src/components/movie/AudioModeTabs';
+import { EpisodeList } from '../../src/components/movie/EpisodeList';
+import { LikeButton, compactCount, useMovieEngagement } from '../../src/components/movie/LikeButton';
+import { Button } from '../../src/components/common/Button';
+import { useTheme } from '../../src/theme';
+import { styles } from '../../src/styles/screens/watch/id.styles';
 
 export default function WatchScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, episodeId, mode } = useLocalSearchParams<{ id: string; episodeId?: string; mode?: AudioMode }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, isDark } = useTheme();
-  const { currentMovie, setCurrentMovie, openAuthModal, isAuthenticated, movies } = useAppStore();
+  const { colors } = useTheme();
+  const { currentMovie, setCurrentMovie, movies, myList, toggleMyList, isVIPMode } = useAppStore();
 
-  const movie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
+  const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
 
-  const [activeEpisode, setActiveEpisode] = useState<Episode | null>(movie?.episodes[0] || null);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [movie, setMovie] = useState<Movie | null>(foundMovie);
+  const [loading, setLoading] = useState(!foundMovie);
+  const [activeEpisode, setActiveEpisode] = useState<Episode | null>(foundMovie?.episodes?.[0] || null);
+  const [audioMode, setAudioMode] = useState<AudioMode>(mode === 'voiceover' ? 'voiceover' : 'subtitle');
+  const [chosenTrack, setChosenTrack] = useState<string | null>(null);
+  const [engagement, setEngagement] = useMovieEngagement(id);
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  const [complianceModalOpen, setComplianceModalOpen] = useState(false);
-  const [unlockModalOpen, setUnlockModalOpen] = useState(false);
-  const [targetUnlockEp, setTargetUnlockEp] = useState<Episode | null>(null);
-
+  // Movie list/detail responses carry no episodes, so they are always fetched separately.
   useEffect(() => {
-    setCurrentMovie(movie);
-    setActiveEpisode(movie?.episodes[0] || null);
-  }, [movie, setCurrentMovie]);
+    if (!id) return;
+    let cancelled = false;
+    const { movies: listed, currentMovie: selected } = useAppStore.getState();
+    const known = listed.find((item) => item.id === id) || (selected?.id === id ? selected : null);
+    setLoading(!known);
 
-  const handleSelectEpisode = (ep: Episode) => {
-    if (ep.isFree || ep.isUnlocked) {
-      setActiveEpisode(ep);
-      setIsPlaying(true);
-    } else {
-      if (!isAuthenticated) {
-        openAuthModal('login');
-        return;
+    Promise.all([
+      known ? Promise.resolve(known) : movieService.getMovieDetail(id).then((res) => (res.success ? res.data : null)),
+      movieService.getEpisodes(id),
+    ]).then(([base, episodesRes]) => {
+      if (cancelled) return;
+      if (base) {
+        const episodes = episodesRes.data;
+        const loaded: Movie = { ...base, episodes, totalEpisodes: episodes.length || base.totalEpisodes };
+        setMovie(loaded);
+        setCurrentMovie(loaded);
+        setActiveEpisode(episodes.find((ep) => ep.id === episodeId) || episodes[0] || null);
       }
-      setTargetUnlockEp(ep);
-      setUnlockModalOpen(true);
-    }
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, setCurrentMovie, episodeId]);
+
+  // Released episodes only; a movie with none says so instead of showing placeholders.
+  const episodes: Episode[] = movie?.episodes ?? [];
+  const currentActiveEpisode = activeEpisode || episodes[0] || null;
+  const tracks = currentActiveEpisode?.subtitles ?? [];
+  const subtitleTrackId = trackFor(audioMode, tracks, chosenTrack);
+
+  const play = async (ep: Episode) => {
+    // After a purchase the episode carries no stream yet: ask the BE again, it decides.
+    const streamUrl = ep.hlsUrl || (await episodeAccessService.checkAccess(ep.id)).data?.streamUrl || '';
+    setActiveEpisode({ ...ep, hlsUrl: streamUrl, isUnlocked: true });
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  };
+  // Every episode is opened through the BE access decision (free starter, plan, purchase).
+  const gate = useEpisodeGate(play);
+  const handleSelectEpisode = (ep: Episode) => void gate.open(ep);
+
+  const countView = useCallback(() => {
+    if (!currentActiveEpisode) return;
+    void engagementService.recordView(currentActiveEpisode.id).then((res) => {
+      if (res.success && res.data.counted && engagement) setEngagement({ ...engagement, viewCount: engagement.viewCount + 1 });
+    });
+  }, [currentActiveEpisode, engagement, setEngagement]);
+
+  const changeTrack = (trackId: string | null) => {
+    if (trackId) setChosenTrack(trackId);
+    setAudioMode(trackId ? 'subtitle' : 'voiceover');
   };
 
-  if (!movie || !activeEpisode) {
+  if (loading || !movie) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Không tìm thấy phim</Text>
+      <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.ruby} />
+        ) : (
+          <>
+            <Text style={[styles.missingTitle, { color: colors.text }]}>Không tìm thấy phim này</Text>
+            <Button label="Quay lại" variant="secondary" onPress={() => router.back()} style={styles.missingBtn} />
+          </>
+        )}
       </View>
     );
   }
 
+  const saved = myList.includes(movie.id);
+  const ep = currentActiveEpisode;
+  const namedEpisode = ep?.title && ep.title !== `Tập ${ep.episodeNumber}`;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Video Player Area */}
-      <View style={[styles.playerContainer, { paddingTop: insets.top }]}>
-        <Image
-          source={{ uri: activeEpisode.thumbnailUrl || movie.bannerUrl }}
-          style={styles.videoPlaceholder}
+      <View style={{ height: Math.max(insets.top, 10), backgroundColor: '#000000' }} />
+      <EpisodePlayer
+        streamUrl={ep?.hlsUrl || ''}
+        posterUrl={ep?.thumbnailUrl || movie.bannerUrl || movie.posterUrl}
+        aiLabel={ep?.aiLabel ?? null}
+        checking={gate.checkingId !== null}
+        onRequestPlay={() => ep && handleSelectEpisode(ep)}
+        subtitles={tracks}
+        subtitleTrackId={subtitleTrackId}
+        onSubtitleChange={changeTrack}
+        audioLabel={languageName(movie.language)}
+        onStarted={countView}
+      />
+
+      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
+        <View style={styles.head}>
+          <TouchableOpacity style={styles.titleRow} onPress={() => router.back()} accessibilityLabel={`Quay lại ${movie.title}`}>
+            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+            <Text style={[styles.movieTitle, { color: colors.text }]} numberOfLines={1}>
+              {movie.title}
+            </Text>
+          </TouchableOpacity>
+          {ep ? (
+            <Text style={[styles.episodeTitle, { color: colors.textSecondary }]} numberOfLines={2}>
+              {episodeLabel(ep, episodes)}
+              {namedEpisode ? `: ${ep.title}` : ''}
+              {ep.duration ? `  (${ep.duration})` : ''}
+            </Text>
+          ) : null}
+          {ep?.notice ? <Text style={[styles.notice, { color: colors.coin }]}>{ep.notice}</Text> : null}
+
+          <View style={styles.actions}>
+            <LikeButton movieId={movie.id} />
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: colors.cardAlt }]}
+              onPress={() => toggleMyList(movie.id)}
+              accessibilityLabel={saved ? 'Bỏ lưu phim' : 'Lưu phim'}
+              accessibilityState={{ selected: saved }}
+            >
+              <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? colors.ruby : colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: colors.cardAlt }]}
+              onPress={() => void Share.share({ message: `Xem "${movie.title}" trên AI Cinema` })}
+              accessibilityLabel="Chia sẻ"
+            >
+              <Ionicons name="share-outline" size={20} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.views, { color: colors.textMuted }]}>{compactCount(engagement?.viewCount ?? 0)} lượt xem</Text>
+          </View>
+        </View>
+
+        <AudioModeTabs
+          mode={audioMode}
+          onModeChange={setAudioMode}
+          tracks={tracks}
+          trackId={subtitleTrackId}
+          onTrackChange={(trackId) => changeTrack(trackId)}
+          language={movie.language}
         />
 
-        {/* Player Overlay Controls */}
-        <View style={styles.playerOverlay}>
-          {/* Top Bar: Back button, Title & Quality */}
-          <View style={styles.playerTopBar}>
-            <TouchableOpacity
-              style={styles.playerBtn}
-              onPress={() => router.back()}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
+        <EpisodeList
+          episodes={episodes}
+          currentId={ep?.id}
+          isVIPMode={isVIPMode}
+          posterUrl={movie.posterUrl}
+          onSelect={handleSelectEpisode}
+        />
 
-            <View style={styles.playerTitleBox}>
-              <Text style={styles.playerMovieTitle} numberOfLines={1}>
-                {movie.title}
-              </Text>
-              <Text style={styles.playerEpTitle} numberOfLines={1}>
-                Tập {activeEpisode.episodeNumber}: {activeEpisode.title}
-              </Text>
-            </View>
-
-            <View style={styles.qualityBadge}>
-              <Text style={styles.qualityText}>4K HDR</Text>
-            </View>
+        {ep?.synopsis ? (
+          <View style={styles.about}>
+            <Text style={[styles.aboutTitle, { color: colors.text }]}>Nội dung tập {ep.episodeNumber}</Text>
+            <Text style={[styles.aboutText, { color: colors.textSecondary }]}>{ep.synopsis}</Text>
           </View>
-
-          {/* Center Play/Pause button */}
-          <TouchableOpacity
-            style={styles.centerPlayBtn}
-            onPress={() => setIsPlaying(!isPlaying)}
-            activeOpacity={0.85}
-          >
-            <Ionicons
-              name={isPlaying ? 'pause' : 'play'}
-              size={36}
-              color="#FFFFFF"
-            />
-          </TouchableOpacity>
-
-          {/* Bottom Bar: Version pill, Scrubber, Fullscreen */}
-          {/* Bottom Bar: Scrubber, Fullscreen */}
-          <View style={styles.playerBottomBar}>
-            {/* Time progress bar */}
-            <View style={styles.scrubberContainer}>
-              <View style={styles.scrubberTrack}>
-                <View style={styles.scrubberProgress} />
-              </View>
-              <Text style={styles.timeText}>14:20 / {activeEpisode.duration}</Text>
-            </View>
-
-            <TouchableOpacity style={styles.playerBtn}>
-              <Ionicons name="expand" size={18} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-
-      {/* Details & Episodes ScrollView */}
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailsContent}>
-        {/* Movie Meta Section */}
-        <View style={styles.metaSection}>
-          <Text style={[styles.title, { color: colors.text }]}>{movie.title}</Text>
-
-          {/* Badges row */}
-          <View style={styles.metaBadges}>
-            {movie.matchScore && (
-              <View style={[styles.badge, styles.matchBadge]}>
-                <Text style={styles.matchText}>{movie.matchScore}% Phù hợp</Text>
-              </View>
-            )}
-            <View style={[styles.badge, { backgroundColor: isDark ? '#1E293B' : '#E2E8F0' }]}>
-              <Text style={[styles.badgeText, { color: colors.text }]}>{movie.year}</Text>
-            </View>
-            <View style={[styles.badge, { backgroundColor: isDark ? '#1E293B' : '#E2E8F0' }]}>
-              <Text style={[styles.badgeText, { color: colors.text }]}>{movie.ageRating}</Text>
-            </View>
-            <View style={[styles.badge, { backgroundColor: isDark ? '#1E293B' : '#E2E8F0' }]}>
-              <Text style={[styles.badgeText, { color: colors.text }]}>6 Tập</Text>
-            </View>
-          </View>
-
-          {/* AI Compliance Button */}
-          <TouchableOpacity
-            style={[
-              styles.complianceBtn,
-              {
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                borderColor: 'rgba(16, 185, 129, 0.4)',
-              },
-            ]}
-            onPress={() => setComplianceModalOpen(true)}
-          >
-            <MaterialCommunityIcons name="shield-check" size={16} color="#10B981" />
-            <Text style={styles.complianceBtnText}>
-              Tuân thủ Điều 44 Luật AI • Điểm: {movie.aiCompliance.moderationScore}%
-            </Text>
-            <Ionicons name="chevron-forward" size={14} color="#10B981" />
-          </TouchableOpacity>
-
-          {/* Synopsis */}
-          <Text style={[styles.synopsis, { color: colors.textSecondary }]}>
-            {movie.description}
-          </Text>
-
-          {/* Active Episode Description */}
-          <View
-            style={[
-              styles.currentEpBox,
-              {
-                backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <Text style={[styles.currentEpTitle, { color: colors.text }]}>
-              Đang phát: Tập {activeEpisode.episodeNumber} - {activeEpisode.title}
-            </Text>
-            <Text style={[styles.currentEpSynopsis, { color: colors.textMuted }]}>
-              {activeEpisode.synopsis}
-            </Text>
-          </View>
-        </View>
-
-        {/* Episodes List Section */}
-        <View style={styles.episodesSection}>
-          <Text style={[styles.episodesHeading, { color: colors.text }]}>
-            Danh Sách Các Tập ({movie.episodes.length} tập)
-          </Text>
-
-          <View style={styles.episodesList}>
-            {movie.episodes.map((ep) => {
-              const isCurrent = ep.id === activeEpisode.id;
-              const isLocked = !ep.isFree && !ep.isUnlocked;
-
-              return (
-                <TouchableOpacity
-                  key={ep.id}
-                  activeOpacity={0.85}
-                  onPress={() => handleSelectEpisode(ep)}
-                  style={[
-                    styles.episodeItem,
-                    {
-                      backgroundColor: isCurrent
-                        ? isDark
-                          ? '#1E293B'
-                          : '#EFF6FF'
-                        : colors.surface,
-                      borderColor: isCurrent ? colors.ruby : colors.border,
-                      borderWidth: isCurrent ? 1.5 : 1,
-                    },
-                  ]}
-                >
-                  <View style={styles.thumbWrapper}>
-                    <Image source={{ uri: ep.thumbnailUrl }} style={styles.epThumb} />
-                    {isLocked ? (
-                      <View style={styles.lockedOverlay}>
-                        <FontAwesome5 name="lock" size={14} color="#F59E0B" />
-                        <Text style={styles.lockedPrice}>{ep.price} Coin</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.playOverlay}>
-                        <Ionicons name="play" size={16} color="#FFFFFF" />
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.epItemInfo}>
-                    <View style={styles.epItemTitleRow}>
-                      <Text style={[styles.epItemTitle, { color: colors.text }]} numberOfLines={1}>
-                        Tập {ep.episodeNumber}: {ep.title}
-                      </Text>
-                      {ep.isFree && (
-                        <View style={styles.freeBadge}>
-                          <Text style={styles.freeBadgeText}>Miễn phí</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={[styles.epItemDuration, { color: colors.textMuted }]}>
-                      {ep.duration}
-                    </Text>
-                    <Text style={[styles.epItemDesc, { color: colors.textSecondary }]} numberOfLines={2}>
-                      {ep.synopsis}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
+        ) : null}
       </ScrollView>
 
-      {/* AI Compliance Modal */}
-      <AIComplianceModal
-        visible={complianceModalOpen}
-        onClose={() => setComplianceModalOpen(false)}
-        compliance={movie.aiCompliance}
-      />
-
-      {/* Unlock Episode Modal */}
-      <UnlockEpisodeModal
-        visible={unlockModalOpen}
-        onClose={() => setUnlockModalOpen(false)}
-        episode={targetUnlockEp}
-        onUnlocked={() => {
-          if (targetUnlockEp) {
-            setActiveEpisode({ ...targetUnlockEp, isUnlocked: true });
-            setIsPlaying(true);
-          }
-        }}
-      />
+      <UnlockEpisodeModal locked={gate.locked} onClose={gate.close} onUnlocked={play} />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  playerContainer: {
-    width: '100%',
-    height: 240,
-    backgroundColor: '#000000',
-    position: 'relative',
-  },
-  videoPlaceholder: {
-    width: '100%',
-    height: '100%',
-  },
-  playerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    justifyContent: 'space-between',
-    padding: 12,
-  },
-  playerTopBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  playerBtn: {
-    padding: 6,
-  },
-  playerTitleBox: {
-    flex: 1,
-    marginHorizontal: 10,
-  },
-  playerMovieTitle: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  playerEpTitle: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 11,
-  },
-  qualityBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  qualityText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  centerPlayBtn: {
-    alignSelf: 'center',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playerBottomBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  scrubberContainer: {
-    flex: 1,
-    gap: 2,
-  },
-  scrubberTrack: {
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  scrubberProgress: {
-    width: '32%',
-    height: '100%',
-    backgroundColor: '#E50914',
-  },
-  timeText: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 9,
-  },
-  detailsContent: {
-    padding: 16,
-    gap: 16,
-    paddingBottom: 32,
-  },
-  metaSection: {
-    gap: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  metaBadges: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  badge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  matchBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.85)',
-  },
-  matchText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  complianceBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginTop: 2,
-  },
-  complianceBtnText: {
-    color: '#10B981',
-    fontSize: 11,
-    fontWeight: '700',
-    flex: 1,
-    marginLeft: 6,
-  },
-  synopsis: {
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  currentEpBox: {
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 4,
-    marginTop: 2,
-  },
-  currentEpTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  currentEpSynopsis: {
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  episodesSection: {
-    gap: 12,
-  },
-  episodesHeading: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  episodesList: {
-    gap: 10,
-  },
-  episodeItem: {
-    flexDirection: 'row',
-    padding: 10,
-    borderRadius: 10,
-    gap: 10,
-  },
-  thumbWrapper: {
-    width: 100,
-    height: 65,
-    borderRadius: 6,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: '#1E293B',
-  },
-  epThumb: {
-    width: '100%',
-    height: '100%',
-  },
-  lockedOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  lockedPrice: {
-    color: '#F59E0B',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  playOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  epItemInfo: {
-    flex: 1,
-    gap: 3,
-  },
-  epItemTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 6,
-  },
-  epItemTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    flex: 1,
-  },
-  freeBadge: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  freeBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  epItemDuration: {
-    fontSize: 11,
-  },
-  epItemDesc: {
-    fontSize: 11,
-    lineHeight: 14,
-  },
-});

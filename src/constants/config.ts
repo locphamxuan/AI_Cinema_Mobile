@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 
 /**
  * AI Cinema Mobile - Network & API Configuration
- * Supports Android Emulator (10.0.2.2), iOS Simulator / Web (localhost),
+ * Supports Android Emulator (10.0.2.2), iOS Simulator (localhost), Web (same-origin /api proxy),
  * and custom LAN IP via EXPO_PUBLIC_API_URL environment variable.
  */
 const getBaseUrl = (): string => {
@@ -15,7 +15,13 @@ const getBaseUrl = (): string => {
     return 'http://10.0.2.2:3001/api';
   }
 
-  // iOS Simulator & Web run on localhost
+  // Web calls its own origin; the Metro dev server proxies /api to the backend (metro.config.js),
+  // so the browser never makes a cross-origin request that the backend CORS list would block.
+  if (Platform.OS === 'web') {
+    return '/api';
+  }
+
+  // iOS Simulator runs on localhost
   return 'http://localhost:3001/api';
 };
 

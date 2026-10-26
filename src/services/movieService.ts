@@ -5,8 +5,8 @@ import type { ApiResponse } from '../types/api';
 import type { Movie, Episode } from '../types/movie';
 
 class MovieService {
-  async listMovies(params?: { category?: string; query?: string; search?: string; genre?: string; limit?: number }): Promise<ApiResponse<Movie[]>> {
-    const searchVal = params?.search || params?.query;
+  async listMovies(params?: { search?: string; genre?: string; limit?: number }): Promise<ApiResponse<Movie[]>> {
+    const searchVal = params?.search;
     const limit = params?.limit || 100;
 
     return apiClient.get<Movie[]>(API_ROUTES.MOVIES.LIST, {
@@ -42,51 +42,16 @@ class MovieService {
     });
   }
 
-  async getFeaturedMovie(): Promise<ApiResponse<Movie>> {
-    return apiClient.get<Movie>(API_ROUTES.MOVIES.FEATURED).then((res) => {
-      if (res.success && res.data) {
-        return {
-          ...res,
-          data: adaptApiMovieToMovie(res.data),
-        };
-      }
-      return res;
-    });
-  }
-
-  async getPopularMovies(): Promise<ApiResponse<Movie[]>> {
-    return apiClient.get<Movie[]>(API_ROUTES.MOVIES.POPULAR).then((res) => {
+  /** Released episodes of a movie; movie list/detail responses do not include them. */
+  async getEpisodes(movieId: string): Promise<ApiResponse<Episode[]>> {
+    return apiClient.get<Episode[]>(API_ROUTES.MOVIES.EPISODES(movieId)).then((res) => {
       if (res.success && Array.isArray(res.data)) {
         return {
           ...res,
-          data: res.data.map(adaptApiMovieToMovie),
+          data: res.data.map((ep, index) => adaptApiEpisodeToEpisode(ep, index + 1)),
         };
       }
-      return res;
-    });
-  }
-
-  async getNewReleases(): Promise<ApiResponse<Movie[]>> {
-    return apiClient.get<Movie[]>(API_ROUTES.MOVIES.NEW_RELEASES).then((res) => {
-      if (res.success && Array.isArray(res.data)) {
-        return {
-          ...res,
-          data: res.data.map(adaptApiMovieToMovie),
-        };
-      }
-      return res;
-    });
-  }
-
-  async getEpisodeDetail(id: string): Promise<ApiResponse<Episode>> {
-    return apiClient.get<Episode>(API_ROUTES.MOVIES.EPISODE_DETAIL(id)).then((res) => {
-      if (res.success && res.data) {
-        return {
-          ...res,
-          data: adaptApiEpisodeToEpisode(res.data),
-        };
-      }
-      return res;
+      return { ...res, success: false, data: [] };
     });
   }
 }

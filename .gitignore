@@ -109,10 +109,19 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
-# Local-only, machine-specific — not shared
+# Local-only, machine-specific - not shared
 .claude/
 .claude-tools/
 .claude-mem/
 CLAUDE.md
+.agents/
+.agent/
+GEMINI.md
 TESTING.md
+PROJECT_OVERVIEW.md
+PROJECT_CONTEXT.md
+PROGRESS.md
 .codegraph/
+
+# Agent working notes
+.artifacts/

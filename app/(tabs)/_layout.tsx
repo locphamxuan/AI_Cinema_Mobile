@@ -2,99 +2,64 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../src/theme';
-import { useAppStore } from '../../src/store/useAppStore';
+import { fonts, useTheme } from '../../src/theme';
+
+type IconName = keyof typeof Ionicons.glyphMap;
+
+/** Outline icon at rest, the filled one when the tab is open. */
+function tabIcon(name: IconName, active: IconName) {
+  return function TabIcon({ color, focused }: { color: string; focused: boolean }) {
+    return <Ionicons name={focused ? active : name} size={23} color={color} />;
+  };
+}
 
 export default function TabLayout() {
-  const { colors, isDark } = useTheme();
-  const { isAuthenticated } = useAppStore();
-
-  const activeColor = '#10B981'; // Green active color as requested
-  const inactiveColor = isDark ? '#94A3B8' : '#64748B';
+  const { isDark, colors } = useTheme();
 
   return (
     <Tabs
+      // Gói Tháng is opened from Hồ sơ or the unlock dialog; its back button returns there.
+      backBehavior="history"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: activeColor,
-        tabBarInactiveTintColor: inactiveColor,
+        tabBarActiveTintColor: colors.tabBarActive,
+        tabBarInactiveTintColor: colors.tabBarInactive,
+        // A floating pill; the open tab sits on a darker pill of its own.
+        tabBarActiveBackgroundColor: colors.tabBarActiveBg,
         tabBarStyle: {
-          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.88)' : 'rgba(255, 255, 255, 0.9)',
-          borderTopColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+          backgroundColor: colors.tabBarBg,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : colors.border,
+          borderWidth: 1,
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 86 : 64,
-          paddingBottom: Platform.OS === 'ios' ? 26 : 8,
+          borderRadius: 34,
+          height: 68,
+          paddingHorizontal: 6,
           paddingTop: 6,
+          paddingBottom: 6,
           position: 'absolute',
-          elevation: 0,
+          left: 16,
+          right: 16,
+          bottom: Platform.OS === 'ios' ? 24 : 14,
+          elevation: 6,
         },
         tabBarItemStyle: {
+          borderRadius: 28,
+          marginHorizontal: 2,
           justifyContent: 'center',
           alignItems: 'center',
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '700',
-          lineHeight: 14,
+          fontFamily: fonts.semibold,
+          fontSize: 12,
           marginTop: 2,
         },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Trang chủ',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Khám phá',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="schedule"
-        options={{
-          title: 'Lịch Chiếu',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="vip"
-        options={{
-          title: 'Gói VIP',
-          href: null, // hidden in main bottom tab
-        }}
-      />
-
-      <Tabs.Screen
-        name="studio"
-        options={{
-          title: 'Studio AI',
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Tài khoản',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={color} />
-          ),
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Trang chủ', tabBarIcon: tabIcon('play-circle-outline', 'play-circle') }} />
+      <Tabs.Screen name="explore" options={{ title: 'Khám phá', tabBarIcon: tabIcon('compass-outline', 'compass') }} />
+      <Tabs.Screen name="schedule" options={{ title: 'Lịch chiếu', tabBarIcon: tabIcon('calendar-clear-outline', 'calendar-clear') }} />
+      <Tabs.Screen name="vip" options={{ title: 'Gói Tháng', href: null }} />
+      <Tabs.Screen name="profile" options={{ title: 'Hồ sơ', tabBarIcon: tabIcon('person-circle-outline', 'person-circle') }} />
     </Tabs>
   );
 }

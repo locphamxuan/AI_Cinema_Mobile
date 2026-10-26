@@ -1,13 +1,13 @@
 /**
  * AI Cinema Mobile - Backend API Endpoints Registry
- * Maps 1-to-1 with NestJS Backend Controllers
+ * Maps 1-to-1 with NestJS Backend Controllers (39 Endpoints Spec Match)
  */
 export const API_ROUTES = {
   // Auth
   AUTH: {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
-    PROFILE: '/auth/profile',
+    PROFILE: '/auth/me',
     LOGOUT: '/auth/logout',
   },
 
@@ -15,57 +15,59 @@ export const API_ROUTES = {
   MOVIES: {
     LIST: '/movies',
     DETAIL: (id: string) => `/movies/${id}`,
-    BY_CATEGORY: (category: string) => `/movies/category/${category}`,
-    SEARCH: '/movies/search',
-    FEATURED: '/movies/featured',
-    POPULAR: '/movies/popular',
-    NEW_RELEASES: '/movies/new-releases',
-    EPISODE_DETAIL: (id: string) => `/catalog/episodes/${id}`,
+    EPISODES: (movieId: string) => `/movies/${movieId}/episodes`,
+    ENGAGEMENT: (movieId: string) => `/movies/${movieId}/engagement`,
+    LIKE: (movieId: string) => `/movies/${movieId}/like`,
+    VIEWS: (episodeId: string) => `/episodes/${episodeId}/views`,
+    SUBTITLE: (subtitleId: string) => `/subtitles/${subtitleId}`,
   },
 
-  // Wallet & Payments
+  // In-app notifications of the signed-in account
+  NOTIFICATIONS: {
+    LIST: '/notifications',
+    UNREAD_COUNT: '/notifications/unread-count',
+    READ_ALL: '/notifications/read-all',
+    READ: (id: string) => `/notifications/${id}/read`,
+  },
+
+  // MF-2 - wallet & Coin top-ups
   WALLET: {
     INFO: '/wallet',
-    CHECK_IN: '/wallet/check-in',
-    STREAK: '/wallet/streak',
-    DEPOSIT: '/wallet/deposit',
-    TRANSACTIONS: '/wallet/transactions',
-    UNLOCK_EPISODE: '/wallet/unlock-episode',
+    AFFORDABILITY: '/wallet/affordability',
+    TOP_UPS: '/wallet/top-ups',
+    TOP_UP_OPTIONS: '/wallet/top-ups/options',
+    TOP_UP_DETAIL: (topUpId: string) => `/wallet/top-ups/${topUpId}`,
+    STATEMENTS: '/wallet/statements',
+    TRANSACTION_DETAIL: (transactionId: string) => `/wallet/transactions/${transactionId}`,
   },
 
-  // Subscription (VIP Plans)
+  // MF-2 - episode access decision and single-episode purchase
+  ACCESS: {
+    DECISION: (episodeId: string) => `/episodes/${episodeId}/access`,
+    PURCHASE: (episodeId: string) => `/episodes/${episodeId}/purchase`,
+  },
+
+  // MF-2 - monthly plan
   SUBSCRIPTION: {
-    CURRENT: '/subscription',
-    SUBSCRIBE: '/subscription/subscribe',
-    CANCEL: '/subscription/cancel',
-    TOGGLE_AUTO_RENEW: '/subscription/toggle-auto-renew',
-    PLANS: '/subscription/plans',
+    PLANS: '/membership-plans',
+    MINE: '/subscriptions/me',
+    QUOTE: '/subscriptions',
+    ACTIVATE: (id: string) => `/subscriptions/${id}/activate`,
+    CANCEL_RENEW: (id: string) => `/subscriptions/${id}/cancel-auto-renew`,
+    RESUME_RENEW: (id: string) => `/subscriptions/${id}/resume-auto-renew`,
+    CYCLES: (id: string) => `/subscriptions/${id}/cycles`,
   },
 
-  // Production Workflow (Mobile Studio)
-  PRODUCTION: {
-    PROJECTS: '/production-projects',
-    PROJECT_DETAIL: (projectId: string) => `/production-projects/${projectId}`,
-    PLANS: (projectId: string) => `/production-projects/${projectId}/plans`,
-    PLAN_DETAIL: (planId: string) => `/production-plans/${planId}`,
-    PLAN_SUBMIT: (planId: string) => `/production-plans/${planId}/submit`,
-    PLAN_REVIEWS: (planId: string) => `/production-plans/${planId}/plan-reviews`,
-    QUOTA_ALLOCATIONS: (planId: string) => `/production-plans/${planId}/quota-allocations`,
-    SCENES: (planId: string) => `/production-plans/${planId}/scenes`,
-    SCENE_DETAIL: (sceneId: string) => `/scenes/${sceneId}`,
-    SCENE_SUBMIT: (sceneId: string) => `/scenes/${sceneId}/submit`,
-    GENERATION_JOBS: (planId: string) => `/production-plans/${planId}/generation-jobs`,
-    JOB_DETAIL: (jobId: string) => `/generation-jobs/${jobId}`,
-    JOB_RETRY: (jobId: string) => `/generation-jobs/${jobId}/retry`,
-    PACKAGES: (planId: string) => `/production-plans/${planId}/episode-packages`,
-    PACKAGE_DETAIL: (packageId: string) => `/episode-packages/${packageId}`,
-    COMPLIANCE_CHECKS: (packageId: string) => `/episode-packages/${packageId}/compliance-checks`,
+  // MF-2 - daily check-in and reward wheel
+  REWARDS: {
+    STATUS: '/daily-rewards/status',
+    CHECK_IN: '/daily-rewards/check-in',
+    SPINS: '/rewards/spins',
   },
 
   // Chat & AI Support
   CHAT: {
     SEND_MESSAGE: '/chat/message',
-    HISTORY: '/chat/history',
     TICKET: '/chat/ticket',
   },
 } as const;

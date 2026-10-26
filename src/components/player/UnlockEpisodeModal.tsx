@@ -1,287 +1,138 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, Modal, Pressable, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { FontAwesome5, Ionicons } from '@expo/vector-icons';
-import { Episode } from '../../types/movie';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../../theme';
+import { episodeAccessService } from '../../services/episodeAccessService';
+import { episodeLabel } from '../../lib/episodeLabel';
+import { idempotencyKey } from '../../lib/ids';
+import { Button } from '../common/Button';
+import type { LockedEpisode } from '../../hooks/useEpisodeGate';
+import type { Episode } from '../../types/movie';
+import { styles } from '../../styles/components/player/UnlockEpisodeModal.styles';
 
 interface UnlockEpisodeModalProps {
-  visible: boolean;
+  /** The episode the BE refused, with its decision; null hides the modal. */
+  locked: LockedEpisode | null;
   onClose: () => void;
-  episode: Episode | null;
-  onUnlocked: () => void;
+  onUnlocked: (episode: Episode) => void;
 }
 
-export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({
-  visible,
-  onClose,
-  episode,
-  onUnlocked,
-}) => {
+/** Main Coins pay first, bonus Coins cover the rest (BR-01); shown before the member confirms. */
+export function splitPrice(price: number, mainCoin: number) {
+  const main = Math.min(mainCoin, price);
+  return { main, bonus: price - main };
+}
+
+export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, onClose, onUnlocked }) => {
   const router = useRouter();
-  const { colors, isDark } = useTheme();
-  const { wallet, unlockEpisode, setTopUpModalOpen } = useAppStore();
+  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const { setWalletBalance, markEpisodeUnlocked, setTopUpModalOpen, currentMovie } = useAppStore();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [paying, setPaying] = useState(false);
+  // One key per opened episode: a double tap or a retry is charged once.
+  const [key, setKey] = useState({ episodeId: '', value: '' });
 
-  if (!episode) return null;
+  if (!locked) return null;
+  const { episode, decision } = locked;
+  const { coinPrice, mainBalance = 0, bonusBalance = 0, enoughCoins = false, missingCoins = 0, monthlyPlanCoinPrice } = decision.required;
+  const canBuy = decision.accessMethods.includes('UNLOCK_EPISODE');
+  const canJoinPlan = decision.accessMethods.includes('MONTHLY_PLAN');
+  const split = splitPrice(coinPrice, mainBalance);
+  const named = episode.title && episode.title !== `Tập ${episode.episodeNumber}`;
+  const siblings = currentMovie?.episodes?.some((ep) => ep.id === episode.id) ? currentMovie.episodes : null;
+  const name = siblings ? episodeLabel(episode, siblings) : `Tập ${episode.episodeNumber}`;
 
-  const totalBalance = wallet.mainCoin + wallet.bonusCoin;
-  const isEnough = totalBalance >= episode.price;
+  const close = () => {
+    setErrorMsg(null);
+    onClose();
+  };
 
   const handleUnlock = async () => {
     setErrorMsg(null);
-    const result = await unlockEpisode(episode.id);
-    if (result.success) {
-      onUnlocked();
-      onClose();
-    } else {
-      setErrorMsg(result.error || 'Mở khóa không thành công.');
+    setPaying(true);
+    const value = key.episodeId === episode.id ? key.value : idempotencyKey('ep-');
+    setKey({ episodeId: episode.id, value });
+    const res = await episodeAccessService.purchaseEpisode(episode.id, value);
+    setPaying(false);
+    if (!res.success || !res.data) {
+      setErrorMsg(res.message || 'Chưa mở được tập này. Bấm lại để thử, Coin sẽ không bị trừ hai lần.');
+      return;
     }
+    setWalletBalance(res.data.mainBalance, res.data.bonusBalance);
+    markEpisodeUnlocked(episode.id);
+    onUnlocked(episode);
+    close();
   };
 
+  const line = (label: string, value: string, tone?: string) => (
+    <View style={styles.line}>
+      <Text style={[styles.lineLabel, { color: colors.textSecondary }]}>{label}</Text>
+      <Text style={[styles.lineValue, { color: tone ?? colors.text }]}>{value}</Text>
+    </View>
+  );
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View
-          style={[
-            styles.container,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          {/* Icon Header */}
-          <View style={[styles.iconCircle, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-            <FontAwesome5 name="lock-open" size={24} color="#F59E0B" />
-          </View>
+    <Modal visible transparent animationType="slide" onRequestClose={close}>
+      <Pressable style={[styles.backdrop, { backgroundColor: colors.overlay }]} onPress={paying ? undefined : close} accessibilityLabel="Đóng" />
+      <View style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        <View style={[styles.handle, { backgroundColor: colors.borderLight }]} />
+        <Text style={[styles.kicker, { color: colors.textMuted }]}>Mở khóa {name.charAt(0).toLowerCase() + name.slice(1)}</Text>
+        {named ? <Text style={[styles.episodeName, { color: colors.text }]}>{episode.title}</Text> : null}
 
-          <Text style={[styles.title, { color: colors.text }]}>
-            Mở Khóa Tập {episode.episodeNumber}: {episode.title}
-          </Text>
+        <View style={styles.priceRow}>
+          <Text style={[styles.price, { color: colors.text }]}>{coinPrice}</Text>
+          <Text style={[styles.priceUnit, { color: colors.textSecondary }]}>Coin</Text>
+        </View>
 
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Sử dụng Coin để mở khóa quyền xem tập phim AI chất lượng cao không giới hạn.
-          </Text>
-
-          {/* Pricing breakdown */}
-          <View
-            style={[
-              styles.priceBox,
-              {
-                backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <View style={styles.priceRow}>
-              <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Giá mở khóa:</Text>
-              <View style={styles.coinBadge}>
-                <FontAwesome5 name="coins" size={12} color="#F59E0B" />
-                <Text style={styles.coinAmount}>{episode.price} Coin</Text>
-              </View>
-            </View>
-
-            <View style={styles.priceRow}>
-              <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Số dư hiện có:</Text>
-              <Text style={[styles.balanceValue, { color: isEnough ? '#10B981' : '#EF4444' }]}>
-                {totalBalance} Coin (Chính: {wallet.mainCoin}, Thưởng: {wallet.bonusCoin})
-              </Text>
-            </View>
-          </View>
-
-          {errorMsg && (
-            <View style={styles.errorBox}>
-              <Ionicons name="alert-circle" size={16} color="#EF4444" />
-              <Text style={styles.errorText}>{errorMsg}</Text>
-            </View>
+        <View style={[styles.breakdown, { backgroundColor: colors.card }]}>
+          {enoughCoins ? (
+            <>
+              {line('Trừ Coin chính', `${split.main}`)}
+              {line('Trừ Coin thưởng', `${split.bonus}`)}
+              <View style={[styles.rule, { backgroundColor: colors.border }]} />
+              {line('Còn lại', `${mainBalance - split.main} chính, ${bonusBalance - split.bonus} thưởng`, colors.textSecondary)}
+            </>
+          ) : (
+            <>
+              {line('Trong ví', `${mainBalance} chính, ${bonusBalance} thưởng`)}
+              {line('Còn thiếu', `${missingCoins} Coin`, colors.danger)}
+            </>
           )}
+        </View>
+        <Text style={[styles.rulesNote, { color: colors.textMuted }]}>Coin chính được trừ trước, Coin thưởng bù phần còn thiếu.</Text>
 
-          {/* Action buttons */}
-          <View style={styles.btnRow}>
-            <TouchableOpacity
-              style={[styles.cancelBtn, { borderColor: colors.border }]}
-              onPress={onClose}
-            >
-              <Text style={[styles.cancelBtnText, { color: colors.textSecondary }]}>Đóng</Text>
-            </TouchableOpacity>
+        {errorMsg && <Text style={[styles.error, { color: colors.danger }]}>{errorMsg}</Text>}
 
-            {isEnough ? (
-              <TouchableOpacity
-                style={[styles.confirmBtn, { backgroundColor: colors.ruby }]}
-                onPress={handleUnlock}
-              >
-                <Text style={styles.confirmBtnText}>Xác nhận mở khóa</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.topUpBtn, { backgroundColor: '#F59E0B' }]}
-                onPress={() => {
-                  onClose();
-                  setTopUpModalOpen(true);
-                }}
-              >
-                <Text style={styles.topUpBtnText}>Nạp thêm Coin</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Option 2: Register Membership */}
-          <TouchableOpacity
-            style={[
-              styles.membershipBtn,
-              {
-                backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.1)',
-                borderColor: 'rgba(245, 158, 11, 0.4)',
-              },
-            ]}
+        {canBuy && enoughCoins ? (
+          <Button label={`Mở khóa với ${coinPrice} Coin`} onPress={handleUnlock} loading={paying} />
+        ) : (
+          <Button
+            label="Nạp Coin"
             onPress={() => {
-              onClose();
+              close();
+              setTopUpModalOpen(true);
+            }}
+          />
+        )}
+
+        {canJoinPlan && (
+          <TouchableOpacity
+            style={styles.planLink}
+            disabled={paying}
+            onPress={() => {
+              close();
               router.push('/(tabs)/vip');
             }}
           >
-            <FontAwesome5 name="crown" size={14} color="#F59E0B" />
-            <Text style={styles.membershipBtnText}>Hoặc Đăng Ký Gói VIP (Membership)</Text>
+            <Text style={[styles.planText, { color: colors.textSecondary }]}>
+              Hoặc dùng Gói Tháng{monthlyPlanCoinPrice ? ` (${monthlyPlanCoinPrice} Coin)` : ''} để xem mọi tập
+            </Text>
           </TouchableOpacity>
-        </View>
+        )}
       </View>
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  container: {
-    width: '100%',
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 20,
-    alignItems: 'center',
-  },
-  iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 16,
-    marginBottom: 16,
-  },
-  priceBox: {
-    width: '100%',
-    borderRadius: 10,
-    borderWidth: 1,
-    padding: 12,
-    gap: 8,
-    marginBottom: 16,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  priceLabel: {
-    fontSize: 12,
-  },
-  coinBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  coinAmount: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#F59E0B',
-  },
-  balanceValue: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    padding: 8,
-    borderRadius: 6,
-    marginBottom: 12,
-    width: '100%',
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 12,
-    flex: 1,
-  },
-  btnRow: {
-    flexDirection: 'row',
-    gap: 10,
-    width: '100%',
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  cancelBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  confirmBtn: {
-    flex: 2,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  confirmBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  topUpBtn: {
-    flex: 2,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  topUpBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  membershipBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    width: '100%',
-    marginTop: 10,
-    paddingVertical: 11,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  membershipBtnText: {
-    color: '#F59E0B',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-});

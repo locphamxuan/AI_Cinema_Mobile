@@ -2,51 +2,36 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-import { WalletState, CheckInStreak } from '../types/wallet';
+import { WalletState } from '../types/wallet';
 import { Movie, WatchHistoryItem } from '../types/movie';
-import { UserSubscription } from '../types/subscription';
-import { Transaction } from '../types/transaction';
+import type { CheckInResult, DailyRewardStatus, MySubscription } from '../types/episodeAccess';
 import { ChatMessage, ChatPhase, SupportTicket } from '../types/chat';
 import { UserProfile } from '../types/auth';
-import { VN_DAY_LABELS } from '../utils/date';
 import {
   authService,
   movieService,
   walletService,
-  subscriptionService,
+  episodeAccessService,
+  rewardService,
   chatService,
 } from '../services';
 import { apiClient } from '../services/apiClient';
-import {
-  adaptApiMovieToMovie,
-  adaptApiWalletToWallet,
-  adaptApiCheckInToStreak,
-  adaptUserProfile,
-} from '../lib/apiAdapter';
-import { getTodayDayIndex } from '../utils/date';
-
-export const emptySubscription: UserSubscription = {
-  plan: null,
-  status: 'none',
-  startDate: null,
-  endDate: null,
-  autoRenew: false,
-  paymentMethod: '',
-};
+import { adaptUserProfile } from '../lib/apiAdapter';
 
 const emptyWallet: WalletState = { mainCoin: 0, bonusCoin: 0 };
 
-const createEmptyCheckInStreak = (): CheckInStreak => ({
-  days: VN_DAY_LABELS.map((dayLabel, dayIndex) => ({
-    dayIndex,
-    dayLabel,
-    reward: 0,
-    claimed: false,
-    isToday: dayIndex === getTodayDayIndex(),
-  })),
-  currentStreak: 0,
-  lastCheckInDate: null,
-  todayClaimed: false,
+/** A plan opens every episode only while ACTIVE and inside the period already paid for. */
+export const planIsRunning = (plan: MySubscription | null, now = Date.now()) =>
+  plan !== null && plan.status === 'ACTIVE' && new Date(plan.currentPeriodEnd).getTime() > now;
+
+/** Everything tied to the signed-in account, reset on logout or when the session expires. */
+const signedOutState = () => ({
+  isAuthenticated: false,
+  user: null,
+  isVIPMode: false,
+  wallet: emptyWallet,
+  subscription: null as MySubscription | null,
+  dailyReward: null as DailyRewardStatus | null,
 });
 
 interface AppState {
@@ -74,29 +59,28 @@ interface AppState {
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
 
-  // VIP Mode
+  /** The monthly plan is running (GET /subscriptions/me): every released episode is open. */
   isVIPMode: boolean;
 
-  // Wallet
+  // Wallet - balances always come from the BE
   wallet: WalletState;
-  checkInStreak: CheckInStreak;
-  claimDailyCheckIn: () => Promise<boolean>;
-  syncCheckInStreak: () => Promise<void>;
   setWalletBalance: (main: number, bonus: number) => void;
+
+  // Daily check-in (BR-05) and reward spins (BR-09)
+  dailyReward: DailyRewardStatus | null;
+  loadDailyReward: () => Promise<boolean>;
+  claimDailyCheckIn: () => Promise<{ success: boolean; result?: CheckInResult; error?: string }>;
+  isRewardSpinOpen: boolean;
+  setRewardSpinOpen: (open: boolean) => void;
 
   // Movie
   currentMovie: Movie | null;
-    setCurrentMovie: (movie: Movie | null) => void;
-  unlockEpisode: (episodeId: string) => Promise<{ success: boolean; error?: string }>;
+  setCurrentMovie: (movie: Movie | null) => void;
+  /** Flags an episode the BE granted (bought, plan, free starter); the wallet is left alone. */
+  markEpisodeUnlocked: (episodeId: string) => void;
 
-  // Subscription
-  subscription: UserSubscription;
-  toggleAutoRenew: () => Promise<void>;
-  cancelSubscription: () => Promise<void>;
-  subscribeToPlan: (planId: string) => Promise<{ success: boolean; error?: string }>;
-
-  // Transactions
-  transactions: Transaction[];
+  // Monthly plan
+  subscription: MySubscription | null;
 
   // Chat
   chatMessages: ChatMessage[];
@@ -127,8 +111,6 @@ interface AppState {
   watchHistory: WatchHistoryItem[];
   addToWatchHistory: (item: Omit<WatchHistoryItem, 'id' | 'lastWatchedAt'>) => void;
 
-  // Deposit
-  depositCoins: (amountVnd: number, paymentMethod: string) => Promise<boolean>;
 }
 
 export const useAppStore = create<AppState>()(
@@ -148,32 +130,37 @@ export const useAppStore = create<AppState>()(
             ? moviesRes.data
             : [];
           set({ movies: rawList, currentMovie: rawList[0] || null, isLoadingMovies: false });
-          if (get().isAuthenticated) await get().loadAccountData();
-        } catch (e) {
+          if (get().isAuthenticated) {
+            // The persisted "signed in" flag can outlive the session; confirm it with the backend.
+            const profileRes = await authService.getProfile();
+            if (profileRes.success) {
+              set((s) => ({ user: s.user ? { ...s.user, ...profileRes.data } : profileRes.data }));
+              await get().loadAccountData();
+            } else if (profileRes.statusCode === 401) {
+              await apiClient.clearSession();
+              set(signedOutState());
+            }
+          }
+        } catch {
           set({ isLoadingMovies: false });
         }
       },
 
       loadAccountData: async () => {
-        const [walletRes, streakRes, transactionsRes, subscriptionRes] = await Promise.all([
+        const [walletRes, planRes] = await Promise.all([
           walletService.getWalletInfo(),
-          walletService.getStreak(),
-          walletService.getTransactions(),
-          subscriptionService.getCurrentSubscription(),
+          episodeAccessService.getMySubscription(),
         ]);
-        set((state) => ({
-          ...(walletRes.success && walletRes.data ? { wallet: walletRes.data } : {}),
-          ...(streakRes.success && streakRes.data ? { checkInStreak: streakRes.data } : {}),
-          ...(transactionsRes.success && Array.isArray(transactionsRes.data)
-            ? { transactions: transactionsRes.data }
-            : {}),
-          ...(subscriptionRes.success && subscriptionRes.data
-            ? {
-                subscription: subscriptionRes.data,
-                isVIPMode: subscriptionRes.data.status === 'active' || state.user?.isVIP === true,
-              }
-            : {}),
-        }));
+        set((state) => {
+          if (!planRes.success) return walletRes.success ? { wallet: walletRes.data } : {};
+          const running = planIsRunning(planRes.data);
+          return {
+            ...(walletRes.success ? { wallet: walletRes.data } : {}),
+            subscription: planRes.data,
+            isVIPMode: running,
+            user: state.user ? { ...state.user, isVIP: running } : null,
+          };
+        });
       },
 
       fetchMovies: async (params) => {
@@ -190,7 +177,7 @@ export const useAppStore = create<AppState>()(
             }
           }
           set({ movies: [], isLoadingMovies: false });
-        } catch (e) {
+        } catch {
           set({ movies: [], isLoadingMovies: false });
         }
       },
@@ -210,48 +197,30 @@ export const useAppStore = create<AppState>()(
       login: async (email, password) => {
         const trimmedEmail = email.trim().toLowerCase();
 
-        // 1. Chặn tài khoản Maker / Checker trên Mobile - chỉ hỗ trợ trên Web Studio
-        if (trimmedEmail === 'creator@gmail.com' || trimmedEmail === 'reviewer@gmail.com') {
-          return {
-            success: false,
-            error: 'Tài khoản Sản xuất & Kiểm duyệt (Maker/Checker) chỉ hỗ trợ trên phiên bản Web Studio máy tính. Ứng dụng di động chỉ dành riêng cho Khán giả!',
-          };
-        }
-
         try {
           const res = await authService.login({ email: trimmedEmail, password });
           if (res.success && res.data?.user) {
             const profile = adaptUserProfile(res.data.user);
-            const isVip = profile.role === 'vip' || profile.isVIP;
-
+            // Whether the member has a plan is the BE's answer (loadAccountData), not the profile's.
             set({
+              ...signedOutState(),
               isAuthenticated: true,
-              user: {
-                ...profile,
-                role: isVip ? 'vip' : 'user',
-                isVIP: isVip,
-              },
-              isVIPMode: isVip,
+              user: { ...profile, role: 'user', isVIP: false },
               isAuthModalOpen: false,
-              subscription: emptySubscription,
             });
             await get().loadAccountData();
 
-            return {
-              success: true,
-              redirectUrl: '/',
-              role: isVip ? 'vip' : 'user',
-            };
+            return { success: true, redirectUrl: '/', role: 'user' };
           }
 
           return {
             success: false,
-            error: res.message || 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại!',
+            error: res.message || 'Email hoặc mật khẩu chưa đúng.',
           };
         } catch (e: any) {
           return {
             success: false,
-            error: e?.message || 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau!',
+            error: e?.message || 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
           };
         }
       },
@@ -259,14 +228,14 @@ export const useAppStore = create<AppState>()(
       register: async (name, email, password, dateOfBirth) => {
         const trimmedEmail = email.trim().toLowerCase();
         const trimmedName = name.trim();
-        const trimmedDob = (dateOfBirth || '2003-05-14').trim();
+        const trimmedDob = (dateOfBirth || '').trim();
 
         if (!trimmedEmail || !password || !trimmedName || !trimmedDob) {
-          return { success: false, error: 'Vui lòng điền đầy đủ thông tin đăng ký!' };
+          return { success: false, error: 'Điền đủ họ tên, ngày sinh, email và mật khẩu.' };
         }
 
         if (password.length < 8) {
-          return { success: false, error: 'Mật khẩu phải từ 8 đến 72 ký tự (có ít nhất 1 chữ cái và 1 chữ số)!' };
+          return { success: false, error: 'Mật khẩu cần 8 đến 72 ký tự, có cả chữ và số.' };
         }
 
         try {
@@ -277,45 +246,25 @@ export const useAppStore = create<AppState>()(
             dateOfBirth: trimmedDob,
           });
 
-          const regUser = res.data?.user || (res.data?.id || res.data?.email ? res.data : null);
-
-          if (res.success && (regUser || res.data)) {
-            const profile = adaptUserProfile(regUser || res.data);
-            set({
-              isAuthenticated: true,
-              user: profile,
-              isVIPMode: false,
-              isAuthModalOpen: false,
-              subscription: emptySubscription,
-            });
-
-            return { success: true, redirectUrl: '/', role: 'user' };
+          if (res.success) {
+            return { success: true, email: trimmedEmail };
           }
 
           return {
             success: false,
-            error: res.message || 'Đăng ký không thành công. Vui lòng thử lại!',
+            error: res.message || 'Chưa tạo được tài khoản. Thử lại sau ít phút.',
           };
         } catch (e: any) {
           return {
             success: false,
-            error: e?.message || 'Lỗi kết nối máy chủ khi đăng ký',
+            error: e?.message || 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
           };
         }
       },
 
       logout: async () => {
-        try {
-          await authService.logout();
-        } catch (e) {
-          console.warn('Logout error:', e);
-        }
-        set({
-          isAuthenticated: false,
-          user: null,
-          isVIPMode: false,
-          subscription: emptySubscription,
-        });
+        await authService.logout();
+        set(signedOutState());
       },
 
       // ===== THEME (Default Pure White Light Mode) =====
@@ -326,102 +275,48 @@ export const useAppStore = create<AppState>()(
         set({ theme: nextTheme });
       },
 
-      // ===== VIP MODE =====
+      // ===== MONTHLY PLAN & WALLET =====
       isVIPMode: false,
-      // ===== WALLET & CHECK-IN (PERSISTENT) =====
+      subscription: null,
       wallet: emptyWallet,
-      checkInStreak: createEmptyCheckInStreak(),
-
-      syncCheckInStreak: async () => {
-        const response = await walletService.getStreak();
-        if (response.success && response.data) set({ checkInStreak: response.data });
-      },
-
-      claimDailyCheckIn: async () => {
-        const response = await walletService.checkIn();
-        if (!response.success || !response.data) return false;
-        set({ checkInStreak: response.data });
-        if (response.data.wallet) set({ wallet: response.data.wallet });
-        else {
-          const walletRes = await walletService.getWalletInfo();
-          if (walletRes.success && walletRes.data) set({ wallet: walletRes.data });
-        }
-        const transactionsRes = await walletService.getTransactions();
-        if (transactionsRes.success && Array.isArray(transactionsRes.data)) {
-          set({ transactions: transactionsRes.data });
-        }
-        return true;
-      },
 
       setWalletBalance: (main, bonus) =>
         set((s) => ({ wallet: { ...s.wallet, mainCoin: main, bonusCoin: bonus } })),
+
+      // ===== DAILY CHECK-IN & REWARD SPINS =====
+      dailyReward: null,
+
+      loadDailyReward: async () => {
+        const res = await rewardService.getDailyStatus();
+        if (res.success && res.data) {
+          set({ dailyReward: res.data, wallet: { mainCoin: res.data.mainBalance, bonusCoin: res.data.bonusBalance } });
+          return true;
+        }
+        return false;
+      },
+
+      claimDailyCheckIn: async () => {
+        const res = await rewardService.checkIn();
+        if (!res.success || !res.data) return { success: false, error: res.message || 'Không điểm danh được.' };
+        set({ wallet: { mainCoin: res.data.mainBalance, bonusCoin: res.data.bonusBalance } });
+        await get().loadDailyReward();
+        return { success: true, result: res.data };
+      },
+
+      isRewardSpinOpen: false,
+      setRewardSpinOpen: (open) => set({ isRewardSpinOpen: open }),
 
       // ===== MOVIE =====
       currentMovie: null,
       setCurrentMovie: (movie) => set({ currentMovie: movie }),
 
-      unlockEpisode: async (episodeId: string) => {
-        const state = get();
-        const currentMovie = state.currentMovie;
-        if (!currentMovie) return { success: false, error: 'Không có phim đang được chọn' };
-        const episode = currentMovie.episodes.find((ep) => ep.id === episodeId);
-        if (!episode) return { success: false, error: 'Tập phim không tồn tại' };
-        if (episode.isUnlocked || episode.isFree) return { success: true };
-
-        const response = await walletService.unlockEpisode({ movieId: currentMovie.id, episodeId });
-        if (!response.success || response.data?.success === false) {
-          return { success: false, error: response.message || 'Không thể mở khóa tập phim' };
-        }
-
+      markEpisodeUnlocked: (episodeId) =>
         set((s) => ({
-          ...(response.data?.newBalance ? { wallet: response.data.newBalance } : {}),
-          currentMovie: {
-            ...currentMovie,
-            episodes: currentMovie.episodes.map((ep) =>
-              ep.id === episodeId ? { ...ep, isUnlocked: true } : ep
-            ),
+          currentMovie: s.currentMovie && {
+            ...s.currentMovie,
+            episodes: s.currentMovie.episodes.map((ep) => (ep.id === episodeId ? { ...ep, isUnlocked: true } : ep)),
           },
-        }));
-        if (!response.data?.newBalance) {
-          const walletRes = await walletService.getWalletInfo();
-          if (walletRes.success && walletRes.data) set({ wallet: walletRes.data });
-        }
-        const transactionsRes = await walletService.getTransactions();
-        if (transactionsRes.success && Array.isArray(transactionsRes.data)) {
-          set({ transactions: transactionsRes.data });
-        }
-        return { success: true };
-      },
-
-      // ===== SUBSCRIPTION =====
-      subscription: emptySubscription,
-
-      toggleAutoRenew: async () => {
-        const nextVal = !get().subscription.autoRenew;
-        const response = await subscriptionService.toggleAutoRenew(nextVal);
-        if (response.success && response.data) {
-          set((s) => ({ subscription: { ...s.subscription, autoRenew: response.data.autoRenew } }));
-        }
-      },
-
-      cancelSubscription: async () => {
-        const response = await subscriptionService.cancelSubscription();
-        if (response.success) {
-          set((s) => ({ subscription: { ...s.subscription, autoRenew: false, status: 'cancelled' } }));
-        }
-      },
-
-      subscribeToPlan: async (planId) => {
-        const response = await subscriptionService.subscribe(planId);
-        if (!response.success || !response.data) {
-          return { success: false, error: response.message || 'Không thể đăng ký gói VIP' };
-        }
-        set({ subscription: response.data, isVIPMode: response.data.status === 'active' });
-        return { success: true };
-      },
-
-      // ===== TRANSACTIONS =====
-      transactions: [],
+        })),
 
       // ===== CHAT =====
       chatMessages: [],
@@ -452,7 +347,7 @@ export const useAppStore = create<AppState>()(
             const botMsg: ChatMessage = {
               id: `msg-${Date.now()}`,
               sender: 'system',
-              content: response.message || 'Không thể gửi tin nhắn. Vui lòng thử lại.',
+              content: response.message || 'Tin nhắn chưa gửi được. Kiểm tra mạng rồi gửi lại.',
               timestamp: new Date().toISOString(),
             };
             set((s) => ({ chatMessages: [...s.chatMessages, botMsg] }));
@@ -497,9 +392,7 @@ export const useAppStore = create<AppState>()(
       // ===== MODALS =====
       isCheckInModalOpen: false,
       setCheckInModalOpen: (open) => {
-        if (open) {
-          get().syncCheckInStreak();
-        }
+        if (open) void get().loadDailyReward();
         set({ isCheckInModalOpen: open });
       },
 
@@ -533,21 +426,6 @@ export const useAppStore = create<AppState>()(
           return { watchHistory: [newItem, ...existing] };
         }),
 
-      // ===== DEPOSIT COINS =====
-      depositCoins: async (amountVnd, paymentMethod) => {
-        const response = await walletService.deposit({ amountVnd, paymentMethod });
-        if (!response.success || !response.data) return false;
-        if (response.data.balance) set({ wallet: response.data.balance });
-        else {
-          const walletRes = await walletService.getWalletInfo();
-          if (walletRes.success && walletRes.data) set({ wallet: walletRes.data });
-        }
-        const transactionsRes = await walletService.getTransactions();
-        if (transactionsRes.success && Array.isArray(transactionsRes.data)) {
-          set({ transactions: transactionsRes.data });
-        }
-        return true;
-      },
     }),
     {
       name: 'ai_cinema_mobile_app_store',
@@ -565,9 +443,8 @@ export const useAppStore = create<AppState>()(
           user: null,
           isVIPMode: false,
           wallet: emptyWallet,
-          checkInStreak: createEmptyCheckInStreak(),
-          subscription: emptySubscription,
-          transactions: [],
+          subscription: null,
+          dailyReward: null,
           myList: [],
           watchHistory: [],
         };
@@ -586,3 +463,6 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+
+// A refresh token the backend rejects means the session is over on every screen.
+apiClient.onSessionExpired(() => useAppStore.setState(signedOutState()));

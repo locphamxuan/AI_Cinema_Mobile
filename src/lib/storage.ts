@@ -5,8 +5,10 @@ export const STORAGE_KEYS = {
   REMEMBERED_PASSWORD: 'ai_cinema_remembered_password',
   REMEMBER_ME: 'ai_cinema_remember_me',
   AUTH_TOKEN: 'ai_cinema_auth_token',
+  REFRESH_TOKEN: 'ai_cinema_refresh_token',
   USER_DATA: 'ai_cinema_user_data',
   WALLET_DATA: 'ai_cinema_wallet_data',
+  RECENT_SEARCHES: 'ai_cinema_recent_searches',
 } as const;
 
 export const storage = {

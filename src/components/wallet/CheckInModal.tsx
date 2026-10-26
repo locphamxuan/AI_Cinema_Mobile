@@ -1,306 +1,168 @@
-import React, { useEffect } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, Modal, Pressable, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../../theme';
+import { Button } from '../common/Button';
+import type { CheckInResult, DailyRewardStatus } from '../../types/episodeAccess';
+import { styles } from '../../styles/components/wallet/CheckInModal.styles';
 
+/** The BE ladder runs seven streak days, then starts again at day 1. */
+const LADDER_LENGTH = 7;
+const LOAD_ERROR = 'Không tải được lịch điểm danh.';
+
+type DayState = 'claimed' | 'next' | 'locked';
+
+/** Each ladder day as the member sees it: what it pays, whether it is done, today, or ahead. */
+export function ladderDays(status: DailyRewardStatus | null, claimedDay?: number) {
+  const streakDay = claimedDay ?? status?.streakDay ?? 0;
+  const doneToday = claimedDay !== undefined || Boolean(status?.checkedInToday);
+  const nextDay = doneToday ? null : (streakDay % LADDER_LENGTH) + 1;
+  return Array.from({ length: LADDER_LENGTH }, (_, i) => {
+    const day = i + 1;
+    const rule = status?.ladder.find((r) => r.streakDay === day);
+    let state: DayState = 'locked';
+    if (day === nextDay) state = 'next';
+    else if (day <= streakDay) state = 'claimed';
+    return { day, bonusCoins: rule?.bonusCoins ?? 0, grantsSpin: rule?.grantsSpin ?? false, state };
+  });
+}
+
+/** BR-05: daily check-in pays bonus Coins only; the milestone day of the ladder also grants a spin (BR-09). */
 export const CheckInModal: React.FC = () => {
-  const { colors, isDark } = useTheme();
-  const {
-    isCheckInModalOpen,
-    setCheckInModalOpen,
-    checkInStreak,
-    claimDailyCheckIn,
-    syncCheckInStreak,
-    wallet,
-  } = useAppStore();
+  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const { isCheckInModalOpen, setCheckInModalOpen, dailyReward, loadDailyReward, claimDailyCheckIn, setRewardSpinOpen } = useAppStore();
+  const [claimed, setClaimed] = useState<CheckInResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const reloadStatus = useCallback(() => {
+    setErrorMsg(null);
+    setStatusLoading(true);
+    return loadDailyReward()
+      .then((loaded) => {
+        if (!loaded) setErrorMsg(LOAD_ERROR);
+        return loaded;
+      })
+      .catch(() => {
+        setErrorMsg(LOAD_ERROR);
+        return false;
+      })
+      .finally(() => setStatusLoading(false));
+  }, [loadDailyReward]);
 
   useEffect(() => {
-    if (isCheckInModalOpen) {
-      syncCheckInStreak();
-    }
-  }, [isCheckInModalOpen, syncCheckInStreak]);
+    if (isCheckInModalOpen) void reloadStatus();
+  }, [isCheckInModalOpen, reloadStatus]);
+
+  const close = () => {
+    setClaimed(null);
+    setErrorMsg(null);
+    setCheckInModalOpen(false);
+  };
+
+  const openWheel = () => {
+    close();
+    setRewardSpinOpen(true);
+  };
 
   const handleClaim = async () => {
-    const success = await claimDailyCheckIn();
-    if (success) {
-      Alert.alert('Thành công 🎉', 'Bạn đã nhận thưởng điểm danh hôm nay!');
+    setBusy(true);
+    setErrorMsg(null);
+    try {
+      const res = await claimDailyCheckIn();
+      if (res.success && res.result) setClaimed(res.result);
+      else setErrorMsg(res.error || 'Chưa điểm danh được. Thử lại sau ít phút.');
+    } catch {
+      // The claim may have gone through; the status from the BE says whether today is done.
+      await reloadStatus();
+    } finally {
+      setBusy(false);
     }
   };
 
+  const days = ladderDays(dailyReward, claimed?.streakDay);
+  const doneToday = Boolean(claimed) || Boolean(dailyReward?.checkedInToday);
+  const todayReward = dailyReward?.reward.bonusCoins ?? 0;
+  const spins = dailyReward?.availableSpins ?? 0;
+  const streak = claimed?.streakDay ?? dailyReward?.streakDay ?? 0;
+
+  let claimLabel = `Nhận ${todayReward} Coin thưởng`;
+  if (statusLoading || (!dailyReward && !errorMsg)) claimLabel = 'Đang tải…';
+  else if (doneToday) claimLabel = 'Hôm nay đã điểm danh';
+  else if (dailyReward && todayReward <= 0) claimLabel = 'Hôm nay không có quà điểm danh';
+
   return (
-    <Modal
-      visible={isCheckInModalOpen}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setCheckInModalOpen(false)}
-    >
-      <View style={styles.backdrop}>
-        <View
-          style={[
-            styles.container,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.titleRow}>
-              <View style={styles.fireBadge}>
-                <Ionicons name="flame" size={16} color="#FFFFFF" />
-              </View>
-              <Text style={[styles.title, { color: colors.text }]}>
-                Điểm Danh 7 Ngày Liên Tiếp
-              </Text>
-            </View>
-            <TouchableOpacity onPress={() => setCheckInModalOpen(false)} style={styles.closeBtn}>
-              <Ionicons name="close" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
+    <Modal visible={isCheckInModalOpen} transparent animationType="slide" onRequestClose={close}>
+      <Pressable style={[styles.backdrop, { backgroundColor: colors.overlay }]} onPress={close} accessibilityLabel="Đóng" />
+      <View style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        <View style={[styles.handle, { backgroundColor: colors.borderLight }]} />
+        <Text style={[styles.title, { color: colors.text }]}>Điểm danh</Text>
+        <Text style={[styles.sub, { color: colors.textSecondary }]}>
+          {streak > 0 ? `Bạn đang giữ chuỗi ${streak} ngày. ` : ''}Lỡ một ngày, chuỗi tính lại từ ngày 1.
+        </Text>
 
-          {/* Current streak badge */}
-          <View style={styles.streakBanner}>
-            <Text style={styles.streakText}>
-              🔥 Chuỗi điểm danh hiện tại: {checkInStreak.currentStreak} ngày
-            </Text>
-            <Text style={[styles.streakSub, { color: colors.textSecondary }]}>
-              Duy trì chuỗi điểm danh để nhận x2 Coin thưởng vào Chủ Nhật!
-            </Text>
-          </View>
+        {!dailyReward && !errorMsg && <ActivityIndicator style={styles.loading} color={colors.ruby} />}
 
-          {/* 7 Days Row */}
-          <View style={styles.daysRow}>
-            {checkInStreak.days.map((day) => {
+        {dailyReward && (
+          <View style={styles.days}>
+            {days.map((d) => {
+              const next = d.state === 'next';
+              const done = d.state === 'claimed';
               return (
                 <View
-                  key={day.dayIndex}
+                  key={d.day}
                   style={[
-                    styles.dayCard,
-                    {
-                      backgroundColor: day.claimed
-                        ? 'rgba(16, 185, 129, 0.12)'
-                        : day.isToday
-                        ? isDark
-                          ? '#1E293B'
-                          : '#EFF6FF'
-                        : isDark
-                        ? '#131B2E'
-                        : '#F8FAFC',
-                      borderColor: day.claimed
-                        ? '#10B981'
-                        : day.isToday
-                        ? colors.ruby
-                        : colors.border,
-                      borderWidth: day.isToday ? 2 : 1,
-                    },
+                    styles.day,
+                    { backgroundColor: next ? colors.rubySoft : colors.card, borderColor: next ? colors.ruby : 'transparent' },
                   ]}
+                  accessibilityLabel={`Ngày ${d.day}, ${d.bonusCoins} Coin thưởng${d.grantsSpin ? ' và một lượt quay' : ''}${done ? ', đã nhận' : ''}`}
                 >
-                  <Text
-                    style={[
-                      styles.dayLabel,
-                      {
-                        color: day.isToday ? (day.claimed ? '#10B981' : colors.ruby) : colors.textSecondary,
-                        fontWeight: day.isToday ? '800' : '700',
-                      },
-                    ]}
-                  >
-                    {day.dayLabel}
-                  </Text>
-                  <FontAwesome5
-                    name="coins"
-                    size={14}
-                    color={day.claimed ? '#10B981' : '#F59E0B'}
-                  />
-                  <Text style={[styles.rewardText, { color: colors.text }]}>
-                    +{day.reward}
-                  </Text>
-                  {day.claimed ? (
-                    <View style={{ alignItems: 'center', gap: 2 }}>
-                      <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-                      {day.isToday && (
-                        <Text
-                          style={[
-                            styles.todayTag,
-                            {
-                              backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                              color: '#10B981',
-                            },
-                          ]}
-                        >
-                          Hôm nay
-                        </Text>
-                      )}
-                    </View>
-                  ) : day.isToday ? (
-                    <Text style={styles.todayTag}>Hôm nay</Text>
-                  ) : null}
+                  <Text style={[styles.dayLabel, { color: next ? colors.ruby : colors.textMuted }]}>Ngày {d.day}</Text>
+                  {done ? (
+                    <Ionicons name="checkmark-circle" size={20} color={colors.verified} />
+                  ) : (
+                    <Ionicons name={d.grantsSpin ? 'gift' : 'ellipse'} size={d.grantsSpin ? 18 : 14} color={d.grantsSpin ? colors.neon : colors.coin} />
+                  )}
+                  <Text style={[styles.reward, { color: done ? colors.textMuted : colors.text }]}>+{d.bonusCoins}</Text>
                 </View>
               );
             })}
           </View>
+        )}
 
-          {/* User Balance summary */}
-          <View
-            style={[
-              styles.balanceBox,
-              {
-                backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
-              Số dư Coin Thưởng hiện có:
-            </Text>
-            <View style={styles.balanceRow}>
-              <Ionicons name="gift" size={14} color="#8B5CF6" />
-              <Text style={[styles.balanceValue, { color: colors.text }]}>
-                {wallet.bonusCoin} Coin
-              </Text>
-            </View>
+        {claimed && (
+          <View style={[styles.done, { backgroundColor: colors.verifiedSoft }]}>
+            <Text style={[styles.doneTitle, { color: colors.text }]}>+{claimed.bonusGranted} Coin thưởng đã vào ví</Text>
+            {claimed.spinGranted && (
+              <Text style={[styles.doneText, { color: colors.textSecondary }]}>Hôm nay là ngày mốc nên bạn có thêm 1 lượt quay.</Text>
+            )}
           </View>
+        )}
 
-          {/* Claim Button */}
-          <TouchableOpacity
-            style={[
-              styles.claimBtn,
-              {
-                backgroundColor: checkInStreak.todayClaimed ? '#10B981' : colors.ruby,
-              },
-            ]}
-            onPress={handleClaim}
-            disabled={checkInStreak.todayClaimed}
-          >
-            <Ionicons
-              name={checkInStreak.todayClaimed ? 'checkmark' : 'gift-outline'}
-              size={18}
-              color="#FFFFFF"
-            />
-            <Text style={styles.claimBtnText}>
-              {checkInStreak.todayClaimed
-                ? 'Đã Nhận Thưởng Hôm Nay'
-                : `Điểm Danh Nhận Thưởng Ngay (+${checkInStreak.days.find((d) => d.isToday)?.reward ?? 10} Coin)`}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {errorMsg && (
+          <View style={styles.errorRow}>
+            <Text style={[styles.error, { color: colors.danger }]}>{errorMsg}</Text>
+            <TouchableOpacity onPress={() => void reloadStatus()} hitSlop={8}>
+              <Text style={[styles.retry, { color: colors.text }]}>Tải lại</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <Button
+          label={claimLabel}
+          onPress={handleClaim}
+          loading={busy}
+          disabled={statusLoading || !dailyReward || doneToday || todayReward <= 0}
+        />
+
+        {spins > 0 && <Button label={`Quay thưởng (còn ${spins} lượt)`} icon="gift-outline" variant="secondary" onPress={openWheel} />}
+
+        <Text style={[styles.footnote, { color: colors.textMuted }]}>Coin thưởng có hạn dùng và được trừ sau Coin chính.</Text>
       </View>
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  container: {
-    width: '100%',
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 18,
-    gap: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  fireBadge: {
-    backgroundColor: '#F59E0B',
-    padding: 4,
-    borderRadius: 6,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  streakBanner: {
-    gap: 4,
-  },
-  streakText: {
-    color: '#F59E0B',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  streakSub: {
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  daysRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 4,
-    marginVertical: 4,
-  },
-  dayCard: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 2,
-    borderRadius: 8,
-    gap: 4,
-  },
-  dayLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  rewardText: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  todayTag: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: '#E50914',
-    backgroundColor: 'rgba(229, 9, 20, 0.12)',
-    paddingHorizontal: 3,
-    paddingVertical: 1,
-    borderRadius: 3,
-  },
-  balanceBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  balanceLabel: {
-    fontSize: 12,
-  },
-  balanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  balanceValue: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  claimBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 10,
-    gap: 6,
-  },
-  claimBtnText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-});

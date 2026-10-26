@@ -11,9 +11,12 @@
     "web": "expo start --web",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "test:cov": "jest --coverage"
   },
   "dependencies": {
+    "@expo-google-fonts/be-vietnam-pro": "^0.4.1",
+    "@expo-google-fonts/phudu": "^0.4.1",
     "@expo/vector-icons": "~14.0.4",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-navigation/bottom-tabs": "^7.0.0",
@@ -25,10 +28,12 @@
     "expo-linear-gradient": "~14.0.2",
     "expo-linking": "~7.0.0",
     "expo-router": "~4.0.0",
+    "expo-screen-orientation": "~8.0.4",
     "expo-splash-screen": "~0.29.0",
     "expo-status-bar": "~2.0.0",
     "expo-system-ui": "~4.0.0",
-    "expo-web-browser": "~14.0.0",
+    "expo-video": "~2.0.6",
+    "expo-web-browser": "~14.0.2",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-native": "0.76.9",

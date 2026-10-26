@@ -8,38 +8,39 @@ export interface AIComplianceInfo {
   disclaimer: string;
 }
 
-export type VersionStatus = 'published' | 'archived' | 'in_review';
+export type EpisodeAvailability = 'AVAILABLE' | 'UNDER_REVISION';
 
-export interface EpisodeVersion {
+/** A subtitle track of the released version; its WebVTT is read from GET /subtitles/:id. */
+export interface SubtitleTrack {
   id: string;
-  versionNumber: string; // 'v1.2.0', 'v1.1.0', 'v1.0.0'
-  versionTitle: string;  // 'Bản Remaster 4K & Sửa khẩu hình AI'
-  releaseDate: string;   // ISO date string
-  author: string;        // 'Đạo diễn AI / Studio'
-  aiModel: string;       // 'CinemaGen v3.2 + ElevenLabs HD'
-  status: VersionStatus;
-  statusLabel: string;   // 'Đang phát hành', 'Đã lưu trữ', 'Đang duyệt'
-  isCurrent: boolean;    // true nếu là bản mới nhất đang phát
-  moderationScore: number; // 98.5
-  changelog: string[];   // Các điểm hiệu chỉnh
-  hlsUrl: string;        // URL stream của bản này
-  duration: string;
+  /** ISO code: vi, en… */
+  language: string;
+  label: string;
+  isDefault: boolean;
 }
 
 export interface Episode {
   id: string;
+  seasonNumber: number;
   episodeNumber: number;
   title: string;
   duration: string;
   hlsUrl: string;
   thumbnailUrl: string;
+  /** Coin price of the episode (BE `coinPrice`). */
   price: number;
+  /** Free-starter episode (BE `isFreeStarter`, BR-03). */
   isFree: boolean;
-  isPreview: boolean;
+  /** UNDER_REVISION = taken down for fixing; shows `notice` and cannot be played (BR-56). */
+  availability: EpisodeAvailability;
+  notice: string | null;
+  /** AI content label text that must be shown with the episode (BR-10). */
+  aiLabel: string | null;
+  subtitles: SubtitleTrack[];
   isUnlocked: boolean;
   synopsis: string;
-  currentVersion?: string;
-  versions?: EpisodeVersion[];
+  /** When the episode went out (ISO), from its latest publication; null if the BE does not say. */
+  publishedAt: string | null;
 }
 
 export interface Movie {
@@ -50,6 +51,8 @@ export interface Movie {
   bannerUrl: string;
   description: string;
   year: number;
+  /** Spoken language of the film (BE defaultLanguage), e.g. vi or en. */
+  language: string;
   episodes: Episode[];
   aiCompliance: AIComplianceInfo;
   totalEpisodes: number;
