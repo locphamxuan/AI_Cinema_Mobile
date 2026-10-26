@@ -30,6 +30,12 @@ class MovieService {
     });
   }
 
+  /** The ranking tab: listed movies by plays, most first. */
+  async ranking(): Promise<ApiResponse<Movie[]>> {
+    const res = await apiClient.get<unknown[]>(API_ROUTES.MOVIES.RANKING);
+    return { ...res, data: res.success && Array.isArray(res.data) ? res.data.map(adaptApiMovieToMovie) : [] };
+  }
+
   async getMovieDetail(id: string): Promise<ApiResponse<Movie>> {
     return apiClient.get<Movie>(API_ROUTES.MOVIES.DETAIL(id)).then((res) => {
       if (res.success && res.data) {
