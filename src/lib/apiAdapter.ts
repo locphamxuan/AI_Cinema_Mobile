@@ -69,6 +69,7 @@ export function adaptApiMovieToMovie(api: any): Movie {
     audioQuality: api.audioQuality || '',
     ageRating: api.ageRating || '',
     badge: api.badge || '',
+    viewCount: typeof api.viewCount === 'number' ? api.viewCount : undefined,
   };
 }
 

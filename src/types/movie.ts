@@ -61,6 +61,8 @@ export interface Movie {
   audioQuality?: string;
   ageRating?: string;
   badge?: string;
+  /** Plays of all its episodes; only the ranking carries it. */
+  viewCount?: number;
 }
 
 export interface WatchHistoryItem {

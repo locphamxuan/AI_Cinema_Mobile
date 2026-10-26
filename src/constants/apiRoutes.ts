@@ -14,12 +14,26 @@ export const API_ROUTES = {
   // Movies & Catalog
   MOVIES: {
     LIST: '/movies',
+    RANKING: '/movies/ranking',
     DETAIL: (id: string) => `/movies/${id}`,
     EPISODES: (movieId: string) => `/movies/${movieId}/episodes`,
     ENGAGEMENT: (movieId: string) => `/movies/${movieId}/engagement`,
     LIKE: (movieId: string) => `/movies/${movieId}/like`,
     VIEWS: (episodeId: string) => `/episodes/${episodeId}/views`,
     SUBTITLE: (subtitleId: string) => `/subtitles/${subtitleId}`,
+  },
+
+  // "Danh sách của tôi": movies the member saved to watch later
+  SAVED_MOVIES: {
+    LIST: '/saved-movies',
+    ITEM: (movieId: string) => `/saved-movies/${movieId}`,
+  },
+
+  // MF-4 - registered devices and live streams of the member
+  DEVICES: {
+    LIST: '/devices',
+    REMOVE: (deviceId: string) => `/devices/${deviceId}`,
+    END_SESSION: (sessionId: string) => `/devices/sessions/${sessionId}/end`,
   },
 
   // In-app notifications of the signed-in account

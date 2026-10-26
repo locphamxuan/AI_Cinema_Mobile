@@ -103,10 +103,6 @@ interface AppState {
   isTopUpModalOpen: boolean;
   setTopUpModalOpen: (open: boolean) => void;
 
-  // My List
-  myList: string[];
-  toggleMyList: (movieId: string) => void;
-
   // Watch History
   watchHistory: WatchHistoryItem[];
   addToWatchHistory: (item: Omit<WatchHistoryItem, 'id' | 'lastWatchedAt'>) => void;
@@ -404,15 +400,6 @@ export const useAppStore = create<AppState>()(
       isTopUpModalOpen: false,
       setTopUpModalOpen: (open) => set({ isTopUpModalOpen: open }),
 
-      // ===== MY LIST =====
-      myList: [],
-      toggleMyList: (movieId) =>
-        set((s) => ({
-          myList: s.myList.includes(movieId)
-            ? s.myList.filter((id) => id !== movieId)
-            : [...s.myList, movieId],
-        })),
-
       // ===== WATCH HISTORY =====
       watchHistory: [],
       addToWatchHistory: (item) =>
@@ -445,7 +432,6 @@ export const useAppStore = create<AppState>()(
           wallet: emptyWallet,
           subscription: null,
           dailyReward: null,
-          myList: [],
           watchHistory: [],
         };
       },
@@ -456,7 +442,6 @@ export const useAppStore = create<AppState>()(
         isAuthenticated: state.isAuthenticated,
         user: state.user,
         isVIPMode: state.isVIPMode,
-        myList: state.myList,
         watchHistory: state.watchHistory,
         theme: state.theme,
       }),

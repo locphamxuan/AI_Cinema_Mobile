@@ -38,3 +38,17 @@ export function resumePointOf(session: Pick<StreamingSession, 'resumePositionSec
   if (duration && at >= duration * 0.95) return null;
   return at;
 }
+
+/** Slack for a player that stops a few frames short of the reported length. */
+const AD_END_SLACK_SECONDS = 0.5;
+
+/**
+ * Seconds of the ad still to play. The length the player reads from the video wins over the stored
+ * one; the ad counts as over once either says so or the player reported its end (BR-33).
+ */
+export function adSecondsLeft(position: number, playerDuration: number, storedDuration: number, reachedEnd: boolean): number {
+  if (reachedEnd) return 0;
+  const length = playerDuration > 0 ? playerDuration : storedDuration;
+  const left = length - position;
+  return left <= AD_END_SLACK_SECONDS ? 0 : Math.ceil(left);
+}

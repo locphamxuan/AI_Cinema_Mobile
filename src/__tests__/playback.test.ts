@@ -1,4 +1,4 @@
-import { cuesReached, resumePointOf, uuidV4 } from '../lib/playback';
+import { adSecondsLeft, cuesReached, resumePointOf, uuidV4 } from '../lib/playback';
 import { guestKey, playbackService } from '../services/playbackService';
 import { extractErrorMessage } from '../services/apiClient';
 import { storage, STORAGE_KEYS } from '../lib/storage';
@@ -43,6 +43,14 @@ describe('MF-3 playback session', () => {
     expect(headersOf(fetchMock.mock.calls[0])['Idempotency-Key']).toBe('k1');
     expect(headersOf(fetchMock.mock.calls[1])['X-Guest-Key']).toBeUndefined();
     expect(headersOf(fetchMock.mock.calls[1]).Authorization).toBe('Bearer token');
+    // MF-4: a member plays from this install's registered device, named on the device list.
+    expect(headersOf(fetchMock.mock.calls[0])['X-Device-Id']).toBeUndefined();
+    expect(headersOf(fetchMock.mock.calls[1])['X-Device-Id']).toMatch(UUID_V4);
+    expect(JSON.parse(String((fetchMock.mock.calls[1][1] as RequestInit).body))).toEqual({
+      episodeId: 'ep-1',
+      deviceName: expect.any(String),
+      devicePlatform: expect.any(String),
+    });
   });
 
   it('beats with the playhead and reads the ad a seek jumped over', async () => {
@@ -75,5 +83,22 @@ describe('MF-3 playback session', () => {
   it('explains the stream limit in Vietnamese', () => {
     const body = { error: { message: 'Too many streams', details: { reason: 'CONCURRENT_LIMIT_REACHED' } } };
     expect(extractErrorMessage(body)).toMatch(/nhiều thiết bị/);
+  });
+});
+
+describe('adSecondsLeft', () => {
+  it('counts down from the stored length until the player reads the video', () => {
+    expect(adSecondsLeft(0, 0, 15, false)).toBe(15);
+    expect(adSecondsLeft(4.2, 0, 15, false)).toBe(11);
+  });
+
+  it('prefers the length the player read from the video', () => {
+    expect(adSecondsLeft(10, 30, 15, false)).toBe(20);
+  });
+
+  it('is over at the end of the video, a few frames short, or once the player says so', () => {
+    expect(adSecondsLeft(30, 30, 15, false)).toBe(0);
+    expect(adSecondsLeft(29.7, 30, 15, false)).toBe(0);
+    expect(adSecondsLeft(3, 30, 15, true)).toBe(0);
   });
 });

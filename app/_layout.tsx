@@ -46,6 +46,9 @@ function RootLayoutContent() {
         <Stack.Screen name="wallet" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="settings" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="watch/[id]" options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="saved" options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="devices" options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="top-ups" options={{ headerShown: false, animation: 'slide_from_right' }} />
       </Stack>
 
       <AuthModal />

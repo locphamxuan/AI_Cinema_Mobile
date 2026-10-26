@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 import type { Movie } from '../../types/movie';
+import { compactCount } from '../movie/LikeButton';
 import { styles } from '../../styles/components/home/RankingList.styles';
 
 interface RankingListProps {
@@ -9,7 +11,7 @@ interface RankingListProps {
   onMoviePress: (movie: Movie) => void;
 }
 
-/** One film a row, led by its place in large condensed numerals; the top three in pink. */
+/** Films by plays, one a row, led by their place in large condensed numerals; the top three in pink. */
 export const RankingList: React.FC<RankingListProps> = ({ movies, onMoviePress }) => {
   const { colors } = useTheme();
 
@@ -31,6 +33,12 @@ export const RankingList: React.FC<RankingListProps> = ({ movies, onMoviePress }
             <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
               {movie.title}
             </Text>
+            {movie.viewCount !== undefined ? (
+              <View style={styles.views}>
+                <Ionicons name="eye-outline" size={13} color={colors.textMuted} />
+                <Text style={[styles.viewsText, { color: colors.textMuted }]}>{compactCount(movie.viewCount)} lượt xem</Text>
+              </View>
+            ) : null}
             {movie.genre[0] ? (
               <View style={[styles.tag, { backgroundColor: colors.chip }]}>
                 <Text style={[styles.tagText, { color: colors.neon }]}>{movie.genre[0]}</Text>

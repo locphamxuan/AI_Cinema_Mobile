@@ -111,6 +111,8 @@ export default function ProfileScreen() {
             value={isAuthenticated ? `${wallet.mainCoin} chính, ${wallet.bonusCoin} thưởng` : undefined}
             onPress={member(() => router.push('/wallet'))}
           />
+          <MenuRow icon="bookmark-outline" label="Phim đã lưu" onPress={member(() => router.push('/saved'))} />
+          <MenuRow icon="phone-portrait-outline" label="Thiết bị của tôi" onPress={member(() => router.push('/devices'))} />
           <MenuRow icon="gift-outline" label="Quà hằng ngày" onPress={member(() => setCheckInModalOpen(true))} />
           <MenuRow icon="notifications-outline" label="Thông báo" count={unread} onPress={member(() => router.push('/notifications'))} />
           <MenuRow icon="chatbubble-ellipses-outline" label="Hỗ trợ" onPress={toggleChat} />

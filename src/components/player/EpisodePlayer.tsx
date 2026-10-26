@@ -63,6 +63,8 @@ function StreamPlayer(props: StreamPlayerProps) {
   const cues = useSubtitleCues(subtitleTrackId);
   const line = subtitleTrackId ? cueAt(cues, currentTime) : null;
   const [controls, setControls] = React.useState(true);
+  // When the viewer last touched the player: only that restarts the hide countdown.
+  const [touchedAt, setTouchedAt] = React.useState(0);
   const [settings, setSettings] = React.useState(false);
   const [fullscreen, setFullscreen] = React.useState(false);
   const [rate, setRate] = React.useState(1);
@@ -75,12 +77,21 @@ function StreamPlayer(props: StreamPlayerProps) {
     }
   }, [playing, onStarted]);
 
-  // The controls fade away while the video plays; a tap brings them back.
+  // The controls fade away 3 s after the last touch while the video plays; a tap brings them back.
+  // The clock is left out on purpose: it ticks every 250 ms and would keep restarting the countdown.
   React.useEffect(() => {
     if (!controls || !playing || settings) return;
     const timer = setTimeout(() => setControls(false), HIDE_CONTROLS_MS);
     return () => clearTimeout(timer);
-  }, [controls, playing, settings, currentTime]);
+  }, [controls, playing, settings, touchedAt]);
+
+  /** A control the viewer used keeps the controls up for another full countdown. */
+  const touched =
+    <A extends unknown[]>(action: (...args: A) => void) =>
+    (...args: A) => {
+      setTouchedAt(Date.now());
+      action(...args);
+    };
 
   // Leaving the screen while fullscreen must not strand the app in landscape.
   React.useEffect(() => () => void lockPortrait(), []);
@@ -96,7 +107,7 @@ function StreamPlayer(props: StreamPlayerProps) {
   };
 
   const stage = (
-    <Pressable style={styles.fill} onPress={() => setControls((v) => !v)} accessibilityLabel="Hiện điều khiển">
+    <Pressable style={styles.fill} onPress={touched(() => setControls((v) => !v))} accessibilityLabel="Hiện điều khiển">
       <VideoView style={styles.fill} player={player} nativeControls={false} contentFit="contain" />
       {line ? (
         <View style={[styles.subtitleBox, controls && styles.subtitleRaised]} pointerEvents="none">
@@ -112,11 +123,11 @@ function StreamPlayer(props: StreamPlayerProps) {
           playing={playing}
           fullscreen={fullscreen}
           rate={rate}
-          onTogglePlay={() => (playing ? player.pause() : player.play())}
-          onSeekBy={(s) => seekTo(currentTime + s)}
-          onSeekTo={seekTo}
+          onTogglePlay={touched(() => (playing ? player.pause() : player.play()))}
+          onSeekBy={touched((s: number) => seekTo(currentTime + s))}
+          onSeekTo={touched(seekTo)}
           onSettings={() => setSettings(true)}
-          onToggleFullscreen={toggleFullscreen}
+          onToggleFullscreen={touched(toggleFullscreen)}
         />
       )}
       {playback.resumeAt !== null && !playback.activeAd ? (
