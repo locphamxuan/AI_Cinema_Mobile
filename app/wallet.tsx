@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useRouter } from 'expo-router';
 import { View, Text, ScrollView } from 'react-native';
 import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { MenuCard, MenuRow } from '../src/components/common/MenuRow';
@@ -10,6 +11,7 @@ import { styles } from '../src/styles/screens/wallet.styles';
 
 /** "Ví Coin": both balances (BR-01), top-up, check-in and the statement. */
 export default function WalletScreen() {
+  const router = useRouter();
   const { colors } = useTheme();
   const { wallet, loadAccountData, setTopUpModalOpen, setCheckInModalOpen } = useAppStore();
 
@@ -43,6 +45,7 @@ export default function WalletScreen() {
         </View>
 
         <MenuCard>
+          <MenuRow icon="receipt-outline" label="Lịch sử nạp Coin" onPress={() => router.push('/top-ups')} />
           <MenuRow icon="gift-outline" label="Điểm danh nhận Coin thưởng" onPress={() => setCheckInModalOpen(true)} last />
         </MenuCard>
 
