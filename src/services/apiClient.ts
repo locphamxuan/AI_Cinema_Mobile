@@ -8,6 +8,8 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   timeoutMs?: number;
   /** Set on the retry after a token refresh (and on auth calls) so a 401 is not retried again. */
   skipAuthRefresh?: boolean;
+  /** Keep a paginated `{ data, meta }` body whole instead of unwrapping it to the rows. */
+  keepEnvelope?: boolean;
 }
 
 interface SessionTokens {
@@ -20,12 +22,24 @@ const joinMessage = (value: unknown): string | undefined => {
   return typeof value === 'string' && value ? value : undefined;
 };
 
+/** Refusals the viewer can act on, keyed by the BE `details.reason` (Main Flow 3). */
+const REASON_MESSAGES: Record<string, string> = {
+  CONCURRENT_LIMIT_REACHED: 'Tài khoản đang xem trên quá nhiều thiết bị cùng lúc. Hãy dừng xem ở thiết bị khác rồi thử lại.',
+  MEDIA_NOT_READY: 'Tập phim chưa sẵn sàng để phát. Vui lòng quay lại sau.',
+  EPISODE_UNDER_REVISION: 'Tập phim đang được chỉnh sửa, vui lòng quay lại sau.',
+  PLAYBACK_ACCESS_REQUIRED: 'Bạn chưa có quyền xem tập này. Hãy mở khóa tập hoặc đăng ký gói.',
+  PLAYBACK_ACCESS_REVOKED: 'Quyền xem tập này đã hết hiệu lực.',
+};
+
 /**
  * The backend wraps errors as `{ error: { code, message, details[] } }`; validation details
  * are more useful to the user than the generic message. Plain `{ message }` is still accepted.
  */
 export const extractErrorMessage = (body: any): string | undefined =>
-  joinMessage(body?.error?.details) ?? joinMessage(body?.error?.message) ?? joinMessage(body?.message);
+  REASON_MESSAGES[body?.error?.details?.reason] ??
+  joinMessage(body?.error?.details) ??
+  joinMessage(body?.error?.message) ??
+  joinMessage(body?.message);
 
 class ApiClient {
   private baseUrl: string;
@@ -141,6 +155,7 @@ class ApiClient {
       timeoutMs = API_CONFIG.TIMEOUT_MS,
       headers: customHeaders,
       skipAuthRefresh = false,
+      keepEnvelope = false,
       ...restOptions
     } = options;
     const url = this.buildUrl(endpoint, params);
@@ -192,7 +207,7 @@ class ApiClient {
       const data = text ? JSON.parse(text) : null;
       return {
         success: true,
-        data: data?.data !== undefined ? data.data : data,
+        data: data?.data !== undefined && !keepEnvelope ? data.data : data,
         statusCode: response.status,
       };
     } catch (err: any) {

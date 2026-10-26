@@ -3,20 +3,25 @@ import { ActivityIndicator, Image, Modal, Pressable, Text, TouchableOpacity, Vie
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
+import { usePlaybackSession } from '../../hooks/usePlaybackSession';
 import { useSubtitleCues } from '../../hooks/useSubtitleCues';
 import { lockLandscape, lockPortrait } from '../../lib/orientation';
 import { seekTarget } from '../../lib/seek';
 import { cueAt } from '../../lib/vtt';
 import type { SubtitleTrack } from '../../types/movie';
+import type { StreamingSession } from '../../types/playback';
 import { PlayerControls } from './PlayerControls';
 import { PlayerSettingsSheet } from './PlayerSettingsSheet';
 import { DEFAULT_AI_LABEL } from './AIComplianceModal';
+import { AdBreakOverlay, ResumePrompt } from './PlaybackOverlays';
 import { styles } from '../../styles/components/player/EpisodePlayer.styles';
 const HIDE_CONTROLS_MS = 3000;
 
 interface EpisodePlayerProps {
-  /** What the BE handed over once access was granted; empty until the viewer presses play. */
+  /** The session's stream once Main Flow 3 opened one; empty until the viewer presses play. */
   streamUrl: string;
+  /** The streaming session the stream belongs to: ads, heartbeat and the resume point. */
+  session?: StreamingSession;
   posterUrl: string;
   /** AI label text that stays on the picture while the video plays (BR-10). */
   aiLabel: string | null;
@@ -44,13 +49,17 @@ function AiLabelOverlay({ text }: { text: string | null }) {
   );
 }
 
-function StreamPlayer(props: Required<Omit<EpisodePlayerProps, 'posterUrl' | 'checking' | 'onRequestPlay' | 'onStarted'>> & { onStarted?: () => void }) {
-  const { streamUrl, aiLabel, subtitles, subtitleTrackId, onSubtitleChange, audioLabel, onStarted } = props;
+type StreamPlayerProps = Required<Omit<EpisodePlayerProps, 'posterUrl' | 'checking' | 'onRequestPlay' | 'onStarted' | 'session'>> &
+  Pick<EpisodePlayerProps, 'onStarted' | 'session'>;
+
+function StreamPlayer(props: StreamPlayerProps) {
+  const { streamUrl, session, aiLabel, subtitles, subtitleTrackId, onSubtitleChange, audioLabel, onStarted } = props;
   const player = useVideoPlayer({ uri: streamUrl }, (p) => {
     p.timeUpdateEventInterval = 0.25;
     p.play();
   });
   const { currentTime, duration, playing } = usePlayerClock(player);
+  const playback = usePlaybackSession(player, session, currentTime);
   const cues = useSubtitleCues(subtitleTrackId);
   const line = subtitleTrackId ? cueAt(cues, currentTime) : null;
   const [controls, setControls] = React.useState(true);
@@ -96,7 +105,7 @@ function StreamPlayer(props: Required<Omit<EpisodePlayerProps, 'posterUrl' | 'ch
           </Text>
         </View>
       ) : null}
-      {controls && (
+      {controls && !playback.activeAd && (
         <PlayerControls
           currentTime={currentTime}
           duration={duration}
@@ -110,6 +119,10 @@ function StreamPlayer(props: Required<Omit<EpisodePlayerProps, 'posterUrl' | 'ch
           onToggleFullscreen={toggleFullscreen}
         />
       )}
+      {playback.resumeAt !== null && !playback.activeAd ? (
+        <ResumePrompt at={playback.resumeAt} onAnswer={playback.answerResume} />
+      ) : null}
+      {playback.activeAd ? <AdBreakOverlay key={playback.activeAd.breakId} cue={playback.activeAd} onDone={playback.finishAd} /> : null}
       <AiLabelOverlay text={aiLabel} />
     </Pressable>
   );
@@ -142,6 +155,7 @@ function StreamPlayer(props: Required<Omit<EpisodePlayerProps, 'posterUrl' | 'ch
 
 export function EpisodePlayer({
   streamUrl,
+  session,
   posterUrl,
   aiLabel,
   checking,
@@ -159,6 +173,7 @@ export function EpisodePlayer({
         <StreamPlayer
           key={streamUrl}
           streamUrl={streamUrl}
+          session={session}
           aiLabel={aiLabel}
           subtitles={subtitles}
           subtitleTrackId={subtitleTrackId}

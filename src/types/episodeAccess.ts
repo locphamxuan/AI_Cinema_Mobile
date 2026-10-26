@@ -15,7 +15,7 @@ export interface AccessDecision {
   source: AccessSourceName;
   actorType: 'GUEST' | 'MEMBER';
   planCode?: string;
-  /** What the player loads; the BE only sends it once access is granted. */
+  /** @deprecated Bypasses Main Flow 3 (ads, stream limit, progress); the player opens a playback session. */
   streamUrl?: string;
   accessMethods: AccessMethod[];
   required: {

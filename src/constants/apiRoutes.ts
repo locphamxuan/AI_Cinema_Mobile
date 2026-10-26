@@ -47,6 +47,16 @@ export const API_ROUTES = {
     PURCHASE: (episodeId: string) => `/episodes/${episodeId}/purchase`,
   },
 
+  // MF-3 - streaming session, heartbeat and mid-roll ads
+  PLAYBACK: {
+    SESSIONS: '/playback/sessions',
+    HEARTBEAT: (sessionId: string) => `/playback/sessions/${sessionId}/heartbeat`,
+    STOP: (sessionId: string) => `/playback/sessions/${sessionId}/stop`,
+    COMPLETE: (sessionId: string) => `/playback/sessions/${sessionId}/complete`,
+    AD_STARTED: (sessionId: string, breakId: string) => `/playback/sessions/${sessionId}/ad-breaks/${breakId}/played`,
+    AD_FINISHED: (sessionId: string, breakId: string) => `/playback/sessions/${sessionId}/ad-breaks/${breakId}/completed`,
+  },
+
   // MF-2 - monthly plan
   SUBSCRIPTION: {
     PLANS: '/membership-plans',
