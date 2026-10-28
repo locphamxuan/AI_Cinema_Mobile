@@ -8,6 +8,7 @@ import { fonts, useTheme } from '../../theme';
 import { storage, STORAGE_KEYS } from '../../lib/storage';
 import { MIN_PASSWORD, authFormError } from '../../lib/authForm';
 import { Button } from '../common/Button';
+import { GoogleSignInSection } from './GoogleSignInSection';
 import { styles } from '../../styles/components/auth/AuthModal.styles';
 
 export const AuthModal: React.FC = () => {
@@ -204,6 +205,8 @@ export const AuthModal: React.FC = () => {
             {error && <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>}
 
             <Button label={isLogin ? 'Đăng nhập' : 'Tạo tài khoản'} onPress={handleSubmit} loading={loading} />
+
+            <GoogleSignInSection />
 
             <TouchableOpacity style={styles.switch} onPress={switchMode}>
               <Text style={[styles.switchText, { color: colors.textMuted }]}>
