@@ -2,7 +2,7 @@ import { apiClient } from './apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import { adaptUserProfile } from '../lib/apiAdapter';
-import type { ApiResponse, AuthResponseDto, LoginRequestDto, RegisterRequestDto } from '../types/api';
+import type { ApiResponse, AuthResponseDto, GoogleLoginRequestDto, LoginRequestDto, RegisterRequestDto } from '../types/api';
 import type { UserProfile } from '../types/auth';
 
 // Auth calls answer 401 for bad credentials; that must not trigger a token refresh.
@@ -23,7 +23,23 @@ class AuthService {
       { email: trimmedEmail, password: dto.password },
       AUTH_CALL
     );
+    return this.acceptSession(res, 'Email hoặc mật khẩu chưa đúng.');
+  }
 
+  /**
+   * Signs in with a Google ID token. A first sign-in may come back with `reason` asking for a
+   * birthday (new member, BR-54) or the password of the account that already owns the email.
+   */
+  async googleLogin(dto: GoogleLoginRequestDto): Promise<ApiResponse<AuthResponseDto>> {
+    const res = await apiClient.post<AuthResponseDto>(API_ROUTES.AUTH.GOOGLE, dto, AUTH_CALL);
+    return this.acceptSession(res, 'Chưa đăng nhập được bằng Google. Thử lại sau ít phút.');
+  }
+
+  /** Keeps a member session; any other role works on the web portal, so its session is ended. */
+  private async acceptSession(
+    res: ApiResponse<AuthResponseDto>,
+    fallbackMessage: string,
+  ): Promise<ApiResponse<AuthResponseDto>> {
     const token = res.data?.accessToken || res.data?.token;
     const user = res.data?.user;
 
@@ -49,8 +65,9 @@ class AuthService {
     return {
       success: false,
       data: null as unknown as AuthResponseDto,
-      message: res.message || 'Email hoặc mật khẩu chưa đúng.',
+      message: res.message || fallbackMessage,
       statusCode: res.statusCode || 401,
+      reason: res.reason,
     };
   }
 

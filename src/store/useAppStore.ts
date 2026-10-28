@@ -7,6 +7,7 @@ import { Movie, WatchHistoryItem } from '../types/movie';
 import type { CheckInResult, DailyRewardStatus, MySubscription } from '../types/episodeAccess';
 import { ChatMessage, ChatPhase, SupportTicket } from '../types/chat';
 import { UserProfile } from '../types/auth';
+import type { BEUserDto } from '../types/api';
 import {
   authService,
   movieService,
@@ -46,6 +47,11 @@ interface AppState {
   isAuthenticated: boolean;
   user: UserProfile | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string; role?: string }>;
+  /** `reason` names the step a first Google sign-in still needs (birthday or password). */
+  loginWithGoogle: (
+    idToken: string,
+    extra?: { dateOfBirth?: string; password?: string },
+  ) => Promise<{ success: boolean; error?: string; reason?: string }>;
   register: (name: string, email: string, password: string, dateOfBirth?: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string; role?: string }>;
   logout: () => Promise<void>;
   isAuthModalOpen: boolean;
@@ -107,6 +113,15 @@ interface AppState {
   watchHistory: WatchHistoryItem[];
   addToWatchHistory: (item: Omit<WatchHistoryItem, 'id' | 'lastWatchedAt'>) => void;
 
+}
+
+type SetState = (partial: Partial<AppState>) => void;
+
+/** Opens the member's session; whether they have a plan is the BE's answer (loadAccountData), not the profile's. */
+async function startSession(set: SetState, get: () => AppState, user: BEUserDto) {
+  const profile = adaptUserProfile(user);
+  set({ ...signedOutState(), isAuthenticated: true, user: { ...profile, role: 'user', isVIP: false }, isAuthModalOpen: false });
+  await get().loadAccountData();
 }
 
 export const useAppStore = create<AppState>()(
@@ -196,16 +211,7 @@ export const useAppStore = create<AppState>()(
         try {
           const res = await authService.login({ email: trimmedEmail, password });
           if (res.success && res.data?.user) {
-            const profile = adaptUserProfile(res.data.user);
-            // Whether the member has a plan is the BE's answer (loadAccountData), not the profile's.
-            set({
-              ...signedOutState(),
-              isAuthenticated: true,
-              user: { ...profile, role: 'user', isVIP: false },
-              isAuthModalOpen: false,
-            });
-            await get().loadAccountData();
-
+            await startSession(set, get, res.data.user);
             return { success: true, redirectUrl: '/', role: 'user' };
           }
 
@@ -218,6 +224,19 @@ export const useAppStore = create<AppState>()(
             success: false,
             error: e?.message || 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
           };
+        }
+      },
+
+      loginWithGoogle: async (idToken, extra = {}) => {
+        try {
+          const res = await authService.googleLogin({ idToken, ...extra });
+          if (res.success && res.data?.user) {
+            await startSession(set, get, res.data.user);
+            return { success: true };
+          }
+          return { success: false, error: res.message, reason: res.reason };
+        } catch (e: any) {
+          return { success: false, error: e?.message || 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.' };
         }
       },
 
