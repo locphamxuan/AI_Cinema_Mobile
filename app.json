@@ -38,6 +38,15 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "owner": "manhhiep-teams",
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "3522947a-ce50-44e7-b768-8d160b12f126"
+      }
     }
   }
 }
