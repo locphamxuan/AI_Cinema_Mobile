@@ -27,6 +27,23 @@ describe('Google sign-in', () => {
     await storage.remove(STORAGE_KEYS.AUTH_TOKEN);
   });
 
+  it('hides the button without loading the library when the native module is missing (Expo Go)', () => {
+    process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = 'web-client-id';
+    jest.isolateModules(() => {
+      const { TurboModuleRegistry } = require('react-native');
+      const lookup = jest.spyOn(TurboModuleRegistry, 'get').mockReturnValue(null);
+      jest.doMock('@react-native-google-signin/google-signin', () => {
+        throw new Error('the library must not load without its native module');
+      });
+      const { isGoogleSignInAvailable } = require('../lib/googleSignIn');
+
+      expect(isGoogleSignInAvailable()).toBe(false);
+      expect(lookup).toHaveBeenCalledWith('RNGoogleSignin');
+    });
+    jest.dontMock('@react-native-google-signin/google-signin');
+    delete process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  });
+
   it('sends only the token and keeps a member session', async () => {
     const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValueOnce(session('MEMBER'));
 
