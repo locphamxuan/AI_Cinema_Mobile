@@ -47,11 +47,8 @@ interface AppState {
   isAuthenticated: boolean;
   user: UserProfile | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string; role?: string }>;
-  /** `reason` names the step a first Google sign-in still needs (birthday or password). */
-  loginWithGoogle: (
-    idToken: string,
-    extra?: { dateOfBirth?: string; password?: string },
-  ) => Promise<{ success: boolean; error?: string; reason?: string }>;
+  /** `reason` is GOOGLE_SIGNUP_NEEDS_BIRTHDAY when a first Google sign-in still needs a birthday. */
+  loginWithGoogle: (idToken: string) => Promise<{ success: boolean; error?: string }>;
   register: (name: string, email: string, password: string, dateOfBirth?: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string; role?: string }>;
   logout: () => Promise<void>;
   isAuthModalOpen: boolean;
@@ -227,14 +224,14 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      loginWithGoogle: async (idToken, extra = {}) => {
+      loginWithGoogle: async (idToken) => {
         try {
-          const res = await authService.googleLogin({ idToken, ...extra });
+          const res = await authService.googleLogin({ idToken });
           if (res.success && res.data?.user) {
             await startSession(set, get, res.data.user);
             return { success: true };
           }
-          return { success: false, error: res.message, reason: res.reason };
+          return { success: false, error: res.message };
         } catch (e: any) {
           return { success: false, error: e?.message || 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.' };
         }
