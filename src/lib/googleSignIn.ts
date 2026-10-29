@@ -1,11 +1,6 @@
 import { Platform } from 'react-native';
 import type { GoogleSignin as GoogleSigninApi } from '@react-native-google-signin/google-signin';
 
-/** A first Google sign-in that opens an account needs a birthday; the same token is sent again with it. */
-export const GOOGLE_NEEDS_BIRTHDAY = 'GOOGLE_SIGNUP_NEEDS_BIRTHDAY';
-
-export const needsGoogleBirthday = (reason?: string) => reason === GOOGLE_NEEDS_BIRTHDAY;
-
 // The ID token must be issued for the Web client ID: that is the audience the backend checks.
 const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 const IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;

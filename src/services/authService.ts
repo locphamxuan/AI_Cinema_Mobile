@@ -27,8 +27,8 @@ class AuthService {
   }
 
   /**
-   * Signs in with a Google ID token. A first sign-in may come back with `reason` asking for a
-   * birthday (new member, BR-54) or the password of the account that already owns the email.
+   * Signs in with a Google ID token in one tap; a new email opens a member account under the
+   * Google name. Google sign-in is for members only: the backend refuses staff accounts.
    */
   async googleLogin(dto: GoogleLoginRequestDto): Promise<ApiResponse<AuthResponseDto>> {
     const res = await apiClient.post<AuthResponseDto>(API_ROUTES.AUTH.GOOGLE, dto, AUTH_CALL);

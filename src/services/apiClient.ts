@@ -24,7 +24,7 @@ const joinMessage = (value: unknown): string | undefined => {
 
 /** Refusals the viewer can act on, keyed by the BE `details.reason` (Main Flow 3). */
 const REASON_MESSAGES: Record<string, string> = {
-  GOOGLE_SIGNUP_NEEDS_BIRTHDAY: 'Nhập ngày sinh để hoàn tất đăng ký (từ 18 tuổi).',
+  GOOGLE_STAFF_ACCOUNT: 'Đăng nhập Google chỉ dành cho thành viên. Tài khoản quản trị / nhân sự hãy đăng nhập bằng mật khẩu.',
   GOOGLE_ACCOUNT_MISMATCH: 'Email này đã được liên kết với một tài khoản Google khác.',
   PROVIDER_NOT_CONFIGURED: 'Đăng nhập bằng Google hiện chưa được bật.',
   CONCURRENT_LIMIT_REACHED: 'Tài khoản đang xem trên quá nhiều thiết bị cùng lúc. Hãy dừng xem ở thiết bị khác rồi thử lại.',

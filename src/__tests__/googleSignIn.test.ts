@@ -1,6 +1,5 @@
 import { authService } from '../services';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-import { GOOGLE_NEEDS_BIRTHDAY, needsGoogleBirthday } from '../lib/googleSignIn';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
@@ -28,35 +27,27 @@ describe('Google sign-in', () => {
     await storage.remove(STORAGE_KEYS.AUTH_TOKEN);
   });
 
-  it('asks for one more answer only when a first Google sign-in needs a birthday', () => {
-    expect(needsGoogleBirthday(GOOGLE_NEEDS_BIRTHDAY)).toBe(true);
-    expect(needsGoogleBirthday('GOOGLE_LINK_NEEDS_PASSWORD')).toBe(false);
-    expect(needsGoogleBirthday('GOOGLE_ACCOUNT_MISMATCH')).toBe(false);
-    expect(needsGoogleBirthday(undefined)).toBe(false);
-  });
-
-  it('sends the token with the answer and keeps a member session', async () => {
+  it('sends only the token and keeps a member session', async () => {
     const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValueOnce(session('MEMBER'));
 
-    const res = await authService.googleLogin({ idToken: 'id-token', dateOfBirth: '2003-05-14' });
+    const res = await authService.googleLogin({ idToken: 'id-token' });
 
     expect(res.success).toBe(true);
     const [url, init] = fetchMock.mock.calls[0];
     expect(String(url)).toContain('/auth/google');
-    expect(JSON.parse(String(init?.body))).toEqual({ idToken: 'id-token', dateOfBirth: '2003-05-14' });
+    expect(JSON.parse(String(init?.body))).toEqual({ idToken: 'id-token' });
     expect(await storage.getString(STORAGE_KEYS.AUTH_TOKEN, '')).toBe('access');
   });
 
-  it('passes the missing step back so the sheet can ask for it', async () => {
+  it('explains that Google sign-in is for members when the backend refuses a staff account', async () => {
     jest
       .spyOn(global, 'fetch')
-      .mockResolvedValueOnce(refusal(422, GOOGLE_NEEDS_BIRTHDAY, 'Enter your date of birth to finish signing up'));
+      .mockResolvedValueOnce(refusal(403, 'GOOGLE_STAFF_ACCOUNT', 'Google sign-in is for member accounts; sign in with your password'));
 
     const res = await authService.googleLogin({ idToken: 'id-token' });
 
     expect(res.success).toBe(false);
-    expect(res.reason).toBe(GOOGLE_NEEDS_BIRTHDAY);
-    expect(res.message).toBe('Nhập ngày sinh để hoàn tất đăng ký (từ 18 tuổi).');
+    expect(res.message).toBe('Đăng nhập Google chỉ dành cho thành viên. Tài khoản quản trị / nhân sự hãy đăng nhập bằng mật khẩu.');
   });
 
   it('turns staff accounts away like the password sign-in does', async () => {

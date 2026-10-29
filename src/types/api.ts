@@ -18,10 +18,9 @@ export interface LoginRequestDto {
   password?: string;
 }
 
-/** Body of POST /auth/google; a first sign-in that opens an account adds the birthday it asks for. */
+/** Body of POST /auth/google. */
 export interface GoogleLoginRequestDto {
   idToken: string;
-  dateOfBirth?: string;
 }
 
 export interface RegisterRequestDto {
