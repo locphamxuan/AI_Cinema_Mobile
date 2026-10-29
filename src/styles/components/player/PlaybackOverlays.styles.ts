@@ -12,7 +12,7 @@ const chip = {
 
 export const styles = StyleSheet.create({
   fill: { width: '100%', height: '100%', position: 'absolute' },
-  ad: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000000' },
+  ad: { ...StyleSheet.absoluteFill, backgroundColor: '#000000' },
   adBadge: { ...chip, top: 10, left: 10, color: '#FCD34D', fontFamily: fonts.semibold, fontSize: 11 },
   adTitle: { position: 'absolute', left: 10, bottom: 14, maxWidth: '40%', color: 'rgba(255,255,255,0.75)', fontSize: 11 },
   adActions: { position: 'absolute', right: 10, bottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },

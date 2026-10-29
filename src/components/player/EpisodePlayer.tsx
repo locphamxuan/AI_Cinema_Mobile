@@ -107,8 +107,15 @@ function StreamPlayer(props: StreamPlayerProps) {
   };
 
   const stage = (
-    <Pressable style={styles.fill} onPress={touched(() => setControls((v) => !v))} accessibilityLabel="Hiện điều khiển">
+    <View style={styles.fill}>
       <VideoView style={styles.fill} player={player} nativeControls={false} contentFit="contain" />
+      {/* The native video surface swallows touches, so a clear layer above it takes the tap that shows or hides the controls. */}
+      <Pressable
+        style={styles.fill}
+        onPress={touched(() => setControls((v) => !v))}
+        accessibilityLabel={controls ? 'Ẩn điều khiển' : 'Hiện điều khiển'}
+        testID="player-tap-layer"
+      />
       {line ? (
         <View style={[styles.subtitleBox, controls && styles.subtitleRaised]} pointerEvents="none">
           <Text style={[styles.subtitle, fullscreen && styles.subtitleLarge]} testID="subtitle-line">
@@ -135,7 +142,7 @@ function StreamPlayer(props: StreamPlayerProps) {
       ) : null}
       {playback.activeAd ? <AdBreakOverlay key={playback.activeAd.breakId} cue={playback.activeAd} onDone={playback.finishAd} /> : null}
       <AiLabelOverlay text={aiLabel} />
-    </Pressable>
+    </View>
   );
 
   return (

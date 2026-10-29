@@ -17,7 +17,7 @@ export const ChatModal: React.FC = () => {
   const { colors, isDark } = useTheme();
   const { chatIsOpen, toggleChat, chatMessages, sendMessage, handleQuickAction, escalateToAgent, chatPhase, chatTicket } = useAppStore();
   const [input, setInput] = useState('');
-  const list = useRef<ScrollView>(null);
+  const list = useRef<React.ComponentRef<typeof ScrollView>>(null);
 
   const handleSend = () => {
     if (!input.trim()) return;

@@ -18,11 +18,9 @@ export interface LoginRequestDto {
   password?: string;
 }
 
-/** Body of POST /auth/google; the extras answer the step a first Google sign-in asks for. */
+/** Body of POST /auth/google. */
 export interface GoogleLoginRequestDto {
   idToken: string;
-  dateOfBirth?: string;
-  password?: string;
 }
 
 export interface RegisterRequestDto {

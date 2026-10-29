@@ -32,7 +32,8 @@ function RootLayoutContent() {
 
   return (
     <>
-      <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />
+      {/* Android draws edge to edge, so the status bar shows the screen behind it instead of its own color. */}
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,

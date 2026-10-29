@@ -62,11 +62,11 @@ export default function TopUpHistoryScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.ruby} />}
           onEndReached={() => !loading && page < totalPages && void load(page + 1)}
           onEndReachedThreshold={0.3}
-          ListHeaderComponent={error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
+          ListHeaderComponent={error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : undefined}
           ListEmptyComponent={
-            loading ? null : <Text style={[styles.empty, { color: colors.textMuted }]}>Bạn chưa nạp Coin lần nào.</Text>
+            loading ? undefined : <Text style={[styles.empty, { color: colors.textMuted }]}>Bạn chưa nạp Coin lần nào.</Text>
           }
-          ListFooterComponent={loading ? <ActivityIndicator color={colors.ruby} style={styles.loading} /> : null}
+          ListFooterComponent={loading ? <ActivityIndicator color={colors.ruby} style={styles.loading} /> : undefined}
           renderItem={({ item }) => {
             const status = TOP_UP_STATUS[item.status];
             const tint = toneColor[status.tone];
