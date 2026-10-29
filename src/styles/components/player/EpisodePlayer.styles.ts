@@ -6,7 +6,7 @@ export const styles = StyleSheet.create({
   fill: { width: '100%', height: '100%', position: 'absolute' },
   fullscreen: { flex: 1, backgroundColor: '#000000' },
   posterShade: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.35)',
     alignItems: 'center',
     justifyContent: 'center',

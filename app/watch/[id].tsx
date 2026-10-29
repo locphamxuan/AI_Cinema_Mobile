@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,7 +41,7 @@ export default function WatchScreen() {
   const [session, setSession] = useState<StreamingSession | null>(null);
   const [opening, setOpening] = useState(false);
   const [engagement, setEngagement] = useMovieEngagement(id);
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<ComponentRef<typeof ScrollView>>(null);
 
   // Movie list/detail responses carry no episodes, so they are always fetched separately.
   useEffect(() => {

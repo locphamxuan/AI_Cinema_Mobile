@@ -101,8 +101,8 @@ export default function NotificationsScreen() {
           ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: colors.border }]} />}
           onEndReached={() => !loading && page < totalPages && void load(page + 1)}
           onEndReachedThreshold={0.3}
-          ListEmptyComponent={loading ? null : <Text style={[styles.empty, { color: colors.textMuted }]}>Mục này chưa có thông báo.</Text>}
-          ListFooterComponent={loading ? <ActivityIndicator color={colors.ruby} style={styles.loading} /> : null}
+          ListEmptyComponent={loading ? undefined : <Text style={[styles.empty, { color: colors.textMuted }]}>Mục này chưa có thông báo.</Text>}
+          ListFooterComponent={loading ? <ActivityIndicator color={colors.ruby} style={styles.loading} /> : undefined}
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.item} onPress={() => void open(item)} accessibilityState={{ selected: !item.readAt }}>
               <View style={[styles.icon, { backgroundColor: colors.card }]}>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, type ColorValue } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { fonts, useTheme } from '../../src/theme';
@@ -8,8 +8,9 @@ type IconName = keyof typeof Ionicons.glyphMap;
 
 /** Outline icon at rest, the filled one when the tab is open. */
 function tabIcon(name: IconName, active: IconName) {
-  return function TabIcon({ color, focused }: { color: string; focused: boolean }) {
-    return <Ionicons name={focused ? active : name} size={23} color={color} />;
+  return function TabIcon({ color, focused }: { color: ColorValue; focused: boolean }) {
+    // The tab bar passes its theme colors as strings; ColorValue only widens the type.
+    return <Ionicons name={focused ? active : name} size={23} color={color as string} />;
   };
 }
 
