@@ -1,0 +1,51 @@
+import { StyleSheet } from 'react-native';
+import { fonts } from '../../../theme';
+
+export const styles = StyleSheet.create({
+  container: { width: '100%', aspectRatio: 16 / 9, maxHeight: 360, backgroundColor: '#000000' },
+  fill: { width: '100%', height: '100%', position: 'absolute' },
+  fullscreen: { flex: 1, backgroundColor: '#000000' },
+  posterShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playBtn: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subtitleBox: { position: 'absolute', left: 12, right: 12, bottom: 10, alignItems: 'center' },
+  subtitleRaised: { bottom: 40 },
+  subtitle: {
+    color: '#FFFFFF',
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+    lineHeight: 21,
+    textAlign: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  subtitleLarge: { fontSize: 20, lineHeight: 28 },
+  aiBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    maxWidth: '70%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  aiBadgeText: { color: '#FFFFFF', fontFamily: fonts.semibold, fontSize: 11, lineHeight: 14 },
+});

@@ -1,0 +1,113 @@
+import { apiClient } from './apiClient';
+import { API_ROUTES } from '../constants/apiRoutes';
+import { storage, STORAGE_KEYS } from '../lib/storage';
+import { adaptUserProfile } from '../lib/apiAdapter';
+import type { ApiResponse, AuthResponseDto, GoogleLoginRequestDto, LoginRequestDto, RegisterRequestDto } from '../types/api';
+import type { UserProfile } from '../types/auth';
+
+// Auth calls answer 401 for bad credentials; that must not trigger a token refresh.
+const AUTH_CALL = { skipAuthRefresh: true } as const;
+
+// The mobile app is for viewers only (BE `UserRole.MEMBER`).
+const MEMBER_ROLE = 'MEMBER';
+const STAFF_ON_MOBILE_MESSAGE =
+  'Tài khoản Sản xuất, Kiểm duyệt và Quản trị dùng trên Web Studio ở máy tính. App điện thoại chỉ dành cho người xem.';
+
+class AuthService {
+  async login(dto: LoginRequestDto): Promise<ApiResponse<AuthResponseDto>> {
+    const trimmedEmail = dto.email.trim().toLowerCase();
+
+    // Kết nối trực tiếp tới Backend NestJS (/api/auth/login)
+    const res = await apiClient.post<AuthResponseDto>(
+      API_ROUTES.AUTH.LOGIN,
+      { email: trimmedEmail, password: dto.password },
+      AUTH_CALL
+    );
+    return this.acceptSession(res, 'Email hoặc mật khẩu chưa đúng.');
+  }
+
+  /**
+   * Signs in with a Google ID token. A first sign-in may come back with `reason` asking for a
+   * birthday (new member, BR-54) or the password of the account that already owns the email.
+   */
+  async googleLogin(dto: GoogleLoginRequestDto): Promise<ApiResponse<AuthResponseDto>> {
+    const res = await apiClient.post<AuthResponseDto>(API_ROUTES.AUTH.GOOGLE, dto, AUTH_CALL);
+    return this.acceptSession(res, 'Chưa đăng nhập được bằng Google. Thử lại sau ít phút.');
+  }
+
+  /** Keeps a member session; any other role works on the web portal, so its session is ended. */
+  private async acceptSession(
+    res: ApiResponse<AuthResponseDto>,
+    fallbackMessage: string,
+  ): Promise<ApiResponse<AuthResponseDto>> {
+    const token = res.data?.accessToken || res.data?.token;
+    const user = res.data?.user;
+
+    if (res.success && token && user && user.role !== MEMBER_ROLE) {
+      // Creator, Reviewer, Staff and Admin work on the web portal; end the session just opened.
+      if (res.data.refreshToken) {
+        await apiClient.post(API_ROUTES.AUTH.LOGOUT, { refreshToken: res.data.refreshToken }, AUTH_CALL);
+      }
+      return {
+        success: false,
+        data: null as unknown as AuthResponseDto,
+        message: STAFF_ON_MOBILE_MESSAGE,
+        statusCode: 403,
+      };
+    }
+
+    if (res.success && token && user) {
+      await apiClient.saveSession({ accessToken: token, refreshToken: res.data.refreshToken });
+      await storage.set(STORAGE_KEYS.USER_DATA, user);
+      return { ...res, data: { ...res.data, accessToken: token, token, user } };
+    }
+
+    return {
+      success: false,
+      data: null as unknown as AuthResponseDto,
+      message: res.message || fallbackMessage,
+      statusCode: res.statusCode || 401,
+      reason: res.reason,
+    };
+  }
+
+  async register(dto: RegisterRequestDto): Promise<ApiResponse<AuthResponseDto>> {
+    const trimmedEmail = dto.email.trim().toLowerCase();
+    const fullName = (dto.fullName || dto.name || '').trim();
+    const dateOfBirth = (dto.dateOfBirth || '2003-05-14').trim();
+
+    // Gửi request tạo tài khoản tới Backend NestJS (/api/auth/register) -> lưu vào Neon PostgreSQL
+    const res = await apiClient.post<AuthResponseDto>(
+      API_ROUTES.AUTH.REGISTER,
+      { email: trimmedEmail, password: dto.password, fullName, dateOfBirth },
+      AUTH_CALL
+    );
+
+    if (res.success) {
+      return res;
+    }
+
+    return {
+      success: false,
+      data: null as unknown as AuthResponseDto,
+      message: res.message || 'Chưa tạo được tài khoản. Thử lại sau ít phút.',
+      statusCode: res.statusCode || 400,
+    };
+  }
+
+  async getProfile(): Promise<ApiResponse<UserProfile>> {
+    const res = await apiClient.get<unknown>(API_ROUTES.AUTH.PROFILE);
+    return { ...res, data: res.success ? adaptUserProfile(res.data) : (null as unknown as UserProfile) };
+  }
+
+  /** Revokes the refresh token on the backend, then forgets the local session either way. */
+  async logout(): Promise<void> {
+    const refreshToken = await storage.getString(STORAGE_KEYS.REFRESH_TOKEN, '');
+    if (refreshToken) {
+      await apiClient.post(API_ROUTES.AUTH.LOGOUT, { refreshToken }, AUTH_CALL);
+    }
+    await apiClient.clearSession();
+  }
+}
+
+export const authService = new AuthService();
