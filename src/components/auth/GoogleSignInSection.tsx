@@ -20,8 +20,6 @@ export const GoogleSignInSection: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  if (!isGoogleSignInAvailable()) return null;
-
   const send = async (token: string, extra?: { dateOfBirth?: string; password?: string }) => {
     setLoading(true);
     setError(null);
@@ -38,6 +36,10 @@ export const GoogleSignInSection: React.FC = () => {
 
   const start = async () => {
     setError(null);
+    if (!isGoogleSignInAvailable()) {
+      setError('Đăng nhập Google yêu cầu bản development build hoặc Expo build (npx expo run:android).');
+      return;
+    }
     try {
       const token = await pickGoogleIdToken();
       if (token) await send(token);
