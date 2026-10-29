@@ -47,10 +47,10 @@ interface AppState {
   isAuthenticated: boolean;
   user: UserProfile | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string; role?: string }>;
-  /** `reason` names the step a first Google sign-in still needs (birthday or password). */
+  /** `reason` is GOOGLE_SIGNUP_NEEDS_BIRTHDAY when a first Google sign-in still needs a birthday. */
   loginWithGoogle: (
     idToken: string,
-    extra?: { dateOfBirth?: string; password?: string },
+    extra?: { dateOfBirth?: string },
   ) => Promise<{ success: boolean; error?: string; reason?: string }>;
   register: (name: string, email: string, password: string, dateOfBirth?: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string; role?: string }>;
   logout: () => Promise<void>;

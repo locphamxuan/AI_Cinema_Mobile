@@ -1,6 +1,6 @@
 import { authService } from '../services';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-import { GOOGLE_STEP, isGoogleStep } from '../lib/googleSignIn';
+import { GOOGLE_NEEDS_BIRTHDAY, needsGoogleBirthday } from '../lib/googleSignIn';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
@@ -28,11 +28,11 @@ describe('Google sign-in', () => {
     await storage.remove(STORAGE_KEYS.AUTH_TOKEN);
   });
 
-  it('knows the two steps a first Google sign-in can ask for', () => {
-    expect(isGoogleStep(GOOGLE_STEP.BIRTHDAY)).toBe(true);
-    expect(isGoogleStep(GOOGLE_STEP.PASSWORD)).toBe(true);
-    expect(isGoogleStep('GOOGLE_ACCOUNT_MISMATCH')).toBe(false);
-    expect(isGoogleStep(undefined)).toBe(false);
+  it('asks for one more answer only when a first Google sign-in needs a birthday', () => {
+    expect(needsGoogleBirthday(GOOGLE_NEEDS_BIRTHDAY)).toBe(true);
+    expect(needsGoogleBirthday('GOOGLE_LINK_NEEDS_PASSWORD')).toBe(false);
+    expect(needsGoogleBirthday('GOOGLE_ACCOUNT_MISMATCH')).toBe(false);
+    expect(needsGoogleBirthday(undefined)).toBe(false);
   });
 
   it('sends the token with the answer and keeps a member session', async () => {
@@ -50,12 +50,12 @@ describe('Google sign-in', () => {
   it('passes the missing step back so the sheet can ask for it', async () => {
     jest
       .spyOn(global, 'fetch')
-      .mockResolvedValueOnce(refusal(422, GOOGLE_STEP.BIRTHDAY, 'Enter your date of birth to finish signing up'));
+      .mockResolvedValueOnce(refusal(422, GOOGLE_NEEDS_BIRTHDAY, 'Enter your date of birth to finish signing up'));
 
     const res = await authService.googleLogin({ idToken: 'id-token' });
 
     expect(res.success).toBe(false);
-    expect(res.reason).toBe(GOOGLE_STEP.BIRTHDAY);
+    expect(res.reason).toBe(GOOGLE_NEEDS_BIRTHDAY);
     expect(res.message).toBe('Nhập ngày sinh để hoàn tất đăng ký (từ 18 tuổi).');
   });
 
