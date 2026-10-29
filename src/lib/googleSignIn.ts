@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform, TurboModuleRegistry } from 'react-native';
 import type { GoogleSignin as GoogleSigninApi } from '@react-native-google-signin/google-signin';
 
 /** Why a first Google sign-in needs one more answer; the same token is sent again with it. */
@@ -25,6 +25,9 @@ let google: typeof GoogleSigninApi | null | undefined;
 function nativeGoogle(): typeof GoogleSigninApi | null {
   if (google !== undefined) return google;
   if (Platform.OS === 'web') return (google = null);
+  // The library looks the module up with getEnforcing as soon as it loads, and the dev runtime
+  // shows that failure as a red screen even when the require below is caught. Ask first instead.
+  if (!TurboModuleRegistry.get('RNGoogleSignin')) return (google = null);
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { GoogleSignin } = require('@react-native-google-signin/google-signin');
