@@ -1,5 +1,5 @@
 export const MIN_PASSWORD = 8;
-export const MAX_PASSWORD = 72;
+const MAX_PASSWORD = 72;
 
 export interface AuthForm {
   name: string;
@@ -10,7 +10,7 @@ export interface AuthForm {
 }
 
 /** The BE rule: 8 to 72 characters with at least one letter and one digit. */
-export function passwordOk(password: string): boolean {
+function passwordOk(password: string): boolean {
   return password.length >= MIN_PASSWORD && password.length <= MAX_PASSWORD && /\p{L}/u.test(password) && /\d/.test(password);
 }
 

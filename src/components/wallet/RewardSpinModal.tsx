@@ -14,7 +14,7 @@ const SPIN_MS = 2400;
 const LOAD_ERROR = 'Không tải được vòng quay.';
 
 /** "+20 Coin thưởng (15%)" or "Gói Tháng 30 ngày (2%)". */
-export const prizeLabel = (p: Pick<RewardPrize, 'type' | 'bonusCoins' | 'planDays' | 'chancePercent'>) =>
+const prizeLabel = (p: Pick<RewardPrize, 'type' | 'bonusCoins' | 'planDays' | 'chancePercent'>) =>
   `${p.type === 'BONUS_COIN' ? `+${p.bonusCoins} Coin thưởng` : `Gói Tháng ${p.planDays} ngày`} (${p.chancePercent ?? 0}%)`;
 
 /** BR-09: a milestone check-in earns a spin; the BE draws the prize and pays it out. */

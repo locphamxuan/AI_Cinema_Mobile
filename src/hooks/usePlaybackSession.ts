@@ -5,7 +5,7 @@ import { playbackService } from '../services/playbackService';
 import type { AdScheduleItem, StreamingSession } from '../types/playback';
 
 /** The BE expects a beat every 10-15s and closes a silent session, paused or not. */
-export const HEARTBEAT_SECONDS = 15;
+const HEARTBEAT_SECONDS = 15;
 
 /**
  * Main Flow 3 inside the player: beats while the episode plays, pauses it at each mid-roll cue

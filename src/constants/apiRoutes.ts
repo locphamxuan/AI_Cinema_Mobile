@@ -89,10 +89,4 @@ export const API_ROUTES = {
     CHECK_IN: '/daily-rewards/check-in',
     SPINS: '/rewards/spins',
   },
-
-  // Chat & AI Support
-  CHAT: {
-    SEND_MESSAGE: '/chat/message',
-    TICKET: '/chat/ticket',
-  },
 } as const;

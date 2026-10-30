@@ -1,7 +1,7 @@
 import type { Episode, Movie } from '../types/movie';
 import { VN_DAY_LABELS, getTodayDayIndex } from '../utils/date';
 
-export const RELEASE_WINDOW_DAYS = 7;
+const RELEASE_WINDOW_DAYS = 7;
 
 export interface ReleaseDay {
   /** Local calendar day, YYYY-MM-DD. */
