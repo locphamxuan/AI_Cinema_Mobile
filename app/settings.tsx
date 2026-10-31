@@ -1,5 +1,6 @@
 
-import { View, Alert, Platform } from 'react-native';
+import { View } from 'react-native';
+import { showDialog } from '../src/lib/dialog';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { ScreenHeader } from '../src/components/common/ScreenHeader';
@@ -18,9 +19,7 @@ export default function SettingsScreen() {
       logout();
       router.back();
     };
-    // Alert buttons are not supported on web.
-    if (Platform.OS === 'web') return leave();
-    Alert.alert('Đăng xuất?', 'Ví Coin và gói Tháng vẫn giữ nguyên, bạn đăng nhập lại là thấy.', [
+    showDialog('Đăng xuất?', 'Ví Coin và gói Tháng vẫn giữ nguyên, bạn đăng nhập lại là thấy.', [
       { text: 'Ở lại', style: 'cancel' },
       { text: 'Đăng xuất', style: 'destructive', onPress: leave },
     ]);

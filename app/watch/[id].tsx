@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { showDialog } from '../../src/lib/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -86,12 +87,12 @@ export default function WatchScreen() {
     setOpening(false);
     if (!res.success || !res.data) {
       if (res.reason && DEVICE_LIMITS.has(res.reason)) {
-        Alert.alert('Đã đạt giới hạn thiết bị', res.message, [
+        showDialog('Đã đạt giới hạn thiết bị', res.message, [
           { text: 'Để sau', style: 'cancel' },
           { text: 'Quản lý thiết bị', onPress: () => router.push('/devices') },
         ]);
       } else {
-        Alert.alert('Không phát được tập', res.message || 'Vui lòng thử lại.');
+        showDialog('Không phát được tập', res.message || 'Vui lòng thử lại.');
       }
       return;
     }
