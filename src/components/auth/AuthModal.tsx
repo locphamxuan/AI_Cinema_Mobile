@@ -21,7 +21,6 @@ export const AuthModal: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [hasSavedCredentials, setHasSavedCredentials] = useState(false);
@@ -80,7 +79,7 @@ export const AuthModal: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    const problem = authFormError(isLogin, { name, email, password, confirmPassword, dateOfBirth });
+    const problem = authFormError(isLogin, { name, email, password, confirmPassword });
     setError(problem);
     if (problem) return;
     setLoading(true);
@@ -106,7 +105,7 @@ export const AuthModal: React.FC = () => {
         setError(result.error || 'Chưa đăng nhập được. Kiểm tra email, mật khẩu và kết nối mạng.');
       }
     } else {
-      const result = await register(name, email, password, dateOfBirth);
+      const result = await register(name, email, password);
       if (result.success) {
         Alert.alert('Đã tạo tài khoản', 'Đăng nhập bằng email vừa đăng ký để bắt đầu xem.', [
           { text: 'Đăng nhập', onPress: () => openAuthModal('login', email.trim()) },
@@ -150,12 +149,6 @@ export const AuthModal: React.FC = () => {
 
             {!isLogin &&
               field('Họ và tên', <TextInput value={name} onChangeText={setName} placeholder="Nguyễn Văn A" placeholderTextColor={colors.textMuted} style={inputStyle} />)}
-            {!isLogin &&
-              field(
-                'Ngày sinh',
-                <TextInput value={dateOfBirth} onChangeText={setDateOfBirth} placeholder="2003-05-14" placeholderTextColor={colors.textMuted} keyboardType="numbers-and-punctuation" style={inputStyle} />,
-                'Viết theo dạng năm-tháng-ngày.',
-              )}
             {field(
               'Email',
               <TextInput value={email} onChangeText={setEmail} placeholder="ten@email.com" placeholderTextColor={colors.textMuted} autoCapitalize="none" keyboardType="email-address" autoComplete="email" style={inputStyle} />,

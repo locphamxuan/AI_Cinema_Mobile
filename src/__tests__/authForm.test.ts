@@ -1,19 +1,19 @@
 import { authFormError } from '../lib/authForm';
 
-const filled = { name: 'Lan', email: 'lan@mail.vn', password: 'phimhay12', confirmPassword: 'phimhay12', dateOfBirth: '2003-05-14' };
+const filled = { name: 'Lan', email: 'lan@mail.vn', password: 'phimhay12', confirmPassword: 'phimhay12' };
 const PASSWORD_RULE = 'Mật khẩu cần 8 đến 72 ký tự, có cả chữ và số.';
 
 describe('auth form', () => {
   it('needs only email and password to sign in', () => {
-    expect(authFormError(true, { ...filled, name: '', dateOfBirth: '' })).toBeNull();
+    expect(authFormError(true, { ...filled, name: '' })).toBeNull();
     expect(authFormError(true, { ...filled, email: '  ' })).toBe('Nhập email và mật khẩu.');
     expect(authFormError(true, { ...filled, password: '' })).toBe('Nhập email và mật khẩu.');
   });
 
-  it('asks for every sign-up field', () => {
+  it('asks for name, email and password to sign up, without a birthday (BR-54)', () => {
     expect(authFormError(false, filled)).toBeNull();
-    expect(authFormError(false, { ...filled, dateOfBirth: '' })).toBe('Điền đủ họ tên, ngày sinh, email và mật khẩu.');
-    expect(authFormError(false, { ...filled, name: ' ' })).toBe('Điền đủ họ tên, ngày sinh, email và mật khẩu.');
+    expect(authFormError(false, { ...filled, name: ' ' })).toBe('Điền đủ họ tên, email và mật khẩu.');
+    expect(authFormError(false, { ...filled, email: '' })).toBe('Điền đủ họ tên, email và mật khẩu.');
   });
 
   it('applies the BE password rule before checking the repeat', () => {
