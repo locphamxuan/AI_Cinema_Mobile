@@ -5,7 +5,6 @@ import { storage, STORAGE_KEYS } from '../lib/storage';
 import { WalletState } from '../types/wallet';
 import { Movie, WatchHistoryItem } from '../types/movie';
 import type { CheckInResult, DailyRewardStatus, MySubscription } from '../types/episodeAccess';
-import { ChatMessage, ChatPhase, SupportTicket } from '../types/chat';
 import { UserProfile } from '../types/auth';
 import type { BEUserDto } from '../types/api';
 import {
@@ -14,7 +13,6 @@ import {
   walletService,
   episodeAccessService,
   rewardService,
-  chatService,
 } from '../services';
 import { apiClient } from '../services/apiClient';
 import { adaptUserProfile } from '../lib/apiAdapter';
@@ -84,17 +82,6 @@ interface AppState {
 
   // Monthly plan
   subscription: MySubscription | null;
-
-  // Chat
-  chatMessages: ChatMessage[];
-  chatPhase: ChatPhase;
-  chatIsOpen: boolean;
-  chatTicket: SupportTicket | null;
-  estimatedWaitMinutes: number;
-  toggleChat: () => void;
-  sendMessage: (content: string) => Promise<void>;
-  handleQuickAction: (actionId: string) => void;
-  escalateToAgent: () => Promise<void>;
 
   // Modals
   isCheckInModalOpen: boolean;
@@ -329,77 +316,6 @@ export const useAppStore = create<AppState>()(
             episodes: s.currentMovie.episodes.map((ep) => (ep.id === episodeId ? { ...ep, isUnlocked: true } : ep)),
           },
         })),
-
-      // ===== CHAT =====
-      chatMessages: [],
-      chatPhase: 'bot' as ChatPhase,
-      chatIsOpen: false,
-      chatTicket: null,
-      estimatedWaitMinutes: 5,
-
-      toggleChat: () => set((s) => ({ chatIsOpen: !s.chatIsOpen })),
-
-      sendMessage: async (content: string) => {
-        const userMsg: ChatMessage = {
-          id: `msg-${Date.now()}`,
-          sender: 'user',
-          content,
-          timestamp: new Date().toISOString(),
-        };
-
-        set((s) => ({ chatMessages: [...s.chatMessages, userMsg] }));
-
-        const response = await chatService.sendMessage(content);
-        if (response.success && response.data) {
-            const botMsg: ChatMessage = {
-              ...response.data,
-            };
-            set((s) => ({ chatMessages: [...s.chatMessages, botMsg] }));
-        } else {
-            const botMsg: ChatMessage = {
-              id: `msg-${Date.now()}`,
-              sender: 'system',
-              content: response.message || 'Tin nhắn chưa gửi được. Kiểm tra mạng rồi gửi lại.',
-              timestamp: new Date().toISOString(),
-            };
-            set((s) => ({ chatMessages: [...s.chatMessages, botMsg] }));
-        }
-      },
-
-      handleQuickAction: (actionId: string) => {
-        const actionLabels: Record<string, string> = {
-          'coin-error': 'Tôi gặp lỗi trừ Coin',
-          'cancel-renew': 'Tôi muốn hủy gia hạn tự động',
-          'report': 'Tôi muốn báo cáo vi phạm',
-        };
-
-        const userMsg: ChatMessage = {
-          id: `msg-${Date.now()}`,
-          sender: 'user',
-          content: actionLabels[actionId] || actionId,
-          timestamp: new Date().toISOString(),
-        };
-
-        void get().sendMessage(userMsg.content);
-      },
-
-      escalateToAgent: async () => {
-        const state = get();
-        const response = await chatService.createTicket(state.chatMessages);
-        if (response.success && response.data) {
-          const ticket: SupportTicket = response.data;
-          set((current) => ({
-            chatPhase: 'waiting',
-            chatTicket: ticket,
-            chatMessages: [...current.chatMessages, {
-              id: `msg-${Date.now()}`,
-              sender: 'system',
-              content: `Đã tạo phiếu hỗ trợ #${ticket.id}.`,
-              timestamp: new Date().toISOString(),
-            }],
-          }));
-        }
-      },
 
       // ===== MODALS =====
       isCheckInModalOpen: false,

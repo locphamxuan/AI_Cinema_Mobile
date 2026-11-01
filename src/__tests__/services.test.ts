@@ -10,7 +10,6 @@ import {
   movieService,
   walletService,
   episodeAccessService,
-  chatService,
 } from '../services';
 import { apiClient, extractErrorMessage } from '../services/apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
@@ -173,12 +172,6 @@ describe('Mobile Services do not return mock fallbacks', () => {
 
   it('episodeAccessService.getPlans reports the backend network error', async () => {
     const res = await episodeAccessService.getPlans();
-    expect(res.success).toBe(false);
-    expect(res.message).toContain('network offline');
-  });
-
-  it('chatService.sendMessage reports the backend network error', async () => {
-    const res = await chatService.sendMessage('Xin chào');
     expect(res.success).toBe(false);
     expect(res.message).toContain('network offline');
   });

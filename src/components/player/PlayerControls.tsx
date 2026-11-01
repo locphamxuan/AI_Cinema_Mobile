@@ -6,7 +6,7 @@ import { clock } from '../../lib/vtt';
 import { styles } from '../../styles/components/player/PlayerControls.styles';
 
 
-export const SEEK_SECONDS = 10;
+const SEEK_SECONDS = 10;
 
 interface PlayerControlsProps {
   currentTime: number;

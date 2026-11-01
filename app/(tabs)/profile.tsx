@@ -24,7 +24,6 @@ export default function ProfileScreen() {
     isVIPMode,
     openAuthModal,
     setCheckInModalOpen,
-    toggleChat,
   } = useAppStore();
   const unread = useUnreadNotifications(isAuthenticated);
 
@@ -115,7 +114,6 @@ export default function ProfileScreen() {
           <MenuRow icon="phone-portrait-outline" label="Thiết bị của tôi" onPress={member(() => router.push('/devices'))} />
           <MenuRow icon="gift-outline" label="Quà hằng ngày" onPress={member(() => setCheckInModalOpen(true))} />
           <MenuRow icon="notifications-outline" label="Thông báo" count={unread} onPress={member(() => router.push('/notifications'))} />
-          <MenuRow icon="chatbubble-ellipses-outline" label="Hỗ trợ" onPress={toggleChat} />
           <MenuRow icon="settings-outline" label="Cài đặt" onPress={() => router.push('/settings')} last />
         </MenuCard>
       </ScrollView>
