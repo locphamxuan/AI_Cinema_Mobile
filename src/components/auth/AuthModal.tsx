@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
+import { View, Text, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { showDialog } from '../../lib/dialog';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -107,7 +108,7 @@ export const AuthModal: React.FC = () => {
     } else {
       const result = await register(name, email, password);
       if (result.success) {
-        Alert.alert('Đã tạo tài khoản', 'Đăng nhập bằng email vừa đăng ký để bắt đầu xem.', [
+        showDialog('Đã tạo tài khoản', 'Đăng nhập bằng email vừa đăng ký để bắt đầu xem.', [
           { text: 'Đăng nhập', onPress: () => openAuthModal('login', email.trim()) },
         ], { cancelable: false });
       } else {
@@ -187,7 +188,7 @@ export const AuthModal: React.FC = () => {
                 <TouchableOpacity
                   hitSlop={8}
                   onPress={() =>
-                    Alert.alert('Quên mật khẩu', 'App chưa đặt lại mật khẩu được. Nhắn cho Hỗ trợ trong mục Hồ sơ để lấy lại tài khoản.')
+                    showDialog('Quên mật khẩu', 'App chưa đặt lại mật khẩu được. Nhắn cho Hỗ trợ trong mục Hồ sơ để lấy lại tài khoản.')
                   }
                 >
                   <Text style={[styles.link, { color: colors.textSecondary }]}>Quên mật khẩu?</Text>

@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { showDialog } from '../src/lib/dialog';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenHeader } from '../src/components/common/ScreenHeader';
@@ -39,12 +40,12 @@ export default function DevicesScreen() {
     setBusyId(id);
     const res = await action();
     setBusyId(null);
-    if (!res.success) Alert.alert('Không thực hiện được', res.message || 'Vui lòng thử lại.');
+    if (!res.success) showDialog('Không thực hiện được', res.message || 'Vui lòng thử lại.');
     await load();
   };
 
   const removeDevice = (device: RegisteredDevice) =>
-    Alert.alert(
+    showDialog(
       'Gỡ thiết bị?',
       device.current
         ? 'Đây là máy bạn đang dùng. Lần xem tới, máy này sẽ được đăng ký lại nếu gói còn chỗ.'
@@ -56,7 +57,7 @@ export default function DevicesScreen() {
     );
 
   const endStream = (stream: LiveStream) =>
-    Alert.alert('Dừng phát?', `"${stream.episode.movieTitle}" sẽ dừng trên thiết bị đó để bạn xem ở máy khác.`, [
+    showDialog('Dừng phát?', `"${stream.episode.movieTitle}" sẽ dừng trên thiết bị đó để bạn xem ở máy khác.`, [
       { text: 'Để sau', style: 'cancel' },
       { text: 'Dừng phát', style: 'destructive', onPress: () => void run(stream.id, () => deviceService.endStream(stream.id)) },
     ]);
