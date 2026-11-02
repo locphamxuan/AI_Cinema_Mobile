@@ -89,7 +89,8 @@ export const TopUpModal: React.FC = () => {
       return;
     }
     // The backend's return trip opens the aicinema:// link, which closes this session; then reconcile.
-    await WebBrowser.openAuthSessionAsync(res.data.redirectUrl, 'aicinema://');
+    if (Platform.OS === 'web') await WebBrowser.openBrowserAsync(res.data.redirectUrl);
+    else await WebBrowser.openAuthSessionAsync(res.data.redirectUrl, 'aicinema://');
     poll(res.data.topUpId);
   };
 

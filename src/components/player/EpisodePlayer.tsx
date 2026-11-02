@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
@@ -8,6 +8,7 @@ import { useSubtitleCues } from '../../hooks/useSubtitleCues';
 import { lockLandscape, lockPortrait } from '../../lib/orientation';
 import { seekTarget } from '../../lib/seek';
 import { cueAt } from '../../lib/vtt';
+import { attachWebStream, toggleWebFullscreen, watchWebFullscreen } from '../../lib/attachWebStream';
 import type { SubtitleTrack } from '../../types/movie';
 import type { StreamingSession } from '../../types/playback';
 import { PlayerControls } from './PlayerControls';
@@ -69,6 +70,13 @@ function StreamPlayer(props: StreamPlayerProps) {
   const [fullscreen, setFullscreen] = React.useState(false);
   const [rate, setRate] = React.useState(1);
   const started = React.useRef(false);
+  const host = React.useRef<React.ComponentRef<typeof View>>(null);
+
+  React.useEffect(() => attachWebStream(host.current, streamUrl), [streamUrl]);
+  React.useEffect(() => watchWebFullscreen(host.current, setFullscreen), []);
+  React.useEffect(() => {
+    if (Platform.OS === 'web') player.play();
+  }, [player]);
 
   React.useEffect(() => {
     if (playing && !started.current) {
@@ -97,6 +105,8 @@ function StreamPlayer(props: StreamPlayerProps) {
   React.useEffect(() => () => void lockPortrait(), []);
 
   const toggleFullscreen = () => {
+    // A Modal would recreate the <video> on the web and lose its place: the browser enlarges the stage instead.
+    if (Platform.OS === 'web') return toggleWebFullscreen(host.current);
     const next = !fullscreen;
     setFullscreen(next);
     void (next ? lockLandscape() : lockPortrait());
@@ -107,7 +117,7 @@ function StreamPlayer(props: StreamPlayerProps) {
   };
 
   const stage = (
-    <View style={styles.fill}>
+    <View style={styles.fill} ref={host}>
       <VideoView style={styles.fill} player={player} nativeControls={false} contentFit="contain" />
       {/* The native video surface swallows touches, so a clear layer above it takes the tap that shows or hides the controls. */}
       <Pressable
@@ -147,7 +157,7 @@ function StreamPlayer(props: StreamPlayerProps) {
 
   return (
     <>
-      {fullscreen ? (
+      {fullscreen && Platform.OS !== 'web' ? (
         <Modal visible animationType="fade" supportedOrientations={['landscape', 'portrait']} onRequestClose={toggleFullscreen}>
           <View style={styles.fullscreen}>{stage}</View>
         </Modal>
