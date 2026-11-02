@@ -56,7 +56,7 @@ export interface WalletBalance {
 }
 
 export type TopUpStatus = 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
-export type PaymentProvider = 'VNPAY' | 'MOMO';
+export type PaymentProvider = 'VNPAY';
 
 /** POST /wallet/top-ups, GET /wallet/top-ups/:topUpId */
 export interface CoinTopUp {

@@ -9,7 +9,7 @@ import { useTheme } from '../src/theme';
 import type { CoinTopUp } from '../src/types/episodeAccess';
 import { styles } from '../src/styles/screens/topUps.styles';
 
-const PROVIDER_NAME: Record<string, string> = { VNPAY: 'VNPay', MOMO: 'MoMo' };
+const PROVIDER_NAME: Record<string, string> = { VNPAY: 'VNPay' };
 
 /** "Lịch sử nạp Coin": every top-up order of the member, newest first, with its payment state. */
 export default function TopUpHistoryScreen() {

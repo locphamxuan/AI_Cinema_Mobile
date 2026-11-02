@@ -7,13 +7,9 @@ import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../../theme';
 import { walletService } from '../../services/walletService';
 import { Button } from '../common/Button';
-import type { PaymentProvider, TopUpOptions, TopUpStatus } from '../../types/episodeAccess';
+import type { TopUpOptions, TopUpStatus } from '../../types/episodeAccess';
 import { styles } from '../../styles/components/wallet/TopUpModal.styles';
 
-const PROVIDERS: { id: PaymentProvider; name: string }[] = [
-  { id: 'VNPAY', name: 'VNPay' },
-  { id: 'MOMO', name: 'MoMo' },
-];
 const POLL_MS = 2500;
 const POLL_LIMIT = 24;
 const FINAL: TopUpStatus[] = ['PAID', 'FAILED', 'CANCELLED', 'EXPIRED'];
@@ -29,14 +25,13 @@ const vnd = (n: number) => `${n.toLocaleString('vi-VN')}đ`;
 /** Main Coins a top-up of `amountVnd` buys at the Admin's rate; the BE credits the same. */
 export const coinsFor = (amountVnd: number, rateVnd: number) => (rateVnd > 0 ? Math.floor(amountVnd / rateVnd) : 0);
 
-/** MF-2 top-up: a VNPay / MoMo order; the gateway's IPN credits main Coins, the app waits for it. */
+/** MF-2 top-up: a VNPay order; the gateway's IPN credits main Coins, the app waits for it. */
 export const TopUpModal: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { isTopUpModalOpen, setTopUpModalOpen, wallet, loadAccountData } = useAppStore();
   const [options, setOptions] = useState<TopUpOptions | null>(null);
   const [amount, setAmount] = useState('');
-  const [provider, setProvider] = useState<PaymentProvider>('VNPAY');
   const [phase, setPhase] = useState<'form' | 'waiting' | 'paid'>('form');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -87,14 +82,13 @@ export const TopUpModal: React.FC = () => {
     if (!inRange) return;
     setErrorMsg(null);
     setPhase('waiting');
-    const res = await walletService.createTopUp(provider, amountVnd);
+    const res = await walletService.createTopUp('VNPAY', amountVnd);
     if (!res.success || !res.data?.redirectUrl) {
       setPhase('form');
       setErrorMsg(res.message || 'Chưa tạo được đơn nạp. Kiểm tra kết nối rồi thử lại.');
       return;
     }
-    // The backend returns to the web wallet page. Keep the auth session open until the member
-    // closes that page or a future backend return deep link reaches this app, then reconcile.
+    // The backend's return trip opens the aicinema:// link, which closes this session; then reconcile.
     await WebBrowser.openAuthSessionAsync(res.data.redirectUrl, 'aicinema://');
     poll(res.data.topUpId);
   };
@@ -157,24 +151,7 @@ export const TopUpModal: React.FC = () => {
                 </Text>
               )}
 
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Thanh toán qua</Text>
-              <View style={styles.methods}>
-                {PROVIDERS.map((p) => {
-                  const selected = provider === p.id;
-                  return (
-                    <TouchableOpacity
-                      key={p.id}
-                      onPress={() => setProvider(p.id)}
-                      disabled={phase !== 'form'}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected }}
-                      style={[styles.method, { backgroundColor: colors.card, borderColor: selected ? colors.ruby : 'transparent' }]}
-                    >
-                      <Text style={[styles.methodName, { color: colors.text }]}>{p.name}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Thanh toán qua VNPay</Text>
 
               {errorMsg && <Text style={[styles.error, { color: colors.danger }]}>{errorMsg}</Text>}
 
