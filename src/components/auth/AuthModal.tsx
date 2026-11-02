@@ -188,7 +188,7 @@ export const AuthModal: React.FC = () => {
                 <TouchableOpacity
                   hitSlop={8}
                   onPress={() =>
-                    showDialog('Quên mật khẩu', 'App chưa đặt lại mật khẩu được. Nhắn cho Hỗ trợ trong mục Hồ sơ để lấy lại tài khoản.')
+                    showDialog('Quên mật khẩu', 'Tính năng đặt lại mật khẩu sẽ có trong bản cập nhật sau.')
                   }
                 >
                   <Text style={[styles.link, { color: colors.textSecondary }]}>Quên mật khẩu?</Text>
