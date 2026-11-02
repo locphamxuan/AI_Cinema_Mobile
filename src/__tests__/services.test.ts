@@ -232,6 +232,24 @@ describe('Live Backend Connection (Port 3001)', () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it('authService.register opens the session of the new Member at once', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 201,
+      text: async () =>
+        JSON.stringify({
+          accessToken: 'new-access',
+          refreshToken: 'r'.repeat(30),
+          user: { id: 'u1', email: 'new@example.com', fullName: 'New', role: 'MEMBER' },
+        }),
+    } as Response);
+    const res = await authService.register({ name: 'New', email: 'new@example.com', password: 'password123' });
+    expect(res.success).toBe(true);
+    expect(res.data.user?.role).toBe('MEMBER');
+    expect(await storage.getString(STORAGE_KEYS.AUTH_TOKEN, '')).toBe('new-access');
+    jest.restoreAllMocks();
+  });
+
   it('authService.register reports duplicate email from backend', async () => {
     jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: false,

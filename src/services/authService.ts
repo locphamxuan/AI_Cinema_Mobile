@@ -83,7 +83,7 @@ class AuthService {
     );
 
     if (res.success) {
-      return res;
+      return this.acceptSession(res, 'Chưa tạo được tài khoản. Thử lại sau ít phút.');
     }
 
     return {
