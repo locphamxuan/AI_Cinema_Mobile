@@ -17,7 +17,8 @@ export default function SettingsScreen() {
   const signOut = () => {
     const leave = () => {
       logout();
-      router.back();
+      if (router.canGoBack()) router.back();
+      else router.replace('/');
     };
     showDialog('Đăng xuất?', 'Ví Coin và gói Tháng vẫn giữ nguyên, bạn đăng nhập lại là thấy.', [
       { text: 'Ở lại', style: 'cancel' },

@@ -242,7 +242,8 @@ export const useAppStore = create<AppState>()(
             password,
           });
 
-          if (res.success) {
+          if (res.success && res.data?.user) {
+            await startSession(set, get, res.data.user);
             return { success: true, email: trimmedEmail };
           }
 

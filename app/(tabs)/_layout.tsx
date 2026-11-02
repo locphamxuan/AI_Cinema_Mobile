@@ -59,7 +59,7 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{ title: 'Trang chủ', tabBarIcon: tabIcon('play-circle-outline', 'play-circle') }} />
       <Tabs.Screen name="explore" options={{ title: 'Khám phá', tabBarIcon: tabIcon('compass-outline', 'compass') }} />
       <Tabs.Screen name="schedule" options={{ title: 'Lịch chiếu', tabBarIcon: tabIcon('calendar-clear-outline', 'calendar-clear') }} />
-      <Tabs.Screen name="vip" options={{ title: 'Gói Tháng', href: null }} />
+      <Tabs.Screen name="vip" options={{ title: 'Gói Tháng', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
       <Tabs.Screen name="profile" options={{ title: 'Hồ sơ', tabBarIcon: tabIcon('person-circle-outline', 'person-circle') }} />
     </Tabs>
   );

@@ -13,12 +13,21 @@ import { styles } from '../src/styles/screens/wallet.styles';
 export default function WalletScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { wallet, loadAccountData, setTopUpModalOpen, setCheckInModalOpen } = useAppStore();
+  const { isAuthenticated, wallet, loadAccountData, setTopUpModalOpen, setCheckInModalOpen } = useAppStore();
 
   // Balances always come from the BE.
   useEffect(() => {
-    void loadAccountData();
-  }, [loadAccountData]);
+    if (isAuthenticated) void loadAccountData();
+  }, [isAuthenticated, loadAccountData]);
+
+  if (!isAuthenticated) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScreenHeader title="Ví Coin" />
+        <Text style={[styles.rule, { color: colors.textMuted, padding: 24 }]}>Đăng nhập để xem ví Coin.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

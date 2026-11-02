@@ -108,9 +108,7 @@ export const AuthModal: React.FC = () => {
     } else {
       const result = await register(name, email, password);
       if (result.success) {
-        showDialog('Đã tạo tài khoản', 'Đăng nhập bằng email vừa đăng ký để bắt đầu xem.', [
-          { text: 'Đăng nhập', onPress: () => openAuthModal('login', email.trim()) },
-        ], { cancelable: false });
+        showDialog('Đã tạo tài khoản', 'Bạn đã là thành viên và có thể bắt đầu xem phim.');
       } else {
         setError(result.error || 'Chưa tạo được tài khoản. Kiểm tra kết nối rồi thử lại.');
       }
@@ -188,7 +186,7 @@ export const AuthModal: React.FC = () => {
                 <TouchableOpacity
                   hitSlop={8}
                   onPress={() =>
-                    showDialog('Quên mật khẩu', 'App chưa đặt lại mật khẩu được. Nhắn cho Hỗ trợ trong mục Hồ sơ để lấy lại tài khoản.')
+                    showDialog('Quên mật khẩu', 'Tính năng đặt lại mật khẩu sẽ có trong bản cập nhật sau.')
                   }
                 >
                   <Text style={[styles.link, { color: colors.textSecondary }]}>Quên mật khẩu?</Text>
