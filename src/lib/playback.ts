@@ -43,12 +43,12 @@ export function resumePointOf(session: Pick<StreamingSession, 'resumePositionSec
 const AD_END_SLACK_SECONDS = 0.5;
 
 /**
- * Seconds of the ad still to play. The length the player reads from the video wins over the stored
- * one; the ad counts as over once either says so or the player reported its end (BR-33).
+ * Seconds of the ad still to play. The admin-set length wins over the player-read one; the ad
+ * counts as over once either says so or the player reported its end (BR-33).
  */
 export function adSecondsLeft(position: number, playerDuration: number, storedDuration: number, reachedEnd: boolean): number {
   if (reachedEnd) return 0;
-  const length = playerDuration > 0 ? playerDuration : storedDuration;
+  const length = storedDuration > 0 ? storedDuration : playerDuration;
   const left = length - position;
   return left <= AD_END_SLACK_SECONDS ? 0 : Math.ceil(left);
 }
