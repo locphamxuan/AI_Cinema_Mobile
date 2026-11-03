@@ -92,8 +92,12 @@ describe('adSecondsLeft', () => {
     expect(adSecondsLeft(4.2, 0, 15, false)).toBe(11);
   });
 
-  it('prefers the length the player read from the video', () => {
-    expect(adSecondsLeft(10, 30, 15, false)).toBe(20);
+  it('prefers the admin-set length over the player-read length', () => {
+    expect(adSecondsLeft(10, 30, 15, false)).toBe(5);
+  });
+
+  it('falls back to the player-read length when the stored length is absent', () => {
+    expect(adSecondsLeft(10, 30, 0, false)).toBe(20);
   });
 
   it('is over at the end of the video, a few frames short, or once the player says so', () => {
