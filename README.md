@@ -26,7 +26,7 @@ that bucket for the origin the app runs on (for example `http://localhost:8081`)
 ```bash
 npm run lint
 npm run typecheck
-npm test               # Jest; `npm run test:cov` also writes coverage/lcov.info for SonarCloud
+npm test               # Jest; `npm run test:cov` also writes coverage/lcov.info
 npx expo export --platform android   # the release bundle must build
 ```
 
@@ -50,8 +50,8 @@ src/lib, utils  small helpers (orientation lock, ids, storage, dates)
 
 ## CI/CD
 
-`.github/workflows/ci.yml`: lint, typecheck, tests with coverage, Android bundle, SonarCloud quality
-gate (needs the `SONAR_TOKEN` repository secret) and a production dependency audit. Release builds go
+`.github/workflows/ci.yml`: lint, typecheck, tests with coverage, Android bundle and a production
+dependency audit. Release builds go
 through EAS (`eas.json`: `development`, `preview` APK, `production`):
 
 ```bash
