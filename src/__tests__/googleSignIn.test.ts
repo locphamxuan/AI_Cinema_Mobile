@@ -80,4 +80,16 @@ describe('Google sign-in', () => {
     expect(String(fetchMock.mock.calls[1][0])).toContain('/auth/logout');
     expect(await storage.getString(STORAGE_KEYS.AUTH_TOKEN, '')).toBe('');
   });
+
+  it('sends a studio account to the Studio Web instead', async () => {
+    jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(session('STUDIO'))
+      .mockResolvedValueOnce({ ok: true, status: 204, text: async () => '' } as Response);
+
+    const res = await authService.googleLogin({ idToken: 'id-token' });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.message).toContain('Studio Web');
+  });
 });

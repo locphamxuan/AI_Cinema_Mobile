@@ -12,6 +12,10 @@ const AUTH_CALL = { skipAuthRefresh: true } as const;
 const MEMBER_ROLE = 'MEMBER';
 const STAFF_ON_MOBILE_MESSAGE =
   'Tài khoản Sản xuất, Kiểm duyệt và Quản trị dùng trên Web Studio ở máy tính. App điện thoại chỉ dành cho người xem.';
+/** MF-1 (07/11/2026): a partner studio logs in on its own Studio Web, never on the viewer app. */
+const STUDIO_ROLE = 'STUDIO';
+const STUDIO_ON_MOBILE_MESSAGE =
+  'Tài khoản Studio đối tác dùng trên Studio Web để ký hợp đồng và nộp phim. App điện thoại chỉ dành cho người xem.';
 
 class AuthService {
   async login(dto: LoginRequestDto): Promise<ApiResponse<AuthResponseDto>> {
@@ -44,14 +48,14 @@ class AuthService {
     const user = res.data?.user;
 
     if (res.success && token && user && user.role !== MEMBER_ROLE) {
-      // Creator, Reviewer, Staff and Admin work on the web portal; end the session just opened.
+      // Creator, Reviewer, Staff and Admin work on the web portal, a studio on the Studio Web; end the session.
       if (res.data.refreshToken) {
         await apiClient.post(API_ROUTES.AUTH.LOGOUT, { refreshToken: res.data.refreshToken }, AUTH_CALL);
       }
       return {
         success: false,
         data: null as unknown as AuthResponseDto,
-        message: STAFF_ON_MOBILE_MESSAGE,
+        message: user.role === STUDIO_ROLE ? STUDIO_ON_MOBILE_MESSAGE : STAFF_ON_MOBILE_MESSAGE,
         statusCode: 403,
       };
     }
