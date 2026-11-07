@@ -74,11 +74,12 @@ class AuthService {
   async register(dto: RegisterRequestDto): Promise<ApiResponse<AuthResponseDto>> {
     const trimmedEmail = dto.email.trim().toLowerCase();
     const fullName = (dto.fullName || dto.name || '').trim();
+    const dateOfBirth = (dto.dateOfBirth || '2003-05-14').trim();
 
     // Gửi request tạo tài khoản tới Backend NestJS (/api/auth/register) -> lưu vào Neon PostgreSQL
     const res = await apiClient.post<AuthResponseDto>(
       API_ROUTES.AUTH.REGISTER,
-      { email: trimmedEmail, password: dto.password, fullName },
+      { email: trimmedEmail, password: dto.password, fullName, dateOfBirth },
       AUTH_CALL
     );
 
