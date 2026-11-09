@@ -3,31 +3,25 @@ import { engagementService } from '../services/engagementService';
 import { parseVtt, type Cue } from '../lib/vtt';
 
 const cache = new Map<string, Cue[]>();
+const NO_CUES: Cue[] = [];
 
 /** The cues of a subtitle track, read once per track; empty while loading or when the track is off (null). */
 export function useSubtitleCues(trackId: string | null): Cue[] {
-  const [cues, setCues] = useState<Cue[]>(() => (trackId ? cache.get(trackId) ?? [] : []));
+  const [loaded, setLoaded] = useState<{ trackId: string; cues: Cue[] } | null>(null);
 
   useEffect(() => {
+    if (!trackId || cache.has(trackId)) return;
     let active = true;
-    if (!trackId) {
-      setCues([]);
-      return;
-    }
-    const known = cache.get(trackId);
-    if (known) {
-      setCues(known);
-      return;
-    }
     void engagementService.subtitleText(trackId).then((text) => {
       const parsed = text ? parseVtt(text) : [];
       if (text) cache.set(trackId, parsed);
-      if (active) setCues(parsed);
+      if (active) setLoaded({ trackId, cues: parsed });
     });
     return () => {
       active = false;
     };
   }, [trackId]);
 
-  return cues;
+  if (!trackId) return NO_CUES;
+  return cache.get(trackId) ?? (loaded?.trackId === trackId ? loaded.cues : NO_CUES);
 }
