@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { showDialog } from '../../lib/dialog';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../store/useAppStore';
@@ -11,6 +11,21 @@ import { MIN_PASSWORD, authFormError } from '../../lib/authForm';
 import { Button } from '../common/Button';
 import { GoogleSignInSection } from './GoogleSignInSection';
 import { styles } from '../../styles/components/auth/AuthModal.styles';
+
+/** The login this device remembered, or null when there is none or it cannot be read. */
+async function readRememberedLogin() {
+  try {
+    const [email, password, remember] = await Promise.all([
+      storage.getString(STORAGE_KEYS.REMEMBERED_EMAIL),
+      storage.getString(STORAGE_KEYS.REMEMBERED_PASSWORD),
+      storage.getString(STORAGE_KEYS.REMEMBER_ME),
+    ]);
+    return email && password ? { email, password, remember: remember !== 'false' } : null;
+  } catch (e) {
+    console.error('Error loading saved credentials:', e);
+    return null;
+  }
+}
 
 export const AuthModal: React.FC = () => {
   const router = useRouter();
@@ -31,33 +46,29 @@ export const AuthModal: React.FC = () => {
 
   const isLogin = authModalMode === 'login';
 
+  // Each opening starts without the previous attempt's error.
+  const [wasOpen, setWasOpen] = useState(false);
+  if (isAuthModalOpen !== wasOpen) {
+    setWasOpen(isAuthModalOpen);
+    if (isAuthModalOpen) setError(null);
+  }
+
   // Fill in what this device remembered when the dialog opens.
   useEffect(() => {
     if (!isAuthModalOpen) return;
-    setError(null);
-    const loadSaved = async () => {
-      try {
-        const [savedEmail, savedPassword, savedRemember] = await Promise.all([
-          storage.getString(STORAGE_KEYS.REMEMBERED_EMAIL),
-          storage.getString(STORAGE_KEYS.REMEMBERED_PASSWORD),
-          storage.getString(STORAGE_KEYS.REMEMBER_ME),
-        ]);
-        if (savedEmail && savedPassword) {
-          setEmail(savedEmail);
-          setPassword(savedPassword);
-          setRememberMe(savedRemember !== 'false');
-          setHasSavedCredentials(true);
-          return;
-        }
-      } catch (e) {
-        console.error('Error loading saved credentials:', e);
+    void readRememberedLogin().then((saved) => {
+      if (saved) {
+        setEmail(saved.email);
+        setPassword(saved.password);
+        setRememberMe(saved.remember);
+        setHasSavedCredentials(true);
+        return;
       }
       setEmail(initialAuthEmail || '');
       if (!initialAuthEmail) setPassword('');
       setRememberMe(true);
       setHasSavedCredentials(false);
-    };
-    void loadSaved();
+    });
   }, [isAuthModalOpen, initialAuthEmail]);
 
   const forgetSaved = async () => {
@@ -102,7 +113,7 @@ export const AuthModal: React.FC = () => {
         } catch (e) {
           console.error('Failed to update remembered credentials:', e);
         }
-        if (result.redirectUrl) router.replace(result.redirectUrl as any);
+        if (result.redirectUrl) router.replace(result.redirectUrl as Href);
       } else {
         setError(result.error || 'Chưa đăng nhập được. Kiểm tra email, mật khẩu và kết nối mạng.');
       }

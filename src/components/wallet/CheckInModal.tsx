@@ -39,9 +39,17 @@ export const CheckInModal: React.FC = () => {
   const [statusLoading, setStatusLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const reloadStatus = useCallback(() => {
-    setErrorMsg(null);
-    setStatusLoading(true);
+  // Opening the sheet starts it clean; the effect below then fetches.
+  const [wasOpen, setWasOpen] = useState(false);
+  if (isCheckInModalOpen !== wasOpen) {
+    setWasOpen(isCheckInModalOpen);
+    if (isCheckInModalOpen) {
+      setErrorMsg(null);
+      setStatusLoading(true);
+    }
+  }
+
+  const fetchStatus = useCallback(() => {
     return loadDailyReward()
       .then((loaded) => {
         if (!loaded) setErrorMsg(LOAD_ERROR);
@@ -55,8 +63,14 @@ export const CheckInModal: React.FC = () => {
   }, [loadDailyReward]);
 
   useEffect(() => {
-    if (isCheckInModalOpen) void reloadStatus();
-  }, [isCheckInModalOpen, reloadStatus]);
+    if (isCheckInModalOpen) void fetchStatus();
+  }, [isCheckInModalOpen, fetchStatus]);
+
+  const reloadStatus = () => {
+    setErrorMsg(null);
+    setStatusLoading(true);
+    return fetchStatus();
+  };
 
   const close = () => {
     setClaimed(null);

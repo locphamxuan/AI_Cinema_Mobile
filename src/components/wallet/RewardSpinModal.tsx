@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Modal, Pressable, TouchableOpacity, ActivityIndicator, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,11 +34,9 @@ function SpinDialog() {
   const [loading, setLoading] = useState(true);
   const [pendingSpinKey, setPendingSpinKey] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const turn = useRef(new Animated.Value(0)).current;
+  const [turn] = useState(() => new Animated.Value(0));
 
-  const loadWheel = useCallback(() => {
-    setLoading(true);
-    setErrorMsg(null);
+  const fetchWheel = useCallback(() => {
     void rewardService
       .getWheel()
       .then((res) => {
@@ -49,7 +47,13 @@ function SpinDialog() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(loadWheel, [loadWheel]);
+  useEffect(fetchWheel, [fetchWheel]);
+
+  const retryWheel = () => {
+    setLoading(true);
+    setErrorMsg(null);
+    fetchWheel();
+  };
 
   const spins = wheel?.availableSpins ?? 0;
   const prizes = wheel?.prizes ?? [];
@@ -156,7 +160,7 @@ function SpinDialog() {
           <View style={styles.errorRow}>
             <Text style={[styles.error, { color: colors.danger }]}>{errorMsg}</Text>
             {!pendingSpinKey && (
-              <TouchableOpacity onPress={loadWheel} hitSlop={8}>
+              <TouchableOpacity onPress={retryWheel} hitSlop={8}>
                 <Text style={[styles.retry, { color: colors.text }]}>Tải lại</Text>
               </TouchableOpacity>
             )}

@@ -294,14 +294,14 @@ export const useAppStore = create<AppState>()(
       name: 'ai_cinema_mobile_app_store',
       version: 2,
       storage: createJSONStorage(() => AsyncStorage),
-      migrate: async (persistedState: any) => {
+      migrate: async (persistedState: unknown) => {
         await Promise.all([
           storage.remove(STORAGE_KEYS.AUTH_TOKEN),
           storage.remove(STORAGE_KEYS.USER_DATA),
           storage.remove(STORAGE_KEYS.WALLET_DATA),
         ]);
         return {
-          ...persistedState,
+          ...(persistedState as Partial<AppState>),
           isAuthenticated: false,
           user: null,
           isVIPMode: false,
