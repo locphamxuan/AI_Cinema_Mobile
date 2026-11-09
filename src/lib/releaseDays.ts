@@ -1,5 +1,5 @@
 import type { Episode, Movie } from '../types/movie';
-import { VN_DAY_LABELS, getTodayDayIndex } from '../utils/date';
+import { VN_DAY_LABELS, getTodayDayIndex } from './date';
 
 const RELEASE_WINDOW_DAYS = 7;
 

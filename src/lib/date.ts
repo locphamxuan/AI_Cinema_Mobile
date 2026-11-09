@@ -1,5 +1,5 @@
 /**
- * Helper utilities for Real-World Date & Vietnam Weekday formatting.
+ * Vietnamese weekday labels and the Monday-based day index.
  */
 
 // Days of week in Vietnam starting Monday: T2, T3, T4, T5, T6, T7, CN

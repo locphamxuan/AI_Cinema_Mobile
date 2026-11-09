@@ -4,7 +4,7 @@ import {
   formatDuration,
   adaptUserProfile,
 } from '../lib/apiAdapter';
-import { getTodayDayIndex, VN_DAY_LABELS } from '../utils/date';
+import { getTodayDayIndex, VN_DAY_LABELS } from '../lib/date';
 import {
   authService,
   movieService,
