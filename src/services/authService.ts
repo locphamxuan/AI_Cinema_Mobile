@@ -20,8 +20,6 @@ const STUDIO_ON_MOBILE_MESSAGE =
 class AuthService {
   async login(dto: LoginRequestDto): Promise<ApiResponse<AuthResponseDto>> {
     const trimmedEmail = dto.email.trim().toLowerCase();
-
-    // Kết nối trực tiếp tới Backend NestJS (/api/auth/login)
     const res = await apiClient.post<AuthResponseDto>(
       API_ROUTES.AUTH.LOGIN,
       { email: trimmedEmail, password: dto.password },
@@ -78,9 +76,7 @@ class AuthService {
   async register(dto: RegisterRequestDto): Promise<ApiResponse<AuthResponseDto>> {
     const trimmedEmail = dto.email.trim().toLowerCase();
     const fullName = (dto.fullName || dto.name || '').trim();
-    const dateOfBirth = (dto.dateOfBirth || '2003-05-14').trim();
-
-    // Gửi request tạo tài khoản tới Backend NestJS (/api/auth/register) -> lưu vào Neon PostgreSQL
+    const dateOfBirth = dto.dateOfBirth.trim();
     const res = await apiClient.post<AuthResponseDto>(
       API_ROUTES.AUTH.REGISTER,
       { email: trimmedEmail, password: dto.password, fullName, dateOfBirth },

@@ -28,7 +28,8 @@ export interface RegisterRequestDto {
   fullName?: string;
   email: string;
   password?: string;
-  dateOfBirth?: string;
+  /** YYYY-MM-DD; the BE turns away anyone under 18. */
+  dateOfBirth: string;
 }
 
 export interface BEUserDto {

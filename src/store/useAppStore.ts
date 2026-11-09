@@ -45,7 +45,7 @@ interface AppState {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string; role?: string }>;
   /** `reason` is GOOGLE_SIGNUP_NEEDS_BIRTHDAY when a first Google sign-in still needs a birthday. */
   loginWithGoogle: (idToken: string) => Promise<{ success: boolean; error?: string }>;
-  register: (name: string, email: string, password: string, dateOfBirth?: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string; role?: string }>;
+  register: (name: string, email: string, password: string, dateOfBirth: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string; role?: string }>;
   logout: () => Promise<void>;
   isAuthModalOpen: boolean;
   authModalMode: 'login' | 'register';
@@ -198,7 +198,7 @@ export const useAppStore = create<AppState>()(
       register: async (name, email, password, dateOfBirth) => {
         const trimmedEmail = email.trim().toLowerCase();
         const trimmedName = name.trim();
-        const trimmedDob = (dateOfBirth || '').trim();
+        const trimmedDob = dateOfBirth.trim();
 
         if (!trimmedEmail || !password || !trimmedName || !trimmedDob) {
           return { success: false, error: 'Điền đủ họ tên, ngày sinh, email và mật khẩu.' };
