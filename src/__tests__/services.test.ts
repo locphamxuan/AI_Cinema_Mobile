@@ -16,11 +16,6 @@ import { API_ROUTES } from '../constants/apiRoutes';
 import { API_CONFIG } from '../constants/config';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 
-// Mock AsyncStorage for headless test execution
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
-);
-
 describe('API Routes and Config', () => {
   it('should have proper API routes configured', () => {
     expect(API_ROUTES.AUTH.LOGIN).toBe('/auth/login');

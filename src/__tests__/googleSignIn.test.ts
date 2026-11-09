@@ -1,10 +1,6 @@
 import { authService } from '../services';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
-);
-
 const session = (role: string) => ({
   ok: true,
   status: 200,

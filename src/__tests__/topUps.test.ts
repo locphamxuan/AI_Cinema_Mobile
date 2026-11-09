@@ -1,10 +1,6 @@
 import { canResumePayment, formatVnd, TOP_UP_STATUS } from '../lib/topUps';
 import { walletService } from '../services/walletService';
 
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
-
 describe('top-up history', () => {
   afterEach(() => jest.restoreAllMocks());
 

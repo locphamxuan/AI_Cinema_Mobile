@@ -7,10 +7,6 @@ import { coinsFor } from '../components/wallet/TopUpModal';
 import { cancelWindowText } from '../../app/(tabs)/vip';
 import type { DailyRewardStatus, MySubscription } from '../types/episodeAccess';
 
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
-
 /** Answers each fetch by `METHOD path` (without the /api prefix) and records the calls. */
 function routeFetch(routes: Record<string, unknown>) {
   return jest.spyOn(global, 'fetch').mockImplementation(async (input, init) => {

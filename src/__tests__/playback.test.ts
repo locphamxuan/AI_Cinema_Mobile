@@ -4,10 +4,6 @@ import { extractErrorMessage } from '../services/apiClient';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import type { AdScheduleItem } from '../types/playback';
 
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
-
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 const cue = (breakId: string, positionSeconds: number): AdScheduleItem => ({

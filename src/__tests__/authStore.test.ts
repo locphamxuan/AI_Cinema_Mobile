@@ -2,10 +2,6 @@ import { useAppStore } from '../store/useAppStore';
 import { apiClient } from '../services/apiClient';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
-
 /** Answers each fetch by `METHOD path` (without the /api prefix) and records the calls. */
 function routeFetch(routes: Record<string, { status?: number; body?: unknown }>) {
   return jest.spyOn(global, 'fetch').mockImplementation(async (input, init) => {
