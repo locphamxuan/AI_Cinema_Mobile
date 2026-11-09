@@ -48,7 +48,7 @@ export const extractErrorMessage = (body: any): string | undefined =>
   joinMessage(body?.message);
 
 class ApiClient {
-  private baseUrl: string;
+  private readonly baseUrl: string;
   private refreshInFlight: Promise<boolean> | null = null;
   private sessionExpiredHandler: (() => void) | null = null;
 
@@ -104,10 +104,6 @@ class ApiClient {
       });
     }
     return this.refreshInFlight;
-  }
-
-  public setBaseUrl(url: string) {
-    this.baseUrl = url;
   }
 
   public getBaseUrl(): string {

@@ -36,10 +36,8 @@ const signedOutState = () => ({
 interface AppState {
   // Movies Data & Loading
   movies: Movie[];
-  isLoadingMovies: boolean;
   loadInitialData: () => Promise<void>;
   loadAccountData: () => Promise<void>;
-  fetchMovies: (params?: { search?: string; genre?: string }) => Promise<void>;
 
   // Auth
   isAuthenticated: boolean;
@@ -54,11 +52,6 @@ interface AppState {
   initialAuthEmail: string;
   openAuthModal: (mode?: 'login' | 'register', email?: string) => void;
   closeAuthModal: () => void;
-
-  // Theme
-  theme: 'light' | 'dark';
-  setTheme: (theme: 'light' | 'dark') => void;
-  toggleTheme: () => void;
 
   /** The monthly plan is running (GET /subscriptions/me): every released episode is open. */
   isVIPMode: boolean;
@@ -113,18 +106,15 @@ export const useAppStore = create<AppState>()(
     (set, get) => ({
       // ===== MOVIES & DATA LOADING =====
       movies: [],
-      isLoadingMovies: false,
 
       loadInitialData: async () => {
         try {
-          set({ isLoadingMovies: true });
-
           const moviesRes = await movieService.listMovies({ limit: 50 });
 
           const rawList = moviesRes.success && Array.isArray(moviesRes.data)
             ? moviesRes.data
             : [];
-          set({ movies: rawList, currentMovie: rawList[0] || null, isLoadingMovies: false });
+          set({ movies: rawList, currentMovie: rawList[0] || null });
           if (get().isAuthenticated) {
             // The persisted "signed in" flag can outlive the session; confirm it with the backend.
             const profileRes = await authService.getProfile();
@@ -137,7 +127,7 @@ export const useAppStore = create<AppState>()(
             }
           }
         } catch {
-          set({ isLoadingMovies: false });
+          // Catalog or profile unreachable: the screens keep what they already show.
         }
       },
 
@@ -156,25 +146,6 @@ export const useAppStore = create<AppState>()(
             user: state.user ? { ...state.user, isVIP: running } : null,
           };
         });
-      },
-
-      fetchMovies: async (params) => {
-        try {
-          set({ isLoadingMovies: true });
-          const res = await movieService.listMovies(params);
-          if (res.success && res.data) {
-            const rawList = Array.isArray(res.data)
-              ? res.data
-              : (res.data as any).items || (res.data as any).data || [];
-            if (Array.isArray(rawList) && rawList.length > 0) {
-              set({ movies: rawList, isLoadingMovies: false });
-              return;
-            }
-          }
-          set({ movies: [], isLoadingMovies: false });
-        } catch {
-          set({ movies: [], isLoadingMovies: false });
-        }
       },
 
       // ===== AUTH & USER =====
@@ -265,14 +236,6 @@ export const useAppStore = create<AppState>()(
       logout: async () => {
         await authService.logout();
         set(signedOutState());
-      },
-
-      // ===== THEME (Default Pure White Light Mode) =====
-      theme: 'light',
-      setTheme: (theme) => set({ theme }),
-      toggleTheme: () => {
-        const nextTheme = get().theme === 'dark' ? 'light' : 'dark';
-        set({ theme: nextTheme });
       },
 
       // ===== MONTHLY PLAN & WALLET =====
@@ -376,7 +339,6 @@ export const useAppStore = create<AppState>()(
         user: state.user,
         isVIPMode: state.isVIPMode,
         watchHistory: state.watchHistory,
-        theme: state.theme,
       }),
     }
   )
