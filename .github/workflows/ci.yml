@@ -2,7 +2,7 @@ name: Mobile CI
 
 on:
   push:
-    branches: [main, dev, "feat/**", "fix/**", "ci/**", "refactor/**"]
+    branches: [main, dev, "feat/**", "fix/**", "ci/**", "refactor/**", "chore/**"]
   pull_request:
   workflow_dispatch:
 
@@ -39,7 +39,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20.19"
-      # Expo SDK 52's build tooling (@expo/cli -> tar, xmldom, ...) carries advisories that only an SDK
-      # upgrade clears; they never ship in the app. Reported, not blocking, until that upgrade lands.
+      # Expo SDK 58's build tooling (@expo/cli -> glob, zod, ...) carries advisories that only an Expo
+      # release clears; they never ship in the app. Reported, not blocking, until that release lands.
       - run: npm audit --omit=dev --audit-level=high
         continue-on-error: true
