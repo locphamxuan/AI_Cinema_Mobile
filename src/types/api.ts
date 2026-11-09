@@ -2,7 +2,7 @@
  * Standard API Response and Request Types for AI Cinema Mobile
  */
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data: T;
   message?: string;
@@ -43,6 +43,13 @@ export interface BEUserDto {
   isVip?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+/** GET /auth/me; the plan fields are older names the adapter still accepts. */
+export interface ProfileDto extends Partial<BEUserDto> {
+  isVIP?: boolean;
+  vipExpiresAt?: string;
+  subscription?: { endDate?: string } | null;
 }
 
 export interface AuthResponseDto {

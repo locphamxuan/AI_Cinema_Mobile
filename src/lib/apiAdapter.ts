@@ -1,7 +1,9 @@
 import type { Movie, Episode, AIComplianceInfo } from '../types/movie';
 import type { UserProfile } from '../types/auth';
+import type { ProfileDto } from '../types/api';
+import type { CatalogEpisodeDto, CatalogMovieDto } from '../types/catalog';
 
-export function adaptUserProfile(api: any): UserProfile {
+export function adaptUserProfile(api: ProfileDto | null | undefined): UserProfile {
   if (!api) {
     return {
       id: 'user-guest',
@@ -29,17 +31,17 @@ export function adaptUserProfile(api: any): UserProfile {
   };
 }
 
-export function adaptApiMovieToMovie(api: any): Movie {
-  if (!api) api = {};
+export function adaptApiMovieToMovie(dto: CatalogMovieDto | null | undefined): Movie {
+  const api: Partial<CatalogMovieDto> = dto ?? {};
 
   const episodes: Episode[] = Array.isArray(api.episodes) && api.episodes.length > 0
-    ? api.episodes.map((ep: any, index: number) => adaptApiEpisodeToEpisode(ep, index + 1))
+    ? api.episodes.map((ep, index) => adaptApiEpisodeToEpisode(ep, index + 1))
     : [];
 
   const genres: string[] = Array.isArray(api.genre)
     ? api.genre
     : Array.isArray(api.genres)
-    ? api.genres.map((g: any) => (typeof g === 'string' ? g : g.name || 'AI Cinema'))
+    ? api.genres.map((g) => (typeof g === 'string' ? g : g.name || 'AI Cinema'))
     : [];
 
   const aiCompliance: AIComplianceInfo = {
@@ -84,7 +86,7 @@ export function formatDuration(totalSeconds: unknown): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
-export function adaptApiEpisodeToEpisode(api: any, defaultIndex = 1): Episode {
+export function adaptApiEpisodeToEpisode(api: CatalogEpisodeDto, defaultIndex = 1): Episode {
   return {
     id: api.id || '',
     seasonNumber: Number(api.seasonNumber) || 1,
@@ -99,7 +101,7 @@ export function adaptApiEpisodeToEpisode(api: any, defaultIndex = 1): Episode {
     notice: api.notice || null,
     aiLabel: api.aiLabel?.labelText || null,
     subtitles: Array.isArray(api.subtitles)
-      ? api.subtitles.map((s: any) => ({
+      ? api.subtitles.map((s) => ({
           id: String(s.id),
           language: String(s.language),
           label: String(s.label || s.language),
