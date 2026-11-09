@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react';
+import { loadThemeMode, saveThemeMode, type ThemeMode } from '../lib/themePreference';
 import { lightColors, darkColors, ThemeColors } from './colors';
 import { spacing, borderRadius } from './spacing';
 import { typography } from './typography';
 
-export type ThemeMode = 'light' | 'dark';
+export type { ThemeMode };
 
 interface ThemeContextType {
   theme: ThemeMode;
@@ -20,13 +21,30 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: ReactNode; initialTheme?: ThemeMode }> = ({
   children,
-  initialTheme = 'dark', // DEFAULT IS CINEMATIC BLACK DARK THEME
+  initialTheme = 'dark',
 }) => {
-  const [theme, setTheme] = useState<ThemeMode>(initialTheme);
+  const [theme, setThemeState] = useState<ThemeMode>(initialTheme);
+  // Set once the viewer picks a look, so a slow read of the saved one cannot undo it.
+  const picked = useRef(false);
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
+  // The saved look comes back from AsyncStorage; a missing or unreadable value keeps the default.
+  useEffect(() => {
+    let active = true;
+    void loadThemeMode(initialTheme).then((saved) => {
+      if (active && !picked.current) setThemeState(saved);
+    });
+    return () => {
+      active = false;
+    };
+  }, [initialTheme]);
+
+  const setTheme = useCallback((mode: ThemeMode) => {
+    picked.current = true;
+    setThemeState(mode);
+    void saveThemeMode(mode);
+  }, []);
+
+  const toggleTheme = useCallback(() => setTheme(theme === 'light' ? 'dark' : 'light'), [setTheme, theme]);
 
   const isDark = theme === 'dark';
   const colors = isDark ? darkColors : lightColors;
