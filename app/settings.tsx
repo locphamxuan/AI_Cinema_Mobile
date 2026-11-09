@@ -6,13 +6,13 @@ import { useRouter } from 'expo-router';
 import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { MenuCard, MenuRow } from '../src/components/common/MenuRow';
 import { useTheme } from '../src/theme';
-import { useAppStore } from '../src/store/useAppStore';
+import { useSessionStore } from '../src/store';
 import { styles } from '../src/styles/screens/settings.styles';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { colors, isDark, toggleTheme } = useTheme();
-  const { isAuthenticated, logout } = useAppStore();
+  const { isAuthenticated, logout } = useSessionStore();
 
   const signOut = () => {
     const leave = () => {

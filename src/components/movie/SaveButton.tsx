@@ -2,14 +2,15 @@ import React from 'react';
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { savedMovieService } from '../../services/savedMovieService';
-import { useAppStore } from '../../store/useAppStore';
+import { useSessionStore, useUiStore } from '../../store';
 import { useTheme } from '../../theme';
 import { styles } from '../../styles/components/movie/SaveButton.styles';
 
 /** Bookmark that keeps the movie in "Danh sách của tôi" on the BE; a Guest is asked to sign in first. */
 export function SaveButton({ movieId }: { movieId: string }) {
   const { colors } = useTheme();
-  const { isAuthenticated, openAuthModal } = useAppStore();
+  const { isAuthenticated } = useSessionStore();
+  const { openAuthModal } = useUiStore();
   // Tagged with its movie: a new movie reads as not saved until the BE answers for it.
   const [status, setStatus] = React.useState<{ movieId: string; saved: boolean } | null>(null);
   const saved = isAuthenticated && status?.movieId === movieId && status.saved;

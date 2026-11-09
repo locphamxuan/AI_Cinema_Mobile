@@ -7,7 +7,7 @@ import { AuthModal } from '../components/auth/AuthModal';
 import { Button } from '../components/common/Button';
 import { purgeLegacyCredentials, readRememberedEmail, rememberEmail } from '../lib/rememberedLogin';
 import { STORAGE_KEYS } from '../lib/storage';
-import { useAppStore } from '../store/useAppStore';
+import { useSessionStore, useUiStore } from '../store';
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('../components/auth/GoogleSignInSection', () => ({ GoogleSignInSection: () => null }));
@@ -44,7 +44,7 @@ const closed = { isAuthModalOpen: false, authModalMode: 'login' as const, initia
 async function openModal() {
   let root!: ReactTestRenderer;
   act(() => {
-    useAppStore.setState({ ...closed, isAuthModalOpen: true });
+    useUiStore.setState({ ...closed, isAuthModalOpen: true });
     root = create(<AuthModal />);
   });
   await settle();
@@ -72,7 +72,8 @@ const storedValues = async () => {
 beforeEach(async () => {
   await AsyncStorage.clear();
   act(() => {
-    useAppStore.setState({ ...closed, login: jest.fn(async () => ({ success: true })) });
+    useUiStore.setState(closed);
+    useSessionStore.setState({ login: jest.fn(async () => ({ success: true })) });
   });
 });
 
@@ -85,7 +86,7 @@ describe('remembered login', () => {
 
     await signIn(root, ' viewer@example.com ');
 
-    expect(useAppStore.getState().login).toHaveBeenCalledWith(' viewer@example.com ', PASSWORD);
+    expect(useSessionStore.getState().login).toHaveBeenCalledWith(' viewer@example.com ', PASSWORD);
     expect(await readRememberedEmail()).toBe('viewer@example.com');
     expect(setItem.mock.calls.map(([, value]) => value)).not.toContain(PASSWORD);
     expect(await storedValues()).not.toContain(PASSWORD);

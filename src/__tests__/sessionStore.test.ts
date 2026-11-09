@@ -1,4 +1,4 @@
-import { useAppStore } from '../store/useAppStore';
+import { useAccountStore, useSessionStore, useUiStore } from '../store';
 import { apiClient } from '../services/apiClient';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 
@@ -46,7 +46,16 @@ const signedOut = {
   dailyReward: null,
 };
 
-beforeEach(() => useAppStore.setState(signedOut));
+/** The account as the screens see it, across the session and account stores. */
+const appState = () => ({ ...useSessionStore.getState(), ...useAccountStore.getState() });
+
+function setAppState(state: Partial<typeof signedOut>) {
+  const { isAuthenticated, user, ...account } = state;
+  useSessionStore.setState({ ...(isAuthenticated !== undefined && { isAuthenticated }), ...(user !== undefined && { user }) });
+  useAccountStore.setState(account);
+}
+
+beforeEach(() => setAppState(signedOut));
 
 afterEach(async () => {
   jest.restoreAllMocks();
@@ -61,25 +70,27 @@ describe('sign-in on the store', () => {
       'GET /subscriptions/me': { body: runningPlan },
     });
 
-    const res = await useAppStore.getState().login(' Viewer@Example.com ', 'password123');
+    useUiStore.getState().openAuthModal('login');
 
-    const state = useAppStore.getState();
+    const res = await useSessionStore.getState().login(' Viewer@Example.com ', 'password123');
+
+    const state = appState();
     expect(res.success).toBe(true);
     expect(state.isAuthenticated).toBe(true);
     expect(state.wallet).toEqual({ mainCoin: 120, bonusCoin: 30 });
     expect(state.isVIPMode).toBe(true);
-    expect(state.user?.isVIP).toBe(true);
+    expect(useUiStore.getState().isAuthModalOpen).toBe(false);
     expect(await storage.getString(STORAGE_KEYS.AUTH_TOKEN, '')).toBe('access');
   });
 
   it('turns a studio account away to the Studio Web and stays signed out', async () => {
     const fetchMock = routeFetch({ 'POST /auth/login': session('STUDIO'), 'POST /auth/logout': { status: 204 } });
 
-    const res = await useAppStore.getState().login('studio@example.com', 'password123');
+    const res = await useSessionStore.getState().login('studio@example.com', 'password123');
 
     expect(res.success).toBe(false);
     expect(res.error).toContain('Studio Web');
-    expect(useAppStore.getState().isAuthenticated).toBe(false);
+    expect(appState().isAuthenticated).toBe(false);
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
       expect.stringContaining('/auth/login'),
       expect.stringContaining('/auth/logout'),
@@ -89,10 +100,10 @@ describe('sign-in on the store', () => {
   it('reports a network failure in words the viewer can act on', async () => {
     jest.spyOn(global, 'fetch').mockRejectedValue(new Error('Network request failed'));
 
-    const res = await useAppStore.getState().login('viewer@example.com', 'password123');
+    const res = await useSessionStore.getState().login('viewer@example.com', 'password123');
 
     expect(res).toEqual({ success: false, error: 'Network request failed' });
-    expect(useAppStore.getState().isAuthenticated).toBe(false);
+    expect(appState().isAuthenticated).toBe(false);
   });
 });
 
@@ -100,7 +111,7 @@ describe('sign-up on the store', () => {
   it('asks for the birthday before calling the BE', async () => {
     const fetchMock = jest.spyOn(global, 'fetch');
 
-    const res = await useAppStore.getState().register('Viewer', 'viewer@example.com', 'password123', '  ');
+    const res = await useSessionStore.getState().register('Viewer', 'viewer@example.com', 'password123', '  ');
 
     expect(res.success).toBe(false);
     expect(res.error).toContain('ngày sinh');
@@ -114,7 +125,7 @@ describe('sign-up on the store', () => {
       'GET /subscriptions/me': { body: null },
     });
 
-    const res = await useAppStore.getState().register(' Viewer ', 'Viewer@Example.com', 'password123', '2000-01-31');
+    const res = await useSessionStore.getState().register(' Viewer ', 'Viewer@Example.com', 'password123', '2000-01-31');
 
     expect(res.success).toBe(true);
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
@@ -123,28 +134,28 @@ describe('sign-up on the store', () => {
       fullName: 'Viewer',
       dateOfBirth: '2000-01-31',
     });
-    expect(useAppStore.getState().isAuthenticated).toBe(true);
-    expect(useAppStore.getState().isVIPMode).toBe(false);
+    expect(appState().isAuthenticated).toBe(true);
+    expect(appState().isVIPMode).toBe(false);
   });
 });
 
 describe('leaving the session', () => {
   it('logout forgets the wallet and plan of the account', async () => {
-    useAppStore.setState({ isAuthenticated: true, isVIPMode: true, wallet: { mainCoin: 5, bonusCoin: 5 } });
+    setAppState({ isAuthenticated: true, isVIPMode: true, wallet: { mainCoin: 5, bonusCoin: 5 } });
     routeFetch({ 'POST /auth/logout': { status: 204 } });
 
-    await useAppStore.getState().logout();
+    await useSessionStore.getState().logout();
 
-    expect(useAppStore.getState()).toMatchObject(signedOut);
+    expect(appState()).toMatchObject(signedOut);
   });
 
   it('signs out every screen when the BE rejects the refresh token', async () => {
-    useAppStore.setState({ isAuthenticated: true, wallet: { mainCoin: 5, bonusCoin: 0 } });
+    setAppState({ isAuthenticated: true, wallet: { mainCoin: 5, bonusCoin: 0 } });
     await apiClient.saveSession({ accessToken: 'old', refreshToken: 'r'.repeat(30) });
     routeFetch({ 'GET /wallet': { status: 401, body: {} }, 'POST /auth/refresh': { status: 401, body: {} } });
 
     await apiClient.get('/wallet');
 
-    expect(useAppStore.getState()).toMatchObject(signedOut);
+    expect(appState()).toMatchObject(signedOut);
   });
 });

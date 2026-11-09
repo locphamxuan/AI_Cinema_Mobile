@@ -7,7 +7,7 @@ import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { deviceService } from '../src/services/deviceService';
 import { deviceIcon, lastSeenLabel } from '../src/lib/device';
 import { clock } from '../src/lib/vtt';
-import { useAppStore } from '../src/store/useAppStore';
+import { useSessionStore } from '../src/store';
 import { useTheme } from '../src/theme';
 import type { DeviceOverview, LiveStream, RegisteredDevice } from '../src/types/device';
 import { styles } from '../src/styles/screens/devices.styles';
@@ -18,7 +18,7 @@ import { styles } from '../src/styles/screens/devices.styles';
  */
 export default function DevicesScreen() {
   const { colors } = useTheme();
-  const isAuthenticated = useAppStore((s) => s.isAuthenticated);
+  const isAuthenticated = useSessionStore((s) => s.isAuthenticated);
   const [data, setData] = React.useState<DeviceOverview | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);

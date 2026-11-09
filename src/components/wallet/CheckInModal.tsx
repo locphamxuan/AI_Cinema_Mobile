@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Modal, Pressable, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppStore } from '../../store/useAppStore';
+import { useAccountStore, useUiStore } from '../../store';
 import { useTheme } from '../../theme';
 import { Button } from '../common/Button';
 import type { CheckInResult, DailyRewardStatus } from '../../types/episodeAccess';
@@ -33,7 +33,8 @@ export function ladderDays(status: DailyRewardStatus | null, claimedDay?: number
 export const CheckInModal: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { isCheckInModalOpen, setCheckInModalOpen, dailyReward, loadDailyReward, claimDailyCheckIn, setRewardSpinOpen } = useAppStore();
+  const { dailyReward, loadDailyReward, claimDailyCheckIn } = useAccountStore();
+  const { isCheckInModalOpen, setCheckInModalOpen, setRewardSpinOpen } = useUiStore();
   const [claimed, setClaimed] = useState<CheckInResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);

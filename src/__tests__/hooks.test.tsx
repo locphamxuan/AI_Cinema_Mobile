@@ -14,7 +14,7 @@ import { notificationService } from '../services/notificationService';
 import { playbackService } from '../services/playbackService';
 import { savedMovieService } from '../services/savedMovieService';
 import { walletService } from '../services/walletService';
-import { useAppStore } from '../store/useAppStore';
+import { useSessionStore } from '../store';
 import type { ApiResponse } from '../types/api';
 import type { StatementLine } from '../types/episodeAccess';
 import type { StreamingSession, WatchHistoryEntry } from '../types/playback';
@@ -222,12 +222,12 @@ describe('SaveButton', () => {
 
   beforeEach(() => {
     act(() => {
-      useAppStore.setState({ isAuthenticated: true });
+      useSessionStore.setState({ isAuthenticated: true });
     });
   });
   afterEach(() => {
     act(() => {
-      useAppStore.setState({ isAuthenticated: false });
+      useSessionStore.setState({ isAuthenticated: false });
     });
   });
 

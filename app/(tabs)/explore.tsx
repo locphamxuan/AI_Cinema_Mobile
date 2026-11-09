@@ -6,7 +6,7 @@ import { PageTitle } from '../../src/components/common/PageTitle';
 import { GenreTile } from '../../src/components/explore/GenreTile';
 import { FilmRow } from '../../src/components/explore/FilmRow';
 import { useTheme } from '../../src/theme';
-import { useAppStore } from '../../src/store/useAppStore';
+import { useCatalogStore, loadInitialData } from '../../src/store';
 import { filterByGenre, genreShelves } from '../../src/lib/homeFeed';
 import { GRID_GAP as GAP, GRID_SIDE as SIDE } from '../../src/styles/layout';
 import { styles } from '../../src/styles/screens/tabs/explore.styles';
@@ -16,12 +16,12 @@ export default function ExploreScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
-  const { movies, loadInitialData } = useAppStore();
+  const { movies } = useCatalogStore();
   const [open, setOpen] = useState<string | null>(null);
 
   useEffect(() => {
     if (movies.length === 0) void loadInitialData();
-  }, [movies.length, loadInitialData]);
+  }, [movies.length]);
 
   // Android back closes the open genre before leaving the tab.
   useEffect(() => {

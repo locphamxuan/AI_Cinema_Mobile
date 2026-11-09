@@ -5,7 +5,7 @@ import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { notificationService, type AppNotification } from '../src/services/notificationService';
 import { MEMBER_NOTIFICATION_TABS, notificationIcon } from '../src/lib/notificationTabs';
 import { dayKey } from '../src/lib/releaseDays';
-import { useAppStore } from '../src/store/useAppStore';
+import { useSessionStore } from '../src/store';
 import { useTheme } from '../src/theme';
 import { styles } from '../src/styles/screens/notifications.styles';
 
@@ -23,7 +23,7 @@ function when(iso: string, now = new Date()): string {
 /** The Member's notifications in tabs: Coin in and out, the monthly plan, refunds and rewards. */
 export default function NotificationsScreen() {
   const { colors } = useTheme();
-  const isAuthenticated = useAppStore((s) => s.isAuthenticated);
+  const isAuthenticated = useSessionStore((s) => s.isAuthenticated);
   const [tab, setTab] = React.useState(MEMBER_NOTIFICATION_TABS[0]);
   const [items, setItems] = React.useState<AppNotification[]>([]);
   const [page, setPage] = React.useState(1);

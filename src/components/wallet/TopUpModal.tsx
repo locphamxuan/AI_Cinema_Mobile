@@ -3,7 +3,7 @@ import { View, Text, TextInput, Modal, Pressable, TouchableOpacity, KeyboardAvoi
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppStore } from '../../store/useAppStore';
+import { useAccountStore, useUiStore } from '../../store';
 import { useTheme } from '../../theme';
 import { walletService } from '../../services/walletService';
 import { Button } from '../common/Button';
@@ -29,7 +29,8 @@ export const coinsFor = (amountVnd: number, rateVnd: number) => (rateVnd > 0 ? M
 export const TopUpModal: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isTopUpModalOpen, setTopUpModalOpen, wallet, loadAccountData } = useAppStore();
+  const { wallet, loadAccountData } = useAccountStore();
+  const { isTopUpModalOpen, setTopUpModalOpen } = useUiStore();
   const [options, setOptions] = useState<TopUpOptions | null>(null);
   const [amount, setAmount] = useState('');
   const [phase, setPhase] = useState<'form' | 'waiting' | 'paid'>('form');

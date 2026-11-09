@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MenuCard, MenuRow } from '../../src/components/common/MenuRow';
 import { useTheme } from '../../src/theme';
-import { useAppStore } from '../../src/store/useAppStore';
+import { useSessionStore, useAccountStore, useCatalogStore, useUiStore } from '../../src/store';
 import { useUnreadNotifications } from '../../src/hooks/useUnreadNotifications';
 import { useWatchHistory } from '../../src/hooks/useWatchHistory';
 import { latestPerMovie } from '../../src/lib/watchHistory';
@@ -16,16 +16,10 @@ export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const {
-    isAuthenticated,
-    user,
-    wallet,
-    movies,
-    subscription,
-    isVIPMode,
-    openAuthModal,
-    setCheckInModalOpen,
-  } = useAppStore();
+  const { isAuthenticated, user } = useSessionStore();
+  const { wallet, subscription, isVIPMode } = useAccountStore();
+  const { movies } = useCatalogStore();
+  const { openAuthModal, setCheckInModalOpen } = useUiStore();
   const unread = useUnreadNotifications(isAuthenticated);
   const watching = latestPerMovie(useWatchHistory(isAuthenticated));
 

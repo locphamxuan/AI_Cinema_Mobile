@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Text, View } from 'react-native';
-import { useAppStore } from '../../store/useAppStore';
+import { useSessionStore } from '../../store';
 import { useTheme } from '../../theme';
 import { isGoogleSignInAvailable, pickGoogleIdToken } from '../../lib/googleSignIn';
 import { Button } from '../common/Button';
@@ -12,7 +12,7 @@ import { styles } from '../../styles/components/auth/AuthModal.styles';
  */
 export const GoogleSignInSection: React.FC = () => {
   const { colors } = useTheme();
-  const loginWithGoogle = useAppStore((state) => state.loginWithGoogle);
+  const loginWithGoogle = useSessionStore((state) => state.loginWithGoogle);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 

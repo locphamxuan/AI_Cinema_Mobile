@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PosterGrid } from '../src/components/home/PosterGrid';
 import { useTheme } from '../src/theme';
-import { useAppStore } from '../src/store/useAppStore';
+import { useCatalogStore } from '../src/store';
 import { movieService } from '../src/services/movieService';
 import { STORAGE_KEYS, storage } from '../src/lib/storage';
 import { addRecentSearch, suggestionPage } from '../src/lib/homeFeed';
@@ -19,7 +19,7 @@ export default function SearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const movies = useAppStore((s) => s.movies);
+  const movies = useCatalogStore((s) => s.movies);
 
   const [query, setQuery] = useState('');
   // The last answer and the term it answers: the old one stays up while a new term loads.

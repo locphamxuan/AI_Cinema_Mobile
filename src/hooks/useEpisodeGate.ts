@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import {} from 'react-native';
 import { showDialog } from '../lib/dialog';
 import { episodeAccessService } from '../services/episodeAccessService';
-import { useAppStore } from '../store/useAppStore';
+import { useCatalogStore, useUiStore } from '../store';
 import type { Episode } from '../types/movie';
 import type { AccessDecision } from '../types/episodeAccess';
 
@@ -17,7 +17,8 @@ export interface LockedEpisode {
  * modal together with the BE's decision: its price, the wallet and whether the plan is an option.
  */
 export function useEpisodeGate(onGranted: (episode: Episode) => void) {
-  const { openAuthModal, markEpisodeUnlocked } = useAppStore();
+  const { markEpisodeUnlocked } = useCatalogStore();
+  const { openAuthModal } = useUiStore();
   const [locked, setLocked] = useState<LockedEpisode | null>(null);
   const [checkingId, setCheckingId] = useState<string | null>(null);
 

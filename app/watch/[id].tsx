@@ -4,7 +4,7 @@ import { showDialog } from '../../src/lib/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppStore } from '../../src/store/useAppStore';
+import { useAccountStore, useCatalogStore } from '../../src/store';
 import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
 import { movieService } from '../../src/services';
 import { engagementService } from '../../src/services/engagementService';
@@ -30,7 +30,8 @@ export default function WatchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { currentMovie, setCurrentMovie, movies, isVIPMode } = useAppStore();
+  const { isVIPMode } = useAccountStore();
+  const { currentMovie, setCurrentMovie, movies } = useCatalogStore();
 
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
 
@@ -50,7 +51,7 @@ export default function WatchScreen() {
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
-    const { movies: listed, currentMovie: selected } = useAppStore.getState();
+    const { movies: listed, currentMovie: selected } = useCatalogStore.getState();
     const known = listed.find((item) => item.id === id) || (selected?.id === id ? selected : null);
 
     Promise.all([

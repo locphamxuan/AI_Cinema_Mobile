@@ -4,7 +4,7 @@ import { showDialog } from '../../lib/dialog';
 import { useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppStore } from '../../store/useAppStore';
+import { useSessionStore, useUiStore } from '../../store';
 import { fonts, useTheme } from '../../theme';
 import { forgetRememberedEmail, readRememberedEmail, rememberEmail } from '../../lib/rememberedLogin';
 import { MIN_PASSWORD, authFormError } from '../../lib/authForm';
@@ -16,7 +16,8 @@ export const AuthModal: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isAuthModalOpen, closeAuthModal, authModalMode, openAuthModal, login, register, initialAuthEmail } = useAppStore();
+  const { login, register } = useSessionStore();
+  const { isAuthModalOpen, closeAuthModal, authModalMode, openAuthModal, initialAuthEmail } = useUiStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

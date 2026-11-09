@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenHeader } from '../../src/components/common/ScreenHeader';
 import { Button } from '../../src/components/common/Button';
 import { useTheme } from '../../src/theme';
-import { useAppStore, planIsRunning } from '../../src/store/useAppStore';
+import { useSessionStore, useAccountStore, useUiStore, planIsRunning } from '../../src/store';
 import { episodeAccessService } from '../../src/services';
 import type { MembershipPlan, MySubscription } from '../../src/types/episodeAccess';
 import { styles } from '../../src/styles/screens/tabs/vip.styles';
@@ -28,7 +28,9 @@ export function cancelWindowText(plan: MySubscription, now = Date.now()): string
 
 export default function VipScreen() {
   const { colors } = useTheme();
-  const { isAuthenticated, openAuthModal, setTopUpModalOpen, setWalletBalance, loadAccountData, subscription, wallet } = useAppStore();
+  const { isAuthenticated } = useSessionStore();
+  const { setWalletBalance, loadAccountData, subscription, wallet } = useAccountStore();
+  const { openAuthModal, setTopUpModalOpen } = useUiStore();
   const [plans, setPlans] = useState<MembershipPlan[] | null>(null);
   const [plansLoadFailed, setPlansLoadFailed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
