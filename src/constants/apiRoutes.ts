@@ -70,6 +70,7 @@ export const API_ROUTES = {
     COMPLETE: (sessionId: string) => `/playback/sessions/${sessionId}/complete`,
     AD_STARTED: (sessionId: string, breakId: string) => `/playback/sessions/${sessionId}/ad-breaks/${breakId}/played`,
     AD_FINISHED: (sessionId: string, breakId: string) => `/playback/sessions/${sessionId}/ad-breaks/${breakId}/completed`,
+    HISTORY: '/playback/history',
   },
 
   // MF-2 - monthly plan

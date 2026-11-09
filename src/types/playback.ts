@@ -30,6 +30,23 @@ export interface StreamingSession {
   reused?: boolean;
 }
 
+/** One row of GET /playback/history (members only), newest first. */
+export interface WatchHistoryEntry {
+  episodeId: string;
+  episodeTitle: string;
+  episodeNumber: number;
+  thumbnailUrl: string | null;
+  movieId: string;
+  movieTitle: string;
+  positionSeconds: number;
+  durationSeconds: number | null;
+  completed: boolean;
+  lastWatchedAt: string | null;
+  /** False once the episode was taken down or is under revision: the row stays but must not be opened. */
+  available: boolean;
+  notice: string | null;
+}
+
 /** Heartbeat, stop and complete answer the session state. */
 export interface SessionState {
   sessionId: string;
