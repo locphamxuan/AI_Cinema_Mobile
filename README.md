@@ -41,11 +41,14 @@ Rules the code must keep (also enforced in review):
 
 ```
 app/            Expo Router screens (tabs, movie/[id], watch/[id])
-src/components  UI, grouped by feature (player, wallet, chat, auth, ...)
+src/components  UI, grouped by feature (player, wallet, auth, ...)
+src/styles      StyleSheets of the components and screens, mirroring their paths
+src/hooks       screen logic shared by components (episode gate, playback session, ...)
 src/services    one module per backend area; apiClient.ts is the only HTTP client
 src/store       Zustand store (useAppStore)
 src/types       DTOs and view models
-src/lib, utils  small helpers (orientation lock, ids, storage, dates)
+src/lib         small helpers (orientation lock, ids, storage, dates)
+src/theme       color tokens, fonts, ThemeContext
 ```
 
 ## CI/CD
