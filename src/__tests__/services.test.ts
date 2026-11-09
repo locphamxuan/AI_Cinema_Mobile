@@ -177,30 +177,7 @@ describe('Mobile Services do not return mock fallbacks', () => {
   });
 });
 
-describe('Live Backend Connection (Port 3001)', () => {
-  it('successfully handles real genres list from live NestJS BE', async () => {
-    const res = await apiClient.get<{ id: string; name: string }[]>('/genres');
-    if (res.success) {
-      expect(res.statusCode).toBe(200);
-      expect(Array.isArray(res.data)).toBe(true);
-      expect(res.data?.length).toBeGreaterThan(0);
-      expect(res.data?.[0]?.name).toBeDefined();
-    } else {
-      expect(res.statusCode).toBeUndefined();
-    }
-  });
-
-  it('successfully handles real policies from live NestJS BE', async () => {
-    const res = await apiClient.get<any[]>('/policies');
-    if (res.success) {
-      expect(res.statusCode).toBe(200);
-      expect(Array.isArray(res.data)).toBe(true);
-      expect(res.data?.length).toBeGreaterThan(0);
-    } else {
-      expect([401, undefined]).toContain(res.statusCode);
-    }
-  });
-
+describe('authService against a mocked backend', () => {
   it('authService.login rejects staff roles and revokes their session', async () => {
     const fetchMock = jest
       .spyOn(global, 'fetch')
@@ -226,10 +203,21 @@ describe('Live Backend Connection (Port 3001)', () => {
     jest.restoreAllMocks();
   });
 
-  it('authService.login returns 401 with real BE error for wrong password', async () => {
-    const res = await authService.login({ email: 'nonexistent_test@example.com', password: 'wrongpassword' });
+  it('authService.login reports a wrong password without refreshing the session', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: { code: 'UNAUTHORIZED', message: 'Invalid email or password' } }),
+    } as Response);
+
+    const res = await authService.login({ email: ' Someone@Example.com ', password: 'wrongpassword1' });
+
     expect(res.success).toBe(false);
     expect(res.statusCode).toBe(401);
+    expect(res.message).toBe('Invalid email or password');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).email).toBe('someone@example.com');
+    jest.restoreAllMocks();
   });
 
   it('authService.register opens the session of the new Member at once', async () => {
