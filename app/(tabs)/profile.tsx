@@ -8,6 +8,8 @@ import { MenuCard, MenuRow } from '../../src/components/common/MenuRow';
 import { useTheme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
 import { useUnreadNotifications } from '../../src/hooks/useUnreadNotifications';
+import { useWatchHistory } from '../../src/hooks/useWatchHistory';
+import { latestPerMovie } from '../../src/lib/watchHistory';
 import { styles } from '../../src/styles/screens/tabs/profile.styles';
 
 export default function ProfileScreen() {
@@ -19,18 +21,18 @@ export default function ProfileScreen() {
     user,
     wallet,
     movies,
-    watchHistory,
     subscription,
     isVIPMode,
     openAuthModal,
     setCheckInModalOpen,
   } = useAppStore();
   const unread = useUnreadNotifications(isAuthenticated);
+  const watching = latestPerMovie(useWatchHistory(isAuthenticated));
 
   /** Runs `action` for a Member, otherwise asks the Guest to sign in first. */
   const member = (action: () => void) => () => (isAuthenticated ? action() : openAuthModal('login'));
   const running = isVIPMode && subscription;
-  const posterOf = (movieId: string, fallback: string) => movies.find((m) => m.id === movieId)?.posterUrl || fallback;
+  const posterOf = (movieId: string, fallback: string | null) => movies.find((m) => m.id === movieId)?.posterUrl || fallback || undefined;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -79,29 +81,34 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </LinearGradient>
 
-        <View style={styles.block}>
-          <Text style={[styles.blockTitle, { color: colors.text }]}>Đang xem dở</Text>
-          {watchHistory.length === 0 ? (
-            <Text style={[styles.blockEmpty, { color: colors.textMuted }]}>Phim bạn mở sẽ hiện ở đây để xem tiếp.</Text>
-          ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.historyRow}>
-              {watchHistory.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.historyItem}
-                  onPress={() => router.push({ pathname: '/watch/[id]', params: { id: item.movieId, episodeId: item.episodeId } })}
-                  accessibilityLabel={`${item.movieTitle}, tập ${item.episodeNumber}`}
-                >
-                  <Image source={{ uri: posterOf(item.movieId, item.thumbnailUrl) }} style={[styles.historyPoster, { backgroundColor: colors.cardAlt }]} />
-                  <Text style={[styles.historyTitle, { color: colors.text }]} numberOfLines={1}>
-                    {item.movieTitle}
-                  </Text>
-                  <Text style={[styles.historyEp, { color: colors.textMuted }]}>Tập {item.episodeNumber}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
-        </View>
+        {isAuthenticated && (
+          <View style={styles.block}>
+            <Text style={[styles.blockTitle, { color: colors.text }]}>Đang xem dở</Text>
+            {watching.length === 0 ? (
+              <Text style={[styles.blockEmpty, { color: colors.textMuted }]}>Phim bạn mở sẽ hiện ở đây để xem tiếp.</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.historyRow}>
+                {watching.map((item) => (
+                  <TouchableOpacity
+                    key={item.episodeId}
+                    style={styles.historyItem}
+                    disabled={!item.available}
+                    onPress={() => router.push({ pathname: '/watch/[id]', params: { id: item.movieId, episodeId: item.episodeId } })}
+                    accessibilityLabel={`${item.movieTitle}, tập ${item.episodeNumber}`}
+                  >
+                    <Image source={{ uri: posterOf(item.movieId, item.thumbnailUrl) }} style={[styles.historyPoster, { backgroundColor: colors.cardAlt }]} />
+                    <Text style={[styles.historyTitle, { color: colors.text }]} numberOfLines={1}>
+                      {item.movieTitle}
+                    </Text>
+                    <Text style={[styles.historyEp, { color: colors.textMuted }]} numberOfLines={2}>
+                      {item.available ? `Tập ${item.episodeNumber}` : item.notice || 'Tập này tạm không xem được'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        )}
 
         <MenuCard>
           <MenuRow

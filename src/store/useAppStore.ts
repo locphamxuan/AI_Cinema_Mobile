@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import { WalletState } from '../types/wallet';
-import { Movie, WatchHistoryItem } from '../types/movie';
+import { Movie } from '../types/movie';
 import type { CheckInResult, DailyRewardStatus, MySubscription } from '../types/episodeAccess';
 import { UserProfile } from '../types/auth';
 import type { BEUserDto } from '../types/api';
@@ -89,10 +89,6 @@ interface AppState {
   closeUnlockModal: () => void;
   isTopUpModalOpen: boolean;
   setTopUpModalOpen: (open: boolean) => void;
-
-  // Watch History
-  watchHistory: WatchHistoryItem[];
-  addToWatchHistory: (item: Omit<WatchHistoryItem, 'id' | 'lastWatchedAt'>) => void;
 
 }
 
@@ -293,20 +289,6 @@ export const useAppStore = create<AppState>()(
 
       isTopUpModalOpen: false,
       setTopUpModalOpen: (open) => set({ isTopUpModalOpen: open }),
-
-      // ===== WATCH HISTORY =====
-      watchHistory: [],
-      addToWatchHistory: (item) =>
-        set((s) => {
-          const existing = s.watchHistory.filter((h) => h.movieId !== item.movieId);
-          const newItem: WatchHistoryItem = {
-            ...item,
-            id: `wh-${Date.now()}`,
-            lastWatchedAt: 'Vừa xong',
-          };
-          return { watchHistory: [newItem, ...existing] };
-        }),
-
     }),
     {
       name: 'ai_cinema_mobile_app_store',
@@ -326,7 +308,6 @@ export const useAppStore = create<AppState>()(
           wallet: emptyWallet,
           subscription: null,
           dailyReward: null,
-          watchHistory: [],
         };
       },
       onRehydrateStorage: () => (state) => {
@@ -336,7 +317,6 @@ export const useAppStore = create<AppState>()(
         isAuthenticated: state.isAuthenticated,
         user: state.user,
         isVIPMode: state.isVIPMode,
-        watchHistory: state.watchHistory,
       }),
     }
   )

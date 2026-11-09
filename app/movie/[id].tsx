@@ -6,6 +6,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../src/store/useAppStore';
 import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
+import { useWatchHistory } from '../../src/hooks/useWatchHistory';
+import { resumeEpisode } from '../../src/lib/watchHistory';
 import { movieService } from '../../src/services';
 import { Movie, Episode } from '../../src/types/movie';
 import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
@@ -24,7 +26,8 @@ export default function MovieDetailScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { colors } = useTheme();
-  const { currentMovie, setCurrentMovie, movies, isVIPMode, watchHistory } = useAppStore();
+  const { currentMovie, setCurrentMovie, movies, isVIPMode, isAuthenticated } = useAppStore();
+  const history = useWatchHistory(isAuthenticated);
 
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
 
@@ -88,9 +91,8 @@ export default function MovieDetailScreen() {
     );
   }
 
-  // "Xem tiếp" picks up the last episode opened on this device; otherwise the first one.
-  const lastSeen = watchHistory.find((item) => item.movieId === movie.id);
-  const resume = lastSeen ? episodes.find((ep) => ep.id === lastSeen.episodeId) : undefined;
+  // "Xem tiếp" picks up from the member's BE watch history; otherwise the first episode.
+  const resume = resumeEpisode(history, movie.id, episodes);
   const next = resume ?? episodes[0];
   const heroHeight = Math.min(Math.round(width * 1.1), 520);
 
