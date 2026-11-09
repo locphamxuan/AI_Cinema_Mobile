@@ -26,12 +26,12 @@ describe('Google sign-in', () => {
   it('hides the button without loading the library when the native module is missing (Expo Go)', () => {
     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = 'web-client-id';
     jest.isolateModules(() => {
-      const { TurboModuleRegistry } = require('react-native');
+      const { TurboModuleRegistry } = jest.requireActual('react-native');
       const lookup = jest.spyOn(TurboModuleRegistry, 'get').mockReturnValue(null);
       jest.doMock('@react-native-google-signin/google-signin', () => {
         throw new Error('the library must not load without its native module');
       });
-      const { isGoogleSignInAvailable } = require('../lib/googleSignIn');
+      const { isGoogleSignInAvailable } = jest.requireActual('../lib/googleSignIn');
 
       expect(isGoogleSignInAvailable()).toBe(false);
       expect(lookup).toHaveBeenCalledWith('RNGoogleSignin');
