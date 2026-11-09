@@ -16,8 +16,12 @@ import {
 } from '../services';
 import { apiClient } from '../services/apiClient';
 import { adaptUserProfile } from '../lib/apiAdapter';
+import { MIN_PASSWORD } from '../lib/authForm';
 
 const emptyWallet: WalletState = { mainCoin: 0, bonusCoin: 0 };
+const NETWORK_ERROR = 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.';
+
+const errorMessage = (e: unknown) => (e instanceof Error && e.message) || NETWORK_ERROR;
 
 /** A plan opens every episode only while ACTIVE and inside the period already paid for. */
 export const planIsRunning = (plan: MySubscription | null, now = Date.now()) =>
@@ -43,7 +47,7 @@ interface AppState {
   isAuthenticated: boolean;
   user: UserProfile | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string; role?: string }>;
-  /** `reason` is GOOGLE_SIGNUP_NEEDS_BIRTHDAY when a first Google sign-in still needs a birthday. */
+  /** One tap: a new Google email opens a member account; the BE refuses staff accounts. */
   loginWithGoogle: (idToken: string) => Promise<{ success: boolean; error?: string }>;
   register: (name: string, email: string, password: string, dateOfBirth: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string; role?: string }>;
   logout: () => Promise<void>;
@@ -174,11 +178,8 @@ export const useAppStore = create<AppState>()(
             success: false,
             error: res.message || 'Email hoặc mật khẩu chưa đúng.',
           };
-        } catch (e: any) {
-          return {
-            success: false,
-            error: e?.message || 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
-          };
+        } catch (e) {
+          return { success: false, error: errorMessage(e) };
         }
       },
 
@@ -190,8 +191,8 @@ export const useAppStore = create<AppState>()(
             return { success: true };
           }
           return { success: false, error: res.message };
-        } catch (e: any) {
-          return { success: false, error: e?.message || 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.' };
+        } catch (e) {
+          return { success: false, error: errorMessage(e) };
         }
       },
 
@@ -204,7 +205,7 @@ export const useAppStore = create<AppState>()(
           return { success: false, error: 'Điền đủ họ tên, ngày sinh, email và mật khẩu.' };
         }
 
-        if (password.length < 8) {
+        if (password.length < MIN_PASSWORD) {
           return { success: false, error: 'Mật khẩu cần 8 đến 72 ký tự, có cả chữ và số.' };
         }
 
@@ -225,11 +226,8 @@ export const useAppStore = create<AppState>()(
             success: false,
             error: res.message || 'Chưa tạo được tài khoản. Thử lại sau ít phút.',
           };
-        } catch (e: any) {
-          return {
-            success: false,
-            error: e?.message || 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
-          };
+        } catch (e) {
+          return { success: false, error: errorMessage(e) };
         }
       },
 
