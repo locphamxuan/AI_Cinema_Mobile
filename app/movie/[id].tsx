@@ -32,7 +32,9 @@ export default function MovieDetailScreen() {
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
 
   const [movie, setMovie] = useState<Movie | null>(foundMovie);
-  const [loading, setLoading] = useState(!foundMovie);
+  // The movie whose fetch has finished, found or not: only an unknown movie waits for it.
+  const [settledId, setSettledId] = useState<string | null>(null);
+  const loading = !foundMovie && settledId !== id;
   const [audioMode, setAudioMode] = useState<AudioMode>('subtitle');
   const [chosenTrack, setChosenTrack] = useState<string | null>(null);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
@@ -45,7 +47,6 @@ export default function MovieDetailScreen() {
     let cancelled = false;
     const { movies: listed, currentMovie: selected } = useAppStore.getState();
     const known = listed.find((item) => item.id === id) || (selected?.id === id ? selected : null);
-    setLoading(!known);
 
     Promise.all([
       known ? Promise.resolve(known) : movieService.getMovieDetail(id).then((res) => (res.success ? res.data : null)),
@@ -58,7 +59,7 @@ export default function MovieDetailScreen() {
         setMovie(loaded);
         setCurrentMovie(loaded);
       }
-      setLoading(false);
+      setSettledId(id);
     });
 
     return () => {

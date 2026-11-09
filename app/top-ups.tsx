@@ -22,24 +22,31 @@ export default function TopUpHistoryScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const load = React.useCallback(async (next: number) => {
-    setLoading(true);
-    const res = await walletService.getTopUps(next);
-    setLoading(false);
-    if (!res.success || !res.data) {
-      setError(res.message || 'Không tải được lịch sử nạp Coin.');
-      return;
-    }
-    setError(null);
-    const rows = res.data.data ?? [];
-    setOrders((prev) => (next === 1 ? rows : [...prev, ...rows]));
-    setTotalPages(res.data.meta?.totalPages ?? 1);
-    setPage(next);
-  }, []);
+  const fetchPage = React.useCallback(
+    (next: number) =>
+      walletService.getTopUps(next).then((res) => {
+        setLoading(false);
+        if (!res.success || !res.data) {
+          setError(res.message || 'Không tải được lịch sử nạp Coin.');
+          return;
+        }
+        setError(null);
+        const rows = res.data.data ?? [];
+        setOrders((prev) => (next === 1 ? rows : [...prev, ...rows]));
+        setTotalPages(res.data.meta?.totalPages ?? 1);
+        setPage(next);
+      }),
+    [],
+  );
 
   React.useEffect(() => {
-    if (isAuthenticated) void load(1);
-  }, [isAuthenticated, load]);
+    if (isAuthenticated) void fetchPage(1);
+  }, [isAuthenticated, fetchPage]);
+
+  const load = (next: number) => {
+    setLoading(true);
+    return fetchPage(next);
+  };
 
   const refresh = async () => {
     setRefreshing(true);

@@ -30,22 +30,32 @@ export default function NotificationsScreen() {
   const [totalPages, setTotalPages] = React.useState(1);
   const [loading, setLoading] = React.useState(true);
 
-  const load = React.useCallback(
-    async (next: number) => {
-      setLoading(true);
-      const res = await notificationService.list(tab.types, next, PAGE_SIZE);
-      const rows = res.success ? res.data?.data ?? [] : [];
-      setItems((prev) => (next === 1 ? rows : [...prev, ...rows]));
-      setTotalPages(res.success ? res.data?.meta?.totalPages ?? 1 : 1);
-      setPage(next);
-      setLoading(false);
-    },
+  const fetchPage = React.useCallback(
+    (next: number) =>
+      notificationService.list(tab.types, next, PAGE_SIZE).then((res) => {
+        const rows = res.success ? res.data?.data ?? [] : [];
+        setItems((prev) => (next === 1 ? rows : [...prev, ...rows]));
+        setTotalPages(res.success ? res.data?.meta?.totalPages ?? 1 : 1);
+        setPage(next);
+        setLoading(false);
+      }),
     [tab],
   );
 
   React.useEffect(() => {
-    if (isAuthenticated) void load(1);
-  }, [isAuthenticated, load]);
+    if (isAuthenticated) void fetchPage(1);
+  }, [isAuthenticated, fetchPage]);
+
+  const loadMore = () => {
+    setLoading(true);
+    void fetchPage(page + 1);
+  };
+
+  const selectTab = (next: typeof tab) => {
+    if (next === tab) return;
+    setLoading(true);
+    setTab(next);
+  };
 
   const open = async (item: AppNotification) => {
     if (!item.readAt) {
@@ -81,7 +91,7 @@ export default function NotificationsScreen() {
             <TouchableOpacity
               key={t.key}
               style={[styles.tab, on && { backgroundColor: colors.rubySoft }]}
-              onPress={() => setTab(t)}
+              onPress={() => selectTab(t)}
               accessibilityRole="tab"
               accessibilityState={{ selected: on }}
             >
@@ -99,7 +109,7 @@ export default function NotificationsScreen() {
           keyExtractor={(n) => n.id}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: colors.border }]} />}
-          onEndReached={() => !loading && page < totalPages && void load(page + 1)}
+          onEndReached={() => !loading && page < totalPages && loadMore()}
           onEndReachedThreshold={0.3}
           ListEmptyComponent={loading ? undefined : <Text style={[styles.empty, { color: colors.textMuted }]}>Mục này chưa có thông báo.</Text>}
           ListFooterComponent={loading ? <ActivityIndicator color={colors.ruby} style={styles.loading} /> : undefined}

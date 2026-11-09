@@ -28,10 +28,10 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [ranked, setRanked] = useState<Movie[]>([]);
 
-  const loadRanking = async () => {
-    const res = await movieService.ranking();
-    if (res.success) setRanked(res.data);
-  };
+  const loadRanking = () =>
+    movieService.ranking().then((res) => {
+      if (res.success) setRanked(res.data);
+    });
 
   useEffect(() => {
     void loadInitialData();

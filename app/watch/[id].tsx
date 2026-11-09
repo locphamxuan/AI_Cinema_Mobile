@@ -35,7 +35,9 @@ export default function WatchScreen() {
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
 
   const [movie, setMovie] = useState<Movie | null>(foundMovie);
-  const [loading, setLoading] = useState(!foundMovie);
+  // The movie whose fetch has finished, found or not: only an unknown movie waits for it.
+  const [settledId, setSettledId] = useState<string | null>(null);
+  const loading = !foundMovie && settledId !== id;
   const [activeEpisode, setActiveEpisode] = useState<Episode | null>(foundMovie?.episodes?.[0] || null);
   const [audioMode, setAudioMode] = useState<AudioMode>(mode === 'voiceover' ? 'voiceover' : 'subtitle');
   const [chosenTrack, setChosenTrack] = useState<string | null>(null);
@@ -50,7 +52,6 @@ export default function WatchScreen() {
     let cancelled = false;
     const { movies: listed, currentMovie: selected } = useAppStore.getState();
     const known = listed.find((item) => item.id === id) || (selected?.id === id ? selected : null);
-    setLoading(!known);
 
     Promise.all([
       known ? Promise.resolve(known) : movieService.getMovieDetail(id).then((res) => (res.success ? res.data : null)),
@@ -64,7 +65,7 @@ export default function WatchScreen() {
         setCurrentMovie(loaded);
         setActiveEpisode(episodes.find((ep) => ep.id === episodeId) || episodes[0] || null);
       }
-      setLoading(false);
+      setSettledId(id);
     });
 
     return () => {
