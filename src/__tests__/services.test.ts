@@ -372,3 +372,41 @@ describe('extractErrorMessage', () => {
     expect(extractErrorMessage(null)).toBeUndefined();
   });
 });
+
+describe('typed error and list bodies', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('maps a refusal reason to its message and hands the reason back', async () => {
+    const body = { error: { code: 'FORBIDDEN', message: 'Forbidden', details: { reason: 'DEVICE_LIMIT_REACHED' } } };
+    expect(extractErrorMessage(body)).toContain('đủ số thiết bị');
+    jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false, status: 403, json: async () => body } as Response);
+
+    const res = await apiClient.get('/playback/sessions');
+
+    expect(res.reason).toBe('DEVICE_LIMIT_REACHED');
+    expect(res.message).toContain('đủ số thiết bị');
+  });
+
+  it('ignores a reason that is not a string', () => {
+    expect(extractErrorMessage({ error: { message: 'Bad', details: { reason: 42 } } })).toBe('Bad');
+  });
+
+  it('reports a timeout when the request is aborted', async () => {
+    jest.spyOn(global, 'fetch').mockRejectedValue({ name: 'AbortError', message: 'Aborted' });
+    const res = await apiClient.get('/movies');
+    expect(res.success).toBe(false);
+    expect(res.message).toContain('Timeout');
+  });
+
+  it('reads a movie list wrapped in items, and answers no rows on failure', async () => {
+    jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => JSON.stringify({ items: [{ id: 'm1', title: 'A' }] }) } as Response)
+      .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) } as Response);
+
+    expect((await movieService.listMovies()).data.map((m) => m.id)).toEqual(['m1']);
+    const failed = await movieService.listMovies();
+    expect(failed.success).toBe(false);
+    expect(failed.data).toEqual([]);
+  });
+});
