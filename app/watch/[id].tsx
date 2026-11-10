@@ -4,7 +4,7 @@ import { showDialog } from '../../src/lib/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppStore } from '../../src/store/useAppStore';
+import { useAccountStore, useCatalogStore } from '../../src/store';
 import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
 import { movieService } from '../../src/services';
 import { engagementService } from '../../src/services/engagementService';
@@ -30,12 +30,15 @@ export default function WatchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { currentMovie, setCurrentMovie, movies, isVIPMode } = useAppStore();
+  const { isVIPMode } = useAccountStore();
+  const { currentMovie, setCurrentMovie, movies } = useCatalogStore();
 
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
 
   const [movie, setMovie] = useState<Movie | null>(foundMovie);
-  const [loading, setLoading] = useState(!foundMovie);
+  // The movie whose fetch has finished, found or not: only an unknown movie waits for it.
+  const [settledId, setSettledId] = useState<string | null>(null);
+  const loading = !foundMovie && settledId !== id;
   const [activeEpisode, setActiveEpisode] = useState<Episode | null>(foundMovie?.episodes?.[0] || null);
   const [audioMode, setAudioMode] = useState<AudioMode>(mode === 'voiceover' ? 'voiceover' : 'subtitle');
   const [chosenTrack, setChosenTrack] = useState<string | null>(null);
@@ -48,9 +51,8 @@ export default function WatchScreen() {
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
-    const { movies: listed, currentMovie: selected } = useAppStore.getState();
+    const { movies: listed, currentMovie: selected } = useCatalogStore.getState();
     const known = listed.find((item) => item.id === id) || (selected?.id === id ? selected : null);
-    setLoading(!known);
 
     Promise.all([
       known ? Promise.resolve(known) : movieService.getMovieDetail(id).then((res) => (res.success ? res.data : null)),
@@ -64,7 +66,7 @@ export default function WatchScreen() {
         setCurrentMovie(loaded);
         setActiveEpisode(episodes.find((ep) => ep.id === episodeId) || episodes[0] || null);
       }
-      setLoading(false);
+      setSettledId(id);
     });
 
     return () => {

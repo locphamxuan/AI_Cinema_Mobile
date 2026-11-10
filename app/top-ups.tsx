@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { walletService } from '../src/services/walletService';
 import { canResumePayment, formatVnd, orderTime, TOP_UP_STATUS, type StatusTone } from '../src/lib/topUps';
-import { useAppStore } from '../src/store/useAppStore';
+import { useSessionStore } from '../src/store';
 import { useTheme } from '../src/theme';
 import type { CoinTopUp } from '../src/types/episodeAccess';
 import { styles } from '../src/styles/screens/topUps.styles';
@@ -14,7 +14,7 @@ const PROVIDER_NAME: Record<string, string> = { VNPAY: 'VNPay' };
 /** "Lịch sử nạp Coin": every top-up order of the member, newest first, with its payment state. */
 export default function TopUpHistoryScreen() {
   const { colors } = useTheme();
-  const isAuthenticated = useAppStore((s) => s.isAuthenticated);
+  const isAuthenticated = useSessionStore((s) => s.isAuthenticated);
   const [orders, setOrders] = React.useState<CoinTopUp[]>([]);
   const [page, setPage] = React.useState(1);
   const [totalPages, setTotalPages] = React.useState(1);
@@ -22,24 +22,31 @@ export default function TopUpHistoryScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const load = React.useCallback(async (next: number) => {
-    setLoading(true);
-    const res = await walletService.getTopUps(next);
-    setLoading(false);
-    if (!res.success || !res.data) {
-      setError(res.message || 'Không tải được lịch sử nạp Coin.');
-      return;
-    }
-    setError(null);
-    const rows = res.data.data ?? [];
-    setOrders((prev) => (next === 1 ? rows : [...prev, ...rows]));
-    setTotalPages(res.data.meta?.totalPages ?? 1);
-    setPage(next);
-  }, []);
+  const fetchPage = React.useCallback(
+    (next: number) =>
+      walletService.getTopUps(next).then((res) => {
+        setLoading(false);
+        if (!res.success || !res.data) {
+          setError(res.message || 'Không tải được lịch sử nạp Coin.');
+          return;
+        }
+        setError(null);
+        const rows = res.data.data ?? [];
+        setOrders((prev) => (next === 1 ? rows : [...prev, ...rows]));
+        setTotalPages(res.data.meta?.totalPages ?? 1);
+        setPage(next);
+      }),
+    [],
+  );
 
   React.useEffect(() => {
-    if (isAuthenticated) void load(1);
-  }, [isAuthenticated, load]);
+    if (isAuthenticated) void fetchPage(1);
+  }, [isAuthenticated, fetchPage]);
+
+  const load = (next: number) => {
+    setLoading(true);
+    return fetchPage(next);
+  };
 
   const refresh = async () => {
     setRefreshing(true);

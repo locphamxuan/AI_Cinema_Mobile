@@ -4,7 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { PageTitle } from '../../src/components/common/PageTitle';
 import { FilmRow } from '../../src/components/explore/FilmRow';
 import { useTheme } from '../../src/theme';
-import { useAppStore } from '../../src/store/useAppStore';
+import { useCatalogStore } from '../../src/store';
 import { movieService } from '../../src/services';
 import { groupReleases, recentDays, releaseTime, type Release } from '../../src/lib/releaseDays';
 import { styles } from '../../src/styles/screens/tabs/schedule.styles';
@@ -16,7 +16,7 @@ const MAX_FILMS = 30;
 export default function ScheduleScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const movies = useAppStore((s) => s.movies);
+  const movies = useCatalogStore((s) => s.movies);
   const [releases, setReleases] = useState<Release[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [selected, setSelected] = useState(0);

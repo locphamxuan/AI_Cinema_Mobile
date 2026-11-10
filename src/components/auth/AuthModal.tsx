@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { showDialog } from '../../lib/dialog';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppStore } from '../../store/useAppStore';
+import { useSessionStore, useUiStore } from '../../store';
 import { fonts, useTheme } from '../../theme';
-import { storage, STORAGE_KEYS } from '../../lib/storage';
+import { forgetRememberedEmail, readRememberedEmail, rememberEmail } from '../../lib/rememberedLogin';
 import { MIN_PASSWORD, authFormError } from '../../lib/authForm';
 import { Button } from '../common/Button';
 import { GoogleSignInSection } from './GoogleSignInSection';
@@ -16,7 +16,8 @@ export const AuthModal: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isAuthModalOpen, closeAuthModal, authModalMode, openAuthModal, login, register, initialAuthEmail } = useAppStore();
+  const { login, register } = useSessionStore();
+  const { isAuthModalOpen, closeAuthModal, authModalMode, openAuthModal, initialAuthEmail } = useUiStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,54 +26,35 @@ export const AuthModal: React.FC = () => {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
-  const [hasSavedCredentials, setHasSavedCredentials] = useState(false);
+  const [hasSavedEmail, setHasSavedEmail] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const isLogin = authModalMode === 'login';
 
-  // Fill in what this device remembered when the dialog opens.
+  // Each opening starts without the previous attempt's error.
+  const [wasOpen, setWasOpen] = useState(false);
+  if (isAuthModalOpen !== wasOpen) {
+    setWasOpen(isAuthModalOpen);
+    if (isAuthModalOpen) setError(null);
+  }
+
+  // Each opening fills in the email this device remembered; the password is always typed again.
   useEffect(() => {
     if (!isAuthModalOpen) return;
-    setError(null);
-    const loadSaved = async () => {
-      try {
-        const [savedEmail, savedPassword, savedRemember] = await Promise.all([
-          storage.getString(STORAGE_KEYS.REMEMBERED_EMAIL),
-          storage.getString(STORAGE_KEYS.REMEMBERED_PASSWORD),
-          storage.getString(STORAGE_KEYS.REMEMBER_ME),
-        ]);
-        if (savedEmail && savedPassword) {
-          setEmail(savedEmail);
-          setPassword(savedPassword);
-          setRememberMe(savedRemember !== 'false');
-          setHasSavedCredentials(true);
-          return;
-        }
-      } catch (e) {
-        console.error('Error loading saved credentials:', e);
-      }
-      setEmail(initialAuthEmail || '');
-      if (!initialAuthEmail) setPassword('');
+    void readRememberedEmail().then((saved) => {
+      setEmail(saved || initialAuthEmail || '');
+      setPassword('');
       setRememberMe(true);
-      setHasSavedCredentials(false);
-    };
-    void loadSaved();
+      setHasSavedEmail(Boolean(saved));
+    });
   }, [isAuthModalOpen, initialAuthEmail]);
 
   const forgetSaved = async () => {
-    try {
-      await Promise.all([
-        storage.remove(STORAGE_KEYS.REMEMBERED_EMAIL),
-        storage.remove(STORAGE_KEYS.REMEMBERED_PASSWORD),
-        storage.remove(STORAGE_KEYS.REMEMBER_ME),
-      ]);
-      setEmail('');
-      setPassword('');
-      setHasSavedCredentials(false);
-    } catch (e) {
-      console.error('Failed to clear credentials:', e);
-    }
+    await forgetRememberedEmail();
+    setEmail('');
+    setPassword('');
+    setHasSavedEmail(false);
   };
 
   const switchMode = () => {
@@ -89,20 +71,9 @@ export const AuthModal: React.FC = () => {
     if (isLogin) {
       const result = await login(email, password);
       if (result.success) {
-        try {
-          if (rememberMe) {
-            await Promise.all([
-              storage.set(STORAGE_KEYS.REMEMBERED_EMAIL, email.trim()),
-              storage.set(STORAGE_KEYS.REMEMBERED_PASSWORD, password),
-              storage.set(STORAGE_KEYS.REMEMBER_ME, 'true'),
-            ]);
-          } else {
-            await forgetSaved();
-          }
-        } catch (e) {
-          console.error('Failed to update remembered credentials:', e);
-        }
-        if (result.redirectUrl) router.replace(result.redirectUrl as any);
+        if (rememberMe) await rememberEmail(email);
+        else await forgetSaved();
+        if (result.redirectUrl) router.replace(result.redirectUrl as Href);
       } else {
         setError(result.error || 'Chưa đăng nhập được. Kiểm tra email, mật khẩu và kết nối mạng.');
       }
@@ -138,11 +109,11 @@ export const AuthModal: React.FC = () => {
           </View>
 
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form} showsVerticalScrollIndicator={false}>
-            {hasSavedCredentials && isLogin && (
+            {hasSavedEmail && isLogin && (
               <View style={[styles.saved, { backgroundColor: colors.card }]}>
-                <Text style={[styles.savedText, { color: colors.textSecondary }]}>Đã điền sẵn tài khoản lưu trên máy này.</Text>
+                <Text style={[styles.savedText, { color: colors.textSecondary }]}>Đã điền sẵn email lưu trên máy này.</Text>
                 <TouchableOpacity onPress={forgetSaved} hitSlop={8}>
-                  <Text style={[styles.savedAction, { color: colors.ruby }]}>Quên tài khoản này</Text>
+                  <Text style={[styles.savedAction, { color: colors.ruby }]}>Quên email này</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -187,7 +158,7 @@ export const AuthModal: React.FC = () => {
                 <View style={[styles.box, rememberMe ? { backgroundColor: colors.ruby, borderColor: colors.ruby } : { borderColor: colors.textMuted }]}>
                   {rememberMe && <Ionicons name="checkmark" size={13} color="#FFFFFF" />}
                 </View>
-                <Text style={[styles.checkLabel, { color: colors.textSecondary }]}>Nhớ đăng nhập trên máy này</Text>
+                <Text style={[styles.checkLabel, { color: colors.textSecondary }]}>Nhớ email trên máy này</Text>
               </TouchableOpacity>
               {isLogin && (
                 <TouchableOpacity

@@ -1,15 +1,11 @@
 import { episodeAccessService, rewardService, walletService } from '../services';
 import { idempotencyKey } from '../lib/ids';
-import { planIsRunning, useAppStore } from '../store/useAppStore';
+import { planIsRunning, useAccountStore } from '../store';
 import { splitPrice } from '../components/player/UnlockEpisodeModal';
 import { ladderDays } from '../components/wallet/CheckInModal';
 import { coinsFor } from '../components/wallet/TopUpModal';
 import { cancelWindowText } from '../../app/(tabs)/vip';
 import type { DailyRewardStatus, MySubscription } from '../types/episodeAccess';
-
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
 
 /** Answers each fetch by `METHOD path` (without the /api prefix) and records the calls. */
 function routeFetch(routes: Record<string, unknown>) {
@@ -133,10 +129,10 @@ describe('MF-2 services call the BE contract', () => {
         bonusBalance: 5,
       },
     });
-    const res = await useAppStore.getState().claimDailyCheckIn();
+    const res = await useAccountStore.getState().claimDailyCheckIn();
     expect(res.success).toBe(true);
-    expect(useAppStore.getState().wallet).toEqual({ mainCoin: 0, bonusCoin: 5 });
-    expect(useAppStore.getState().dailyReward?.checkedInToday).toBe(true);
+    expect(useAccountStore.getState().wallet).toEqual({ mainCoin: 0, bonusCoin: 5 });
+    expect(useAccountStore.getState().dailyReward?.checkedInToday).toBe(true);
   });
 
   it('reads the wheel and the Coin history from their own routes', async () => {

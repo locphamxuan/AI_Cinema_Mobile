@@ -8,10 +8,6 @@ import { apiClient } from '../services/apiClient';
 import { engagementService } from '../services/engagementService';
 import { notificationService } from '../services/notificationService';
 
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
-
 const VTT = `WEBVTT
 
 1

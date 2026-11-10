@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme';
-import { useAppStore } from '../../store/useAppStore';
+import { useSessionStore, useAccountStore, useUiStore } from '../../store';
 import { styles } from '../../styles/components/home/HomeTopBar.styles';
 
 interface HomeTopBarProps {
@@ -15,7 +15,9 @@ interface HomeTopBarProps {
 export const HomeTopBar: React.FC<HomeTopBarProps> = ({ hint }) => {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { isAuthenticated, dailyReward, openAuthModal, setCheckInModalOpen } = useAppStore();
+  const { isAuthenticated } = useSessionStore();
+  const { dailyReward } = useAccountStore();
+  const { openAuthModal, setCheckInModalOpen } = useUiStore();
 
   // Something to collect today: check-in not done yet, or spins left (both from the BE).
   const spins = dailyReward?.availableSpins ?? 0;

@@ -144,7 +144,7 @@ function StreamPlayer(props: StreamPlayerProps) {
           onSeekBy={touched((s: number) => seekTo(currentTime + s))}
           onSeekTo={touched(seekTo)}
           onSettings={() => setSettings(true)}
-          onToggleFullscreen={touched(toggleFullscreen)}
+          onToggleFullscreen={() => touched(toggleFullscreen)()}
         />
       )}
       {playback.resumeAt !== null && !playback.activeAd ? (

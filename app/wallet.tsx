@@ -6,14 +6,16 @@ import { MenuCard, MenuRow } from '../src/components/common/MenuRow';
 import { Button } from '../src/components/common/Button';
 import { StatementList } from '../src/components/wallet/StatementList';
 import { useTheme } from '../src/theme';
-import { useAppStore } from '../src/store/useAppStore';
+import { useSessionStore, useAccountStore, useUiStore } from '../src/store';
 import { styles } from '../src/styles/screens/wallet.styles';
 
 /** "Ví Coin": both balances (BR-01), top-up, check-in and the statement. */
 export default function WalletScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { isAuthenticated, wallet, loadAccountData, setTopUpModalOpen, setCheckInModalOpen } = useAppStore();
+  const { isAuthenticated } = useSessionStore();
+  const { wallet, loadAccountData } = useAccountStore();
+  const { setTopUpModalOpen, setCheckInModalOpen } = useUiStore();
 
   // Balances always come from the BE.
   useEffect(() => {

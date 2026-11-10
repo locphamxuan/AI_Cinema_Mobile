@@ -1,10 +1,6 @@
 import { authService } from '../services';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
-);
-
 const session = (role: string) => ({
   ok: true,
   status: 200,
@@ -30,12 +26,12 @@ describe('Google sign-in', () => {
   it('hides the button without loading the library when the native module is missing (Expo Go)', () => {
     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = 'web-client-id';
     jest.isolateModules(() => {
-      const { TurboModuleRegistry } = require('react-native');
+      const { TurboModuleRegistry } = jest.requireActual('react-native');
       const lookup = jest.spyOn(TurboModuleRegistry, 'get').mockReturnValue(null);
       jest.doMock('@react-native-google-signin/google-signin', () => {
         throw new Error('the library must not load without its native module');
       });
-      const { isGoogleSignInAvailable } = require('../lib/googleSignIn');
+      const { isGoogleSignInAvailable } = jest.requireActual('../lib/googleSignIn');
 
       expect(isGoogleSignInAvailable()).toBe(false);
       expect(lookup).toHaveBeenCalledWith('RNGoogleSignin');
@@ -79,5 +75,17 @@ describe('Google sign-in', () => {
     expect(res.statusCode).toBe(403);
     expect(String(fetchMock.mock.calls[1][0])).toContain('/auth/logout');
     expect(await storage.getString(STORAGE_KEYS.AUTH_TOKEN, '')).toBe('');
+  });
+
+  it('sends a studio account to the Studio Web instead', async () => {
+    jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(session('STUDIO'))
+      .mockResolvedValueOnce({ ok: true, status: 204, text: async () => '' } as Response);
+
+    const res = await authService.googleLogin({ idToken: 'id-token' });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.message).toContain('Studio Web');
   });
 });

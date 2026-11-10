@@ -4,7 +4,7 @@ import {
   formatDuration,
   adaptUserProfile,
 } from '../lib/apiAdapter';
-import { getTodayDayIndex, VN_DAY_LABELS } from '../utils/date';
+import { getTodayDayIndex, VN_DAY_LABELS } from '../lib/date';
 import {
   authService,
   movieService,
@@ -15,11 +15,6 @@ import { apiClient, extractErrorMessage } from '../services/apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
 import { API_CONFIG } from '../constants/config';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-
-// Mock AsyncStorage for headless test execution
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
-);
 
 describe('API Routes and Config', () => {
   it('should have proper API routes configured', () => {
@@ -177,30 +172,7 @@ describe('Mobile Services do not return mock fallbacks', () => {
   });
 });
 
-describe('Live Backend Connection (Port 3001)', () => {
-  it('successfully handles real genres list from live NestJS BE', async () => {
-    const res = await apiClient.get<{ id: string; name: string }[]>('/genres');
-    if (res.success) {
-      expect(res.statusCode).toBe(200);
-      expect(Array.isArray(res.data)).toBe(true);
-      expect(res.data?.length).toBeGreaterThan(0);
-      expect(res.data?.[0]?.name).toBeDefined();
-    } else {
-      expect(res.statusCode).toBeUndefined();
-    }
-  });
-
-  it('successfully handles real policies from live NestJS BE', async () => {
-    const res = await apiClient.get<any[]>('/policies');
-    if (res.success) {
-      expect(res.statusCode).toBe(200);
-      expect(Array.isArray(res.data)).toBe(true);
-      expect(res.data?.length).toBeGreaterThan(0);
-    } else {
-      expect([401, undefined]).toContain(res.statusCode);
-    }
-  });
-
+describe('authService against a mocked backend', () => {
   it('authService.login rejects staff roles and revokes their session', async () => {
     const fetchMock = jest
       .spyOn(global, 'fetch')
@@ -226,10 +198,21 @@ describe('Live Backend Connection (Port 3001)', () => {
     jest.restoreAllMocks();
   });
 
-  it('authService.login returns 401 with real BE error for wrong password', async () => {
-    const res = await authService.login({ email: 'nonexistent_test@example.com', password: 'wrongpassword' });
+  it('authService.login reports a wrong password without refreshing the session', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: { code: 'UNAUTHORIZED', message: 'Invalid email or password' } }),
+    } as Response);
+
+    const res = await authService.login({ email: ' Someone@Example.com ', password: 'wrongpassword1' });
+
     expect(res.success).toBe(false);
     expect(res.statusCode).toBe(401);
+    expect(res.message).toBe('Invalid email or password');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).email).toBe('someone@example.com');
+    jest.restoreAllMocks();
   });
 
   it('authService.register opens the session of the new Member at once', async () => {
@@ -243,8 +226,15 @@ describe('Live Backend Connection (Port 3001)', () => {
           user: { id: 'u1', email: 'new@example.com', fullName: 'New', role: 'MEMBER' },
         }),
     } as Response);
-    const res = await authService.register({ name: 'New', email: 'new@example.com', password: 'password123' });
+    const res = await authService.register({
+      name: 'New',
+      email: 'new@example.com',
+      password: 'password123',
+      dateOfBirth: '2000-01-31',
+    });
     expect(res.success).toBe(true);
+    const sent = JSON.parse(String((global.fetch as jest.Mock).mock.calls[0][1].body));
+    expect(sent).toEqual({ email: 'new@example.com', password: 'password123', fullName: 'New', dateOfBirth: '2000-01-31' });
     expect(res.data.user?.role).toBe('MEMBER');
     expect(await storage.getString(STORAGE_KEYS.AUTH_TOKEN, '')).toBe('new-access');
     jest.restoreAllMocks();
@@ -260,6 +250,7 @@ describe('Live Backend Connection (Port 3001)', () => {
       name: 'Test Duplicate',
       email: 'test_node_check@example.com',
       password: 'password123',
+      dateOfBirth: '2000-01-31',
     });
     expect(res.success).toBe(false);
     expect(res.statusCode).toBe(409);
@@ -279,6 +270,7 @@ describe('Live Backend Connection (Port 3001)', () => {
       name: 'Test Invalid',
       email: 'not-an-email',
       password: 'password123',
+      dateOfBirth: '2000-01-31',
     });
     expect(res.success).toBe(false);
     expect(res.statusCode).toBe(400);
@@ -378,5 +370,43 @@ describe('extractErrorMessage', () => {
     expect(extractErrorMessage({ error: { message: 'Email already exists' } })).toBe('Email already exists');
     expect(extractErrorMessage({ message: ['x', 'y'] })).toBe('x, y');
     expect(extractErrorMessage(null)).toBeUndefined();
+  });
+});
+
+describe('typed error and list bodies', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('maps a refusal reason to its message and hands the reason back', async () => {
+    const body = { error: { code: 'FORBIDDEN', message: 'Forbidden', details: { reason: 'DEVICE_LIMIT_REACHED' } } };
+    expect(extractErrorMessage(body)).toContain('đủ số thiết bị');
+    jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false, status: 403, json: async () => body } as Response);
+
+    const res = await apiClient.get('/playback/sessions');
+
+    expect(res.reason).toBe('DEVICE_LIMIT_REACHED');
+    expect(res.message).toContain('đủ số thiết bị');
+  });
+
+  it('ignores a reason that is not a string', () => {
+    expect(extractErrorMessage({ error: { message: 'Bad', details: { reason: 42 } } })).toBe('Bad');
+  });
+
+  it('reports a timeout when the request is aborted', async () => {
+    jest.spyOn(global, 'fetch').mockRejectedValue({ name: 'AbortError', message: 'Aborted' });
+    const res = await apiClient.get('/movies');
+    expect(res.success).toBe(false);
+    expect(res.message).toContain('Timeout');
+  });
+
+  it('reads a movie list wrapped in items, and answers no rows on failure', async () => {
+    jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => JSON.stringify({ items: [{ id: 'm1', title: 'A' }] }) } as Response)
+      .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) } as Response);
+
+    expect((await movieService.listMovies()).data.map((m) => m.id)).toEqual(['m1']);
+    const failed = await movieService.listMovies();
+    expect(failed.success).toBe(false);
+    expect(failed.data).toEqual([]);
   });
 });

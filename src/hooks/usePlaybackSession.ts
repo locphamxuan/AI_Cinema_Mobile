@@ -19,8 +19,12 @@ export function usePlaybackSession(player: VideoPlayer, session: StreamingSessio
   const activeRef = useRef<AdScheduleItem | null>(null);
   const finished = useRef(false);
   const position = useRef(0);
-  position.current = Math.floor(currentTime);
   const sessionId = session?.sessionId;
+
+  // Declared first so the effects below already read this render's position.
+  useEffect(() => {
+    position.current = Math.floor(currentTime);
+  }, [currentTime]);
 
   const startAd = useCallback(
     (cue: AdScheduleItem) => {

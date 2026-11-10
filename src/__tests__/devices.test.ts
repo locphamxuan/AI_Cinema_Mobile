@@ -5,10 +5,6 @@ import { deviceService } from '../services/deviceService';
 import { savedMovieService } from '../services/savedMovieService';
 import { movieService } from '../services/movieService';
 
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
-
 const ok = (body: unknown, status = 200) => ({ ok: true, status, text: async () => JSON.stringify(body) }) as Response;
 const call = (mock: jest.SpyInstance, i = 0) => mock.mock.calls[i] as [string, RequestInit];
 

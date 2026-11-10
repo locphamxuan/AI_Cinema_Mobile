@@ -13,6 +13,7 @@ import { Phudu_700Bold } from '@expo-google-fonts/phudu/700Bold';
 import { Phudu_800ExtraBold } from '@expo-google-fonts/phudu/800ExtraBold';
 import { ThemeProvider, useTheme } from '../src/theme';
 import { lockPortrait } from '../src/lib/orientation';
+import { purgeLegacyCredentials } from '../src/lib/rememberedLogin';
 import { AuthModal } from '../src/components/auth/AuthModal';
 import { CheckInModal } from '../src/components/wallet/CheckInModal';
 import { TopUpModal } from '../src/components/wallet/TopUpModal';
@@ -69,6 +70,11 @@ export default function RootLayout() {
     Phudu_800ExtraBold,
   });
   const ready = fontsLoaded || Boolean(fontError);
+
+  // Older versions kept the password on the device; it must not outlive the update.
+  React.useEffect(() => {
+    void purgeLegacyCredentials();
+  }, []);
 
   React.useEffect(() => {
     if (ready) void SplashScreen.hideAsync().catch(() => undefined);

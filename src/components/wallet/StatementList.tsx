@@ -41,26 +41,36 @@ export const StatementList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const load = useCallback(
-    async (nextPage: number) => {
-      setLoading(true);
-      const res = await walletService.getStatements(nextPage, filter === 'ALL' ? undefined : filter);
-      setLoading(false);
-      if (!res.success || !Array.isArray(res.data)) {
-        setErrorMsg(res.message || 'Không tải được lịch sử giao dịch.');
-        return;
-      }
-      setErrorMsg(null);
-      setLines((prev) => (nextPage === 1 ? res.data : [...prev, ...res.data]));
-      setPage(nextPage);
-      setHasMore(res.data.length === STATEMENT_PAGE_SIZE);
-    },
+  const fetchPage = useCallback(
+    (nextPage: number) =>
+      walletService.getStatements(nextPage, filter === 'ALL' ? undefined : filter).then((res) => {
+        setLoading(false);
+        if (!res.success || !Array.isArray(res.data)) {
+          setErrorMsg(res.message || 'Không tải được lịch sử giao dịch.');
+          return;
+        }
+        setErrorMsg(null);
+        setLines((prev) => (nextPage === 1 ? res.data : [...prev, ...res.data]));
+        setPage(nextPage);
+        setHasMore(res.data.length === STATEMENT_PAGE_SIZE);
+      }),
     [filter],
   );
 
   useEffect(() => {
-    void load(1);
-  }, [load]);
+    void fetchPage(1);
+  }, [fetchPage]);
+
+  const selectFilter = (next: typeof filter) => {
+    if (next === filter) return;
+    setLoading(true);
+    setFilter(next);
+  };
+
+  const loadOlder = () => {
+    setLoading(true);
+    void fetchPage(page + 1);
+  };
 
   return (
     <View style={styles.wrap}>
@@ -70,7 +80,7 @@ export const StatementList: React.FC = () => {
           return (
             <TouchableOpacity
               key={f.id}
-              onPress={() => setFilter(f.id)}
+              onPress={() => selectFilter(f.id)}
               style={[styles.chip, { backgroundColor: selected ? colors.rubySoft : colors.card }]}
               accessibilityState={{ selected }}
             >
@@ -111,7 +121,7 @@ export const StatementList: React.FC = () => {
       ))}
 
       {loading && <ActivityIndicator style={styles.loading} color={colors.ruby} />}
-      {!loading && hasMore && <Button label="Xem giao dịch cũ hơn" variant="secondary" onPress={() => void load(page + 1)} />}
+      {!loading && hasMore && <Button label="Xem giao dịch cũ hơn" variant="secondary" onPress={loadOlder} />}
     </View>
   );
 };

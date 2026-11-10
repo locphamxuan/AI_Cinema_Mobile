@@ -16,7 +16,9 @@ export function AdBreakOverlay({ cue, onDone }: { cue: AdScheduleItem; onDone: (
   const { currentTime, duration } = usePlayerClock(ad);
   const [ended, setEnded] = React.useState(false);
   const done = React.useRef(onDone);
-  done.current = onDone;
+  React.useEffect(() => {
+    done.current = onDone;
+  }, [onDone]);
 
   React.useEffect(() => {
     const finished = ad.addListener('playToEnd', () => setEnded(true));

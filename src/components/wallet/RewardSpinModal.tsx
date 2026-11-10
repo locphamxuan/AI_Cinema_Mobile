@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Modal, Pressable, TouchableOpacity, ActivityIndicator, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppStore } from '../../store/useAppStore';
+import { useAccountStore, useUiStore } from '../../store';
 import { useTheme } from '../../theme';
 import { rewardService } from '../../services/rewardService';
 import { idempotencyKey } from '../../lib/ids';
@@ -19,7 +19,7 @@ const prizeLabel = (p: Pick<RewardPrize, 'type' | 'bonusCoins' | 'planDays' | 'c
 
 /** BR-09: a milestone check-in earns a spin; the BE draws the prize and pays it out. */
 export const RewardSpinModal: React.FC = () => {
-  const isOpen = useAppStore((s) => s.isRewardSpinOpen);
+  const isOpen = useUiStore((s) => s.isRewardSpinOpen);
   // Mounted only while open, so every opening starts from a fresh load.
   return isOpen ? <SpinDialog /> : null;
 };
@@ -27,18 +27,17 @@ export const RewardSpinModal: React.FC = () => {
 function SpinDialog() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { setRewardSpinOpen, setWalletBalance, loadAccountData, loadDailyReward } = useAppStore();
+  const { setWalletBalance, loadAccountData, loadDailyReward } = useAccountStore();
+  const { setRewardSpinOpen } = useUiStore();
   const [wheel, setWheel] = useState<RewardWheelStatus | null>(null);
   const [won, setWon] = useState<SpinResult | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pendingSpinKey, setPendingSpinKey] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const turn = useRef(new Animated.Value(0)).current;
+  const [turn] = useState(() => new Animated.Value(0));
 
-  const loadWheel = useCallback(() => {
-    setLoading(true);
-    setErrorMsg(null);
+  const fetchWheel = useCallback(() => {
     void rewardService
       .getWheel()
       .then((res) => {
@@ -49,7 +48,13 @@ function SpinDialog() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(loadWheel, [loadWheel]);
+  useEffect(fetchWheel, [fetchWheel]);
+
+  const retryWheel = () => {
+    setLoading(true);
+    setErrorMsg(null);
+    fetchWheel();
+  };
 
   const spins = wheel?.availableSpins ?? 0;
   const prizes = wheel?.prizes ?? [];
@@ -156,7 +161,7 @@ function SpinDialog() {
           <View style={styles.errorRow}>
             <Text style={[styles.error, { color: colors.danger }]}>{errorMsg}</Text>
             {!pendingSpinKey && (
-              <TouchableOpacity onPress={loadWheel} hitSlop={8}>
+              <TouchableOpacity onPress={retryWheel} hitSlop={8}>
                 <Text style={[styles.retry, { color: colors.text }]}>Tải lại</Text>
               </TouchableOpacity>
             )}

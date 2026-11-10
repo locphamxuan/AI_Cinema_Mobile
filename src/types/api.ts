@@ -2,7 +2,7 @@
  * Standard API Response and Request Types for AI Cinema Mobile
  */
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data: T;
   message?: string;
@@ -28,7 +28,8 @@ export interface RegisterRequestDto {
   fullName?: string;
   email: string;
   password?: string;
-  dateOfBirth?: string;
+  /** YYYY-MM-DD; the BE turns away anyone under 18. */
+  dateOfBirth: string;
 }
 
 export interface BEUserDto {
@@ -42,6 +43,13 @@ export interface BEUserDto {
   isVip?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+/** GET /auth/me; the plan fields are older names the adapter still accepts. */
+export interface ProfileDto extends Partial<BEUserDto> {
+  isVIP?: boolean;
+  vipExpiresAt?: string;
+  subscription?: { endDate?: string } | null;
 }
 
 export interface AuthResponseDto {

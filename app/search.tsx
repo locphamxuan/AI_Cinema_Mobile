@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PosterGrid } from '../src/components/home/PosterGrid';
 import { useTheme } from '../src/theme';
-import { useAppStore } from '../src/store/useAppStore';
+import { useCatalogStore } from '../src/store';
 import { movieService } from '../src/services/movieService';
 import { STORAGE_KEYS, storage } from '../src/lib/storage';
 import { addRecentSearch, suggestionPage } from '../src/lib/homeFeed';
@@ -19,15 +19,17 @@ export default function SearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const movies = useAppStore((s) => s.movies);
+  const movies = useCatalogStore((s) => s.movies);
 
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Movie[] | null>(null);
-  const [searching, setSearching] = useState(false);
+  // The last answer and the term it answers: the old one stays up while a new term loads.
+  const [found, setFound] = useState<{ term: string; movies: Movie[] } | null>(null);
   const [recent, setRecent] = useState<string[]>([]);
   const [page, setPage] = useState(0);
 
   const term = query.trim();
+  const results = term ? found?.movies ?? null : null;
+  const searching = term !== '' && found?.term !== term;
   const suggestions = useMemo(() => suggestionPage(movies, page, SUGGESTION_SIZE), [movies, page]);
 
   useEffect(() => {
@@ -36,18 +38,11 @@ export default function SearchScreen() {
 
   // Search on the server without touching the store, so the home lists stay as they were.
   useEffect(() => {
-    if (!term) {
-      setResults(null);
-      setSearching(false);
-      return;
-    }
+    if (!term) return;
     let active = true;
-    setSearching(true);
     const timer = setTimeout(() => {
       void movieService.listMovies({ search: term, limit: 30 }).then((res) => {
-        if (!active) return;
-        setResults(res.success && Array.isArray(res.data) ? res.data : []);
-        setSearching(false);
+        if (active) setFound({ term, movies: res.success && Array.isArray(res.data) ? res.data : [] });
       });
     }, DEBOUNCE_MS);
     return () => {
@@ -55,6 +50,12 @@ export default function SearchScreen() {
       clearTimeout(timer);
     };
   }, [term]);
+
+  const changeQuery = (value: string) => {
+    setQuery(value);
+    // A cleared box starts over: the next term shows the spinner, not the old results.
+    if (!value.trim()) setFound(null);
+  };
 
   const remember = useCallback(
     (value: string) => {
@@ -87,7 +88,7 @@ export default function SearchScreen() {
           <Ionicons name="search" size={18} color={colors.textMuted} />
           <TextInput
             value={query}
-            onChangeText={setQuery}
+            onChangeText={changeQuery}
             onSubmitEditing={() => term && remember(term)}
             autoFocus
             returnKeyType="search"
@@ -96,7 +97,7 @@ export default function SearchScreen() {
             style={[styles.inputText, { color: colors.text }]}
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')} hitSlop={10} accessibilityLabel="Xóa ô tìm">
+            <TouchableOpacity onPress={() => changeQuery('')} hitSlop={10} accessibilityLabel="Xóa ô tìm">
               <Ionicons name="close-circle" size={18} color={colors.textMuted} />
             </TouchableOpacity>
           )}
@@ -126,7 +127,7 @@ export default function SearchScreen() {
                 </View>
                 <View style={styles.chips}>
                   {recent.map((item) => (
-                    <TouchableOpacity key={item} onPress={() => setQuery(item)} style={[styles.chip, { backgroundColor: fieldBg }]}>
+                    <TouchableOpacity key={item} onPress={() => changeQuery(item)} style={[styles.chip, { backgroundColor: fieldBg }]}>
                       <Text style={[styles.chipText, { color: colors.text }]}>{item}</Text>
                     </TouchableOpacity>
                   ))}

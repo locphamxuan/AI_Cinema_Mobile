@@ -8,7 +8,7 @@ import { HomeTabBar } from '../../src/components/home/HomeTabBar';
 import { PosterGrid } from '../../src/components/home/PosterGrid';
 import { RankingList } from '../../src/components/home/RankingList';
 import { useTheme } from '../../src/theme';
-import { useAppStore } from '../../src/store/useAppStore';
+import { useSessionStore, useAccountStore, useCatalogStore, loadInitialData } from '../../src/store';
 import { movieService } from '../../src/services';
 import { ALL_GENRES, collectGenres, filterByGenre, newestFirst, suggestionPage, type HomeTabKey } from '../../src/lib/homeFeed';
 import { Movie } from '../../src/types/movie';
@@ -20,7 +20,9 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { movies, loadInitialData, isAuthenticated, loadDailyReward } = useAppStore();
+  const { isAuthenticated } = useSessionStore();
+  const { loadDailyReward } = useAccountStore();
+  const { movies } = useCatalogStore();
 
   const [tab, setTab] = useState<HomeTabKey>('recommend');
   const [genre, setGenre] = useState(ALL_GENRES);
@@ -28,14 +30,14 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [ranked, setRanked] = useState<Movie[]>([]);
 
-  const loadRanking = async () => {
-    const res = await movieService.ranking();
-    if (res.success) setRanked(res.data);
-  };
+  const loadRanking = () =>
+    movieService.ranking().then((res) => {
+      if (res.success) setRanked(res.data);
+    });
 
   useEffect(() => {
     void loadInitialData();
-  }, [loadInitialData]);
+  }, []);
 
   // Plays change all the time: the ranking is read from the BE each time the tab opens.
   useEffect(() => {

@@ -5,7 +5,7 @@ import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { PosterGrid } from '../src/components/home/PosterGrid';
 import { Button } from '../src/components/common/Button';
 import { savedMovieService } from '../src/services/savedMovieService';
-import { useAppStore } from '../src/store/useAppStore';
+import { useSessionStore, useUiStore } from '../src/store';
 import { useTheme } from '../src/theme';
 import type { Movie } from '../src/types/movie';
 import { styles } from '../src/styles/screens/saved.styles';
@@ -14,7 +14,8 @@ import { styles } from '../src/styles/screens/saved.styles';
 export default function SavedMoviesScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { isAuthenticated, openAuthModal } = useAppStore();
+  const { isAuthenticated } = useSessionStore();
+  const { openAuthModal } = useUiStore();
   const [movies, setMovies] = React.useState<Movie[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);

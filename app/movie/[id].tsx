@@ -4,8 +4,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppStore } from '../../src/store/useAppStore';
+import { useSessionStore, useAccountStore, useCatalogStore } from '../../src/store';
 import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
+import { useWatchHistory } from '../../src/hooks/useWatchHistory';
+import { resumeEpisode } from '../../src/lib/watchHistory';
 import { movieService } from '../../src/services';
 import { Movie, Episode } from '../../src/types/movie';
 import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
@@ -24,12 +26,17 @@ export default function MovieDetailScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { colors } = useTheme();
-  const { currentMovie, setCurrentMovie, movies, isVIPMode, watchHistory } = useAppStore();
+  const { isAuthenticated } = useSessionStore();
+  const { isVIPMode } = useAccountStore();
+  const { currentMovie, setCurrentMovie, movies } = useCatalogStore();
+  const history = useWatchHistory(isAuthenticated);
 
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
 
   const [movie, setMovie] = useState<Movie | null>(foundMovie);
-  const [loading, setLoading] = useState(!foundMovie);
+  // The movie whose fetch has finished, found or not: only an unknown movie waits for it.
+  const [settledId, setSettledId] = useState<string | null>(null);
+  const loading = !foundMovie && settledId !== id;
   const [audioMode, setAudioMode] = useState<AudioMode>('subtitle');
   const [chosenTrack, setChosenTrack] = useState<string | null>(null);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
@@ -40,9 +47,8 @@ export default function MovieDetailScreen() {
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
-    const { movies: listed, currentMovie: selected } = useAppStore.getState();
+    const { movies: listed, currentMovie: selected } = useCatalogStore.getState();
     const known = listed.find((item) => item.id === id) || (selected?.id === id ? selected : null);
-    setLoading(!known);
 
     Promise.all([
       known ? Promise.resolve(known) : movieService.getMovieDetail(id).then((res) => (res.success ? res.data : null)),
@@ -55,7 +61,7 @@ export default function MovieDetailScreen() {
         setMovie(loaded);
         setCurrentMovie(loaded);
       }
-      setLoading(false);
+      setSettledId(id);
     });
 
     return () => {
@@ -88,9 +94,8 @@ export default function MovieDetailScreen() {
     );
   }
 
-  // "Xem tiếp" picks up the last episode opened on this device; otherwise the first one.
-  const lastSeen = watchHistory.find((item) => item.movieId === movie.id);
-  const resume = lastSeen ? episodes.find((ep) => ep.id === lastSeen.episodeId) : undefined;
+  // "Xem tiếp" picks up from the member's BE watch history; otherwise the first episode.
+  const resume = resumeEpisode(history, movie.id, episodes);
   const next = resume ?? episodes[0];
   const heroHeight = Math.min(Math.round(width * 1.1), 520);
 

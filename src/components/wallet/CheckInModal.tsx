@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Modal, Pressable, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppStore } from '../../store/useAppStore';
+import { useAccountStore, useUiStore } from '../../store';
 import { useTheme } from '../../theme';
 import { Button } from '../common/Button';
 import type { CheckInResult, DailyRewardStatus } from '../../types/episodeAccess';
@@ -33,15 +33,24 @@ export function ladderDays(status: DailyRewardStatus | null, claimedDay?: number
 export const CheckInModal: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { isCheckInModalOpen, setCheckInModalOpen, dailyReward, loadDailyReward, claimDailyCheckIn, setRewardSpinOpen } = useAppStore();
+  const { dailyReward, loadDailyReward, claimDailyCheckIn } = useAccountStore();
+  const { isCheckInModalOpen, setCheckInModalOpen, setRewardSpinOpen } = useUiStore();
   const [claimed, setClaimed] = useState<CheckInResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const reloadStatus = useCallback(() => {
-    setErrorMsg(null);
-    setStatusLoading(true);
+  // Opening the sheet starts it clean; the effect below then fetches.
+  const [wasOpen, setWasOpen] = useState(false);
+  if (isCheckInModalOpen !== wasOpen) {
+    setWasOpen(isCheckInModalOpen);
+    if (isCheckInModalOpen) {
+      setErrorMsg(null);
+      setStatusLoading(true);
+    }
+  }
+
+  const fetchStatus = useCallback(() => {
     return loadDailyReward()
       .then((loaded) => {
         if (!loaded) setErrorMsg(LOAD_ERROR);
@@ -55,8 +64,14 @@ export const CheckInModal: React.FC = () => {
   }, [loadDailyReward]);
 
   useEffect(() => {
-    if (isCheckInModalOpen) void reloadStatus();
-  }, [isCheckInModalOpen, reloadStatus]);
+    if (isCheckInModalOpen) void fetchStatus();
+  }, [isCheckInModalOpen, fetchStatus]);
+
+  const reloadStatus = () => {
+    setErrorMsg(null);
+    setStatusLoading(true);
+    return fetchStatus();
+  };
 
   const close = () => {
     setClaimed(null);
