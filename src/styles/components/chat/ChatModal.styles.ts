@@ -1,0 +1,36 @@
+import { StyleSheet } from 'react-native';
+import { fonts, textStyle } from '../../../theme';
+
+export const styles = StyleSheet.create({
+  backdrop: { flex: 1, justifyContent: 'flex-end' },
+  sheet: { height: '82%', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16, paddingTop: 16 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  headerText: { flex: 1, gap: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  title: { fontFamily: fonts.displayHeavy, fontSize: 24, lineHeight: 28 },
+  status: { ...textStyle.caption },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  actionPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  actionPillText: { ...textStyle.caption, fontFamily: fonts.semibold },
+  messages: { flex: 1 },
+  messageContent: { gap: 10, paddingVertical: 14 },
+  empty: { ...textStyle.label, textAlign: 'center', marginTop: 24, paddingHorizontal: 24 },
+  system: { ...textStyle.caption, textAlign: 'center', marginVertical: 4, paddingHorizontal: 12 },
+  bubbleRow: { flexDirection: 'row' },
+  bubble: { maxWidth: '82%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
+  bubbleText: { ...textStyle.body, fontSize: 14, lineHeight: 20 },
+  chipsBar: { flexGrow: 0 },
+  chips: { gap: 8, paddingVertical: 8 },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999 },
+  chipText: { ...textStyle.label, fontSize: 12 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 24, paddingLeft: 16, paddingRight: 6, gap: 8, marginTop: 4 },
+  input: { ...textStyle.body, flex: 1, minHeight: 44, maxHeight: 96, paddingVertical: 10 },
+  send: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+});

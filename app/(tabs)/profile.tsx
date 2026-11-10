@@ -19,7 +19,7 @@ export default function ProfileScreen() {
   const { isAuthenticated, user } = useSessionStore();
   const { wallet, subscription, isVIPMode } = useAccountStore();
   const { movies } = useCatalogStore();
-  const { openAuthModal, setCheckInModalOpen } = useUiStore();
+  const { openAuthModal, setCheckInModalOpen, setChatModalOpen } = useUiStore();
   const unread = useUnreadNotifications(isAuthenticated);
   const watching = latestPerMovie(useWatchHistory(isAuthenticated));
 
@@ -115,6 +115,7 @@ export default function ProfileScreen() {
           <MenuRow icon="phone-portrait-outline" label="Thiết bị của tôi" onPress={member(() => router.push('/devices'))} />
           <MenuRow icon="gift-outline" label="Quà hằng ngày" onPress={member(() => setCheckInModalOpen(true))} />
           <MenuRow icon="notifications-outline" label="Thông báo" count={unread} onPress={member(() => router.push('/notifications'))} />
+          <MenuRow icon="chatbubble-ellipses-outline" label="Trợ lý AI & Hỗ trợ" onPress={member(() => setChatModalOpen(true))} />
           <MenuRow icon="settings-outline" label="Cài đặt" onPress={() => router.push('/settings')} last />
         </MenuCard>
       </ScrollView>

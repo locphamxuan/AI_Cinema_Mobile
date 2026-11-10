@@ -18,6 +18,7 @@ import { AuthModal } from '../src/components/auth/AuthModal';
 import { CheckInModal } from '../src/components/wallet/CheckInModal';
 import { TopUpModal } from '../src/components/wallet/TopUpModal';
 import { RewardSpinModal } from '../src/components/wallet/RewardSpinModal';
+import { ChatModal } from '../src/components/chat/ChatModal';
 
 // Text would flash in the system font otherwise.
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -56,6 +57,7 @@ function RootLayoutContent() {
       <CheckInModal />
       <TopUpModal />
       <RewardSpinModal />
+      <ChatModal />
     </>
   );
 }

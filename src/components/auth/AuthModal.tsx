@@ -9,6 +9,7 @@ import { fonts, useTheme } from '../../theme';
 import { forgetRememberedEmail, readRememberedEmail, rememberEmail } from '../../lib/rememberedLogin';
 import { MIN_PASSWORD, authFormError } from '../../lib/authForm';
 import { Button } from '../common/Button';
+import { AgeConfirmModal } from './AgeConfirmModal';
 import { GoogleSignInSection } from './GoogleSignInSection';
 import { styles } from '../../styles/components/auth/AuthModal.styles';
 
@@ -29,6 +30,7 @@ export const AuthModal: React.FC = () => {
   const [hasSavedEmail, setHasSavedEmail] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [ageModalOpen, setAgeModalOpen] = useState(false);
 
   const isLogin = authModalMode === 'login';
 
@@ -36,7 +38,10 @@ export const AuthModal: React.FC = () => {
   const [wasOpen, setWasOpen] = useState(false);
   if (isAuthModalOpen !== wasOpen) {
     setWasOpen(isAuthModalOpen);
-    if (isAuthModalOpen) setError(null);
+    if (isAuthModalOpen) {
+      setError(null);
+      setAgeModalOpen(false);
+    }
   }
 
   // Each opening fills in the email this device remembered; the password is always typed again.
@@ -59,31 +64,40 @@ export const AuthModal: React.FC = () => {
 
   const switchMode = () => {
     setError(null);
+    setAgeModalOpen(false);
     openAuthModal(isLogin ? 'register' : 'login');
+  };
+
+  const handleConfirmAgeAndRegister = async () => {
+    setAgeModalOpen(false);
+    setLoading(true);
+    const result = await register(name, email, password, dateOfBirth);
+    if (result.success) {
+      showDialog('Đã tạo tài khoản', 'Bạn đã là thành viên và có thể bắt đầu xem phim.');
+    } else {
+      setError(result.error || 'Chưa tạo được tài khoản. Kiểm tra kết nối rồi thử lại.');
+    }
+    setLoading(false);
   };
 
   const handleSubmit = async () => {
     const problem = authFormError(isLogin, { name, email, password, confirmPassword, dateOfBirth });
     setError(problem);
     if (problem) return;
-    setLoading(true);
 
-    if (isLogin) {
-      const result = await login(email, password);
-      if (result.success) {
-        if (rememberMe) await rememberEmail(email);
-        else await forgetSaved();
-        if (result.redirectUrl) router.replace(result.redirectUrl as Href);
-      } else {
-        setError(result.error || 'Chưa đăng nhập được. Kiểm tra email, mật khẩu và kết nối mạng.');
-      }
+    if (!isLogin) {
+      setAgeModalOpen(true);
+      return;
+    }
+
+    setLoading(true);
+    const result = await login(email, password);
+    if (result.success) {
+      if (rememberMe) await rememberEmail(email);
+      else await forgetSaved();
+      if (result.redirectUrl) router.replace(result.redirectUrl as Href);
     } else {
-      const result = await register(name, email, password, dateOfBirth);
-      if (result.success) {
-        showDialog('Đã tạo tài khoản', 'Bạn đã là thành viên và có thể bắt đầu xem phim.');
-      } else {
-        setError(result.error || 'Chưa tạo được tài khoản. Kiểm tra kết nối rồi thử lại.');
-      }
+      setError(result.error || 'Chưa đăng nhập được. Kiểm tra email, mật khẩu và kết nối mạng.');
     }
     setLoading(false);
   };
@@ -187,6 +201,13 @@ export const AuthModal: React.FC = () => {
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
+      <AgeConfirmModal
+        visible={ageModalOpen && !isLogin}
+        dateOfBirth={dateOfBirth}
+        loading={loading}
+        onCancel={() => setAgeModalOpen(false)}
+        onConfirm={handleConfirmAgeAndRegister}
+      />
     </Modal>
   );
 };

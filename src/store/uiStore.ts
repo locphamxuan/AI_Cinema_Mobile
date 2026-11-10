@@ -18,6 +18,8 @@ interface UiState {
   setRewardSpinOpen: (open: boolean) => void;
   isTopUpModalOpen: boolean;
   setTopUpModalOpen: (open: boolean) => void;
+  isChatModalOpen: boolean;
+  setChatModalOpen: (open: boolean) => void;
 }
 
 /** Which app-wide sheet is open. Nothing here is persisted or tied to the account. */
@@ -37,4 +39,6 @@ export const useUiStore = create<UiState>()((set) => ({
   setRewardSpinOpen: (open) => set({ isRewardSpinOpen: open }),
   isTopUpModalOpen: false,
   setTopUpModalOpen: (open) => set({ isTopUpModalOpen: open }),
+  isChatModalOpen: false,
+  setChatModalOpen: (open) => set({ isChatModalOpen: open }),
 }));

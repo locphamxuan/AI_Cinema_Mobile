@@ -17,13 +17,14 @@ export const HomeTopBar: React.FC<HomeTopBarProps> = ({ hint }) => {
   const { colors, isDark } = useTheme();
   const { isAuthenticated } = useSessionStore();
   const { dailyReward } = useAccountStore();
-  const { openAuthModal, setCheckInModalOpen } = useUiStore();
+  const { openAuthModal, setCheckInModalOpen, setChatModalOpen } = useUiStore();
 
   // Something to collect today: check-in not done yet, or spins left (both from the BE).
   const spins = dailyReward?.availableSpins ?? 0;
   const checkInWaiting = Boolean(dailyReward && !dailyReward.checkedInToday);
 
   const openRewards = () => (isAuthenticated ? setCheckInModalOpen(true) : openAuthModal('login'));
+  const openChat = () => (isAuthenticated ? setChatModalOpen(true) : openAuthModal('login'));
 
   return (
     <View style={styles.row}>
@@ -38,6 +39,14 @@ export const HomeTopBar: React.FC<HomeTopBarProps> = ({ hint }) => {
         <Text style={[styles.hint, { color: colors.textMuted }]} numberOfLines={1}>
           {hint || 'Tìm tên phim'}
         </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={openChat}
+        style={styles.gift}
+        accessibilityLabel="Trợ lý AI hỗ trợ"
+      >
+        <Ionicons name="chatbubble-ellipses-outline" size={24} color={colors.text} />
       </TouchableOpacity>
 
       <TouchableOpacity

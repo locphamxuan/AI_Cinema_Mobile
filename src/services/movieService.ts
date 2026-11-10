@@ -38,6 +38,12 @@ class MovieService {
     return { ...res, data: res.success && Array.isArray(res.data) ? res.data.map(adaptApiMovieToMovie) : [] };
   }
 
+  /** Personalized recommendations for the signed-in member; empty when the BE endpoint is unavailable. */
+  async recommendations(): Promise<ApiResponse<Movie[]>> {
+    const res = await apiClient.get<CatalogMovieDto[]>(API_ROUTES.MOVIES.RECOMMENDATIONS);
+    return { ...res, data: res.success && Array.isArray(res.data) ? res.data.map(adaptApiMovieToMovie) : [] };
+  }
+
   async getMovieDetail(id: string): Promise<ApiResponse<Movie>> {
     return apiClient.get<CatalogMovieDto>(API_ROUTES.MOVIES.DETAIL(id)).then((res) => {
       if (res.success && res.data) {
