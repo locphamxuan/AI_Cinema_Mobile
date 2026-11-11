@@ -9,6 +9,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
+  type GestureResponderEvent,
   type TextInputKeyPressEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -79,7 +81,36 @@ export const ChatModal: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [webOffset, setWebOffset] = useState({ x: 0, y: 0 });
+  const [webDragStart, setWebDragStart] = useState<{
+    pageX: number;
+    pageY: number;
+    startX: number;
+    startY: number;
+  } | null>(null);
+  const { width: winWidth, height: winHeight } = useWindowDimensions();
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+
+  const handleWebHeaderGrant = (e: GestureResponderEvent) => {
+    setWebDragStart({
+      pageX: e.nativeEvent.pageX,
+      pageY: e.nativeEvent.pageY,
+      startX: webOffset.x,
+      startY: webOffset.y,
+    });
+  };
+
+  const handleWebHeaderMove = (e: GestureResponderEvent) => {
+    if (!webDragStart) return;
+    const dx = e.nativeEvent.pageX - webDragStart.pageX;
+    const dy = e.nativeEvent.pageY - webDragStart.pageY;
+    const maxLeft = Math.max(0, winWidth - 440);
+    const maxUp = Math.max(0, winHeight - 630);
+    setWebOffset({
+      x: Math.min(20, Math.max(-maxLeft, webDragStart.startX + dx)),
+      y: Math.min(20, Math.max(-maxUp, webDragStart.startY + dy)),
+    });
+  };
 
   const catalogContext: SupportCatalogContext = useMemo(
     () => ({
@@ -277,10 +308,20 @@ export const ChatModal: React.FC = () => {
               borderColor: colors.border,
               paddingBottom: Math.max(insets.bottom, 12) + 8,
             },
+            Platform.OS === 'web'
+              ? { transform: [{ translateX: webOffset.x }, { translateY: webOffset.y }] }
+              : null,
           ]}
         >
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}>
+          {/* Header (draggable on Web) */}
+          <View
+            onMoveShouldSetResponder={() => Platform.OS === 'web'}
+            onResponderGrant={handleWebHeaderGrant}
+            onResponderMove={handleWebHeaderMove}
+            onResponderRelease={() => setWebDragStart(null)}
+            onResponderTerminate={() => setWebDragStart(null)}
+            style={[styles.header, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}
+          >
             <View style={styles.headerBrand}>
               <AiOrb size="sm" />
               <View style={styles.headerText}>
