@@ -3,6 +3,8 @@ import { Platform, type ColorValue } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { fonts, useTheme } from '../../src/theme';
+import { useUiStore } from '../../src/store';
+import { AiOrb } from '../../src/components/chat/AiOrb';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -16,6 +18,7 @@ function tabIcon(name: IconName, active: IconName) {
 
 export default function TabLayout() {
   const { isDark, colors } = useTheme();
+  const setChatModalOpen = useUiStore((s) => s.setChatModalOpen);
 
   return (
     <Tabs
@@ -51,13 +54,26 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontFamily: fonts.semibold,
-          fontSize: 12,
+          fontSize: 11,
           marginTop: 2,
         },
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Trang chủ', tabBarIcon: tabIcon('play-circle-outline', 'play-circle') }} />
       <Tabs.Screen name="explore" options={{ title: 'Khám phá', tabBarIcon: tabIcon('compass-outline', 'compass') }} />
+      <Tabs.Screen
+        name="assistant"
+        options={{
+          title: 'Trợ lý AI',
+          tabBarIcon: () => <AiOrb size="xs" />,
+        }}
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+            setChatModalOpen(true);
+          },
+        }}
+      />
       <Tabs.Screen name="schedule" options={{ title: 'Lịch chiếu', tabBarIcon: tabIcon('calendar-clear-outline', 'calendar-clear') }} />
       <Tabs.Screen name="vip" options={{ title: 'Gói Tháng', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
       <Tabs.Screen name="profile" options={{ title: 'Hồ sơ', tabBarIcon: tabIcon('person-circle-outline', 'person-circle') }} />

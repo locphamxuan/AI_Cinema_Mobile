@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { showDialog } from '../../lib/dialog';
 import { useRouter, type Href } from 'expo-router';
@@ -7,11 +7,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSessionStore, useUiStore } from '../../store';
 import { fonts, useTheme } from '../../theme';
 import { forgetRememberedEmail, readRememberedEmail, rememberEmail } from '../../lib/rememberedLogin';
-import { MIN_PASSWORD, authFormError } from '../../lib/authForm';
+import { MIN_PASSWORD, authFormError, normalizeDateOfBirth } from '../../lib/authForm';
 import { Button } from '../common/Button';
 import { AgeConfirmModal } from './AgeConfirmModal';
 import { GoogleSignInSection } from './GoogleSignInSection';
 import { styles } from '../../styles/components/auth/AuthModal.styles';
+
+const digitsOnly = (value: string, maxLen: number) => value.replace(/\D/g, '').slice(0, maxLen);
 
 export const AuthModal: React.FC = () => {
   const router = useRouter();
@@ -24,7 +26,9 @@ export const AuthModal: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [dobDay, setDobDay] = useState('');
+  const [dobMonth, setDobMonth] = useState('');
+  const [dobYear, setDobYear] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [hasSavedEmail, setHasSavedEmail] = useState(false);
@@ -32,7 +36,14 @@ export const AuthModal: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [ageModalOpen, setAgeModalOpen] = useState(false);
 
+  const monthRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const yearRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+
   const isLogin = authModalMode === 'login';
+  const dateOfBirthInput =
+    dobDay || dobMonth || dobYear
+      ? `${dobDay.padStart(2, '0')}/${dobMonth.padStart(2, '0')}/${dobYear}`
+      : '';
 
   // Each opening starts without the previous attempt's error.
   const [wasOpen, setWasOpen] = useState(false);
@@ -69,9 +80,15 @@ export const AuthModal: React.FC = () => {
   };
 
   const handleConfirmAgeAndRegister = async () => {
+    const normalizedDob = normalizeDateOfBirth(dateOfBirthInput);
+    if (!normalizedDob) {
+      setAgeModalOpen(false);
+      setError('Ngày sinh chưa hợp lệ (nhập dạng DD/MM/YYYY, ví dụ 14/05/2003).');
+      return;
+    }
     setAgeModalOpen(false);
     setLoading(true);
-    const result = await register(name, email, password, dateOfBirth);
+    const result = await register(name, email, password, normalizedDob);
     if (result.success) {
       showDialog('Đã tạo tài khoản', 'Bạn đã là thành viên và có thể bắt đầu xem phim.');
     } else {
@@ -81,7 +98,8 @@ export const AuthModal: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    const problem = authFormError(isLogin, { name, email, password, confirmPassword, dateOfBirth });
+    const rawDob = dobDay.trim() && dobMonth.trim() && dobYear.trim() ? dateOfBirthInput : '';
+    const problem = authFormError(isLogin, { name, email, password, confirmPassword, dateOfBirth: rawDob });
     setError(problem);
     if (problem) return;
 
@@ -133,13 +151,74 @@ export const AuthModal: React.FC = () => {
             )}
 
             {!isLogin &&
-              field('Họ và tên', <TextInput value={name} onChangeText={setName} placeholder="Nguyễn Văn A" placeholderTextColor={colors.textMuted} style={inputStyle} />)}
+              field(
+                'Họ và tên',
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Nguyễn Văn A"
+                  placeholderTextColor={colors.textMuted}
+                  autoComplete="name"
+                  style={inputStyle}
+                />,
+              )}
+
             {!isLogin &&
               field(
-                'Ngày sinh',
-                <TextInput value={dateOfBirth} onChangeText={setDateOfBirth} placeholder="2003-05-14" placeholderTextColor={colors.textMuted} keyboardType="numbers-and-punctuation" style={inputStyle} />,
-                'Viết theo dạng năm-tháng-ngày.',
+                'Ngày sinh (chỉ nhập số · từ 18 tuổi)',
+                <View style={styles.dobRow}>
+                  <TextInput
+                    value={dobDay}
+                    onChangeText={(v) => {
+                      const next = digitsOnly(v, 2);
+                      setDobDay(next);
+                      if (next.length === 2) monthRef.current?.focus();
+                    }}
+                    placeholder="Ngày (14)"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    autoComplete="off"
+                    importantForAutofill="no"
+                    accessibilityLabel="Ngày sinh"
+                    style={[inputStyle, styles.dobPart]}
+                  />
+                  <Text style={[styles.dobSlash, { color: colors.textMuted }]}>/</Text>
+                  <TextInput
+                    ref={monthRef}
+                    value={dobMonth}
+                    onChangeText={(v) => {
+                      const next = digitsOnly(v, 2);
+                      setDobMonth(next);
+                      if (next.length === 2) yearRef.current?.focus();
+                    }}
+                    placeholder="Tháng (05)"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    autoComplete="off"
+                    importantForAutofill="no"
+                    accessibilityLabel="Tháng sinh"
+                    style={[inputStyle, styles.dobPart]}
+                  />
+                  <Text style={[styles.dobSlash, { color: colors.textMuted }]}>/</Text>
+                  <TextInput
+                    ref={yearRef}
+                    value={dobYear}
+                    onChangeText={(v) => setDobYear(digitsOnly(v, 4))}
+                    placeholder="Năm (2003)"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    autoComplete="off"
+                    importantForAutofill="no"
+                    accessibilityLabel="Năm sinh"
+                    style={[inputStyle, styles.dobYear]}
+                  />
+                </View>,
+                'Ví dụ: 14 / 05 / 2003. Bước tiếp theo sẽ hiển thị điều khoản & xác nhận 18+.',
               )}
+
             {field(
               'Email',
               <TextInput value={email} onChangeText={setEmail} placeholder="ten@email.com" placeholderTextColor={colors.textMuted} autoCapitalize="none" keyboardType="email-address" autoComplete="email" style={inputStyle} />,
@@ -188,7 +267,7 @@ export const AuthModal: React.FC = () => {
 
             {error && <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>}
 
-            <Button label={isLogin ? 'Đăng nhập' : 'Tạo tài khoản'} onPress={handleSubmit} loading={loading} />
+            <Button label={isLogin ? 'Đăng nhập' : 'Tiếp tục'} onPress={handleSubmit} loading={loading} />
 
             <GoogleSignInSection />
 
@@ -203,7 +282,7 @@ export const AuthModal: React.FC = () => {
       </KeyboardAvoidingView>
       <AgeConfirmModal
         visible={ageModalOpen && !isLogin}
-        dateOfBirth={dateOfBirth}
+        dateOfBirth={dateOfBirthInput}
         loading={loading}
         onCancel={() => setAgeModalOpen(false)}
         onConfirm={handleConfirmAgeAndRegister}

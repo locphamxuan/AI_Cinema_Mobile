@@ -5,13 +5,14 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme';
 import { useSessionStore, useAccountStore, useUiStore } from '../../store';
 import { styles } from '../../styles/components/home/HomeTopBar.styles';
+import { AiOrb } from '../chat/AiOrb';
 
 interface HomeTopBarProps {
   /** A film title shown as the search hint. */
   hint?: string;
 }
 
-/** Search pill and the reward gift (check-in / spins) at the top of the home screen. */
+/** Search pill, AI Assistant button, and the reward gift at the top of the home screen. */
 export const HomeTopBar: React.FC<HomeTopBarProps> = ({ hint }) => {
   const router = useRouter();
   const { colors, isDark } = useTheme();
@@ -24,7 +25,7 @@ export const HomeTopBar: React.FC<HomeTopBarProps> = ({ hint }) => {
   const checkInWaiting = Boolean(dailyReward && !dailyReward.checkedInToday);
 
   const openRewards = () => (isAuthenticated ? setCheckInModalOpen(true) : openAuthModal('login'));
-  const openChat = () => (isAuthenticated ? setChatModalOpen(true) : openAuthModal('login'));
+  const openChat = () => setChatModalOpen(true);
 
   return (
     <View style={styles.row}>
@@ -42,11 +43,19 @@ export const HomeTopBar: React.FC<HomeTopBarProps> = ({ hint }) => {
       </TouchableOpacity>
 
       <TouchableOpacity
+        activeOpacity={0.85}
         onPress={openChat}
-        style={styles.gift}
-        accessibilityLabel="Trợ lý AI hỗ trợ"
+        style={[
+          styles.aiPill,
+          {
+            backgroundColor: isDark ? 'rgba(236, 72, 153, 0.16)' : 'rgba(236, 72, 153, 0.12)',
+            borderColor: 'rgba(236, 72, 153, 0.45)',
+          },
+        ]}
+        accessibilityLabel="Mở Trợ lý AI"
       >
-        <Ionicons name="chatbubble-ellipses-outline" size={24} color={colors.text} />
+        <AiOrb size="xs" />
+        <Text style={[styles.aiLabel, { color: colors.text }]}>AI</Text>
       </TouchableOpacity>
 
       <TouchableOpacity

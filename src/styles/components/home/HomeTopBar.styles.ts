@@ -1,8 +1,8 @@
 import { StyleSheet } from 'react-native';
-import { textStyle } from '../../../theme';
+import { fonts, textStyle } from '../../../theme';
 
 export const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingTop: 6 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 6 },
   search: {
     flex: 1,
     flexDirection: 'row',
@@ -13,6 +13,20 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   hint: { ...textStyle.body, flex: 1 },
+  aiPill: {
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  aiLabel: {
+    fontFamily: fonts.bold,
+    fontSize: 12,
+    letterSpacing: 0.4,
+  },
   gift: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   count: {
     position: 'absolute',

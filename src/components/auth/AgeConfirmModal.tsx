@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { calculateAgeYears, isAtLeast18 } from '../../lib/authForm';
+import { calculateAgeYears, formatDobDisplay, isAtLeast18 } from '../../lib/authForm';
 import { borderRadius, fonts, spacing, useTheme } from '../../theme';
 
 interface AgeConfirmModalProps {
@@ -12,7 +12,26 @@ interface AgeConfirmModalProps {
   onConfirm: () => void;
 }
 
-/** BR-54: Explicit age confirmation step shown before submitting account registration. */
+const TERMS_ITEMS = [
+  {
+    title: '1. Độ tuổi thành viên (18+ · BR-54)',
+    body: 'Nền tảng AI Cinema chỉ cung cấp dịch vụ cho người dùng từ đủ 18 tuổi trở lên. Thông tin ngày sinh phải trung thực và chính xác.',
+  },
+  {
+    title: '2. Nội dung tạo bởi AI & Quy chuẩn hiển thị',
+    body: 'Phim ngắn, hình ảnh và phụ đề có ứng dụng AI được kiểm duyệt và gắn nhãn minh bạch theo Điều 44 trước khi phát hành.',
+  },
+  {
+    title: '3. Ví Coin, Gói Tháng & Thanh toán',
+    body: 'Coin nạp qua VNPay và gói thành viên được dùng để mở khóa tập phim trên hệ sinh thái AI Cinema, không quy đổi thành tiền mặt.',
+  },
+  {
+    title: '4. Bảo mật tài khoản & Thiết bị',
+    body: 'Bạn chịu trách nhiệm bảo vệ mật khẩu và tuân thủ giới hạn thiết bị xem đồng thời theo gói hiện hành.',
+  },
+];
+
+/** BR-54: Explicit terms & 18+ age confirmation step shown before submitting account registration. */
 export const AgeConfirmModal: React.FC<AgeConfirmModalProps> = ({
   visible,
   dateOfBirth,
@@ -51,15 +70,15 @@ export const AgeConfirmModal: React.FC<AgeConfirmModalProps> = ({
               />
             </View>
             <View style={styles.headerTextWrap}>
-              <Text style={[styles.title, { color: colors.text }]}>Xác nhận độ tuổi (18+)</Text>
-              <Text style={[styles.subtitle, { color: colors.textMuted }]}>Quy định đăng ký thành viên AI Cinema</Text>
+              <Text style={[styles.title, { color: colors.text }]}>Điều khoản & Xác nhận 18+</Text>
+              <Text style={[styles.subtitle, { color: colors.textMuted }]}>Bước cuối để hoàn tất đăng ký AI Cinema</Text>
             </View>
           </View>
 
           <View style={[styles.dobBox, { backgroundColor: colors.surfaceVariant, borderColor: colors.borderLight }]}>
             <Text style={[styles.dobLabel, { color: colors.textSecondary }]}>Ngày sinh đã nhập</Text>
             <Text style={[styles.dobValue, { color: colors.text }]}>
-              {dateOfBirth || 'Chưa nhập'}
+              {formatDobDisplay(dateOfBirth)}
               {age !== null ? ` (${age} tuổi)` : ''}
             </Text>
           </View>
@@ -68,33 +87,47 @@ export const AgeConfirmModal: React.FC<AgeConfirmModalProps> = ({
             <View style={[styles.warningBox, { backgroundColor: colors.dangerSoft, borderColor: colors.danger }]}>
               <Text style={[styles.warningText, { color: colors.danger }]}>
                 {age === null
-                  ? 'Ngày sinh chưa đúng định dạng YYYY-MM-DD (ví dụ 1998-06-15). Vui lòng quay lại chỉnh sửa.'
+                  ? 'Ngày sinh chưa hợp lệ (nhập dạng DD/MM/YYYY, ví dụ 14/05/2003). Vui lòng quay lại chỉnh sửa.'
                   : 'Bạn cần đủ 18 tuổi trở lên để đăng ký tài khoản xem phim trên AI Cinema.'}
               </Text>
             </View>
           ) : (
-            <TouchableOpacity
-              style={[styles.checkBoxRow, { borderColor: checked ? colors.ruby : colors.border }]}
-              onPress={() => setChecked((prev) => !prev)}
-              activeOpacity={0.8}
-            >
-              <View
-                style={[
-                  styles.box,
-                  {
-                    borderColor: checked ? colors.ruby : colors.border,
-                    backgroundColor: checked ? colors.ruby : 'transparent',
-                  },
-                ]}
-              >
-                {checked && <Ionicons name="checkmark" size={14} color={colors.white} />}
+            <>
+              <View style={[styles.termsWrap, { backgroundColor: colors.surfaceVariant, borderColor: colors.borderLight }]}>
+                <ScrollView style={styles.termsScroll} showsVerticalScrollIndicator>
+                  {TERMS_ITEMS.map((item) => (
+                    <View key={item.title} style={styles.termBlock}>
+                      <Text style={[styles.termTitle, { color: colors.text }]}>{item.title}</Text>
+                      <Text style={[styles.termBody, { color: colors.textSecondary }]}>{item.body}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
               </View>
-              <Text style={[styles.consentText, { color: colors.textSecondary }]}>
-                Tôi xác nhận tôi đã đủ <Text style={{ color: colors.text, fontFamily: fonts.semibold }}>18 tuổi</Text>,
-                ngày sinh <Text style={{ color: colors.text, fontFamily: fonts.semibold }}>{dateOfBirth}</Text> là chính
-                xác và đồng ý điều khoản sử dụng của nền tảng.
-              </Text>
-            </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.checkBoxRow, { borderColor: checked ? colors.ruby : colors.border }]}
+                onPress={() => setChecked((prev) => !prev)}
+                activeOpacity={0.8}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked }}
+              >
+                <View
+                  style={[
+                    styles.box,
+                    {
+                      borderColor: checked ? colors.ruby : colors.border,
+                      backgroundColor: checked ? colors.ruby : 'transparent',
+                    },
+                  ]}
+                >
+                  {checked && <Ionicons name="checkmark" size={14} color={colors.white} />}
+                </View>
+                <Text style={[styles.consentText, { color: colors.textSecondary }]}>
+                  Tôi đã đọc toàn bộ <Text style={{ color: colors.text, fontFamily: fonts.semibold }}>Điều khoản sử dụng</Text>{' '}
+                  và xác nhận tôi đã đủ <Text style={{ color: colors.text, fontFamily: fonts.semibold }}>18 tuổi trở lên</Text>.
+                </Text>
+              </TouchableOpacity>
+            </>
           )}
 
           <View style={styles.actions}>
@@ -139,11 +172,11 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 420,
     borderRadius: borderRadius.xl,
     borderWidth: 1,
     padding: spacing.xl,
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   headerRow: {
     flexDirection: 'row',
@@ -185,6 +218,29 @@ const styles = StyleSheet.create({
   dobValue: {
     fontSize: 13,
     fontFamily: fonts.semibold,
+  },
+  termsWrap: {
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    maxHeight: 165,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  termsScroll: {
+    flexGrow: 0,
+  },
+  termBlock: {
+    marginBottom: spacing.sm,
+  },
+  termTitle: {
+    fontSize: 12,
+    fontFamily: fonts.semibold,
+    marginBottom: 2,
+  },
+  termBody: {
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    lineHeight: 17,
   },
   warningBox: {
     borderRadius: borderRadius.md,

@@ -40,7 +40,31 @@ describe('supportService (Chatbox AI)', () => {
     expect(msgRes.data?.aiMessage?.content).toBe('Bạn vào Ví Coin nhé.');
   });
 
-  it('falls back cleanly to local AI assistant when BE returns 404', async () => {
+  it('closes old thread and starts a fresh AI conversation via startFresh', async () => {
+    const postSpy = jest
+      .spyOn(apiClient, 'post')
+      .mockResolvedValueOnce({
+        success: true,
+        statusCode: 200,
+        data: { id: 'conv-old', status: 'CLOSED', createdAt: '2026-11-10T00:00:00Z' },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        statusCode: 201,
+        data: { id: 'conv-new', status: 'AI_HANDLING', createdAt: '2026-11-11T00:00:00Z' },
+      });
+
+    const fresh = await supportService.startFresh('conv-old');
+    expect(postSpy).toHaveBeenNthCalledWith(1, API_ROUTES.SUPPORT.CLOSE('conv-old'), {
+      note: 'Người dùng tạo cuộc hội thoại mới',
+    });
+    expect(postSpy).toHaveBeenNthCalledWith(2, API_ROUTES.SUPPORT.CONVERSATIONS, {});
+    expect(fresh.success).toBe(true);
+    expect(fresh.data?.id).toBe('conv-new');
+    expect(fresh.data?.status).toBe('AI_HANDLING');
+  });
+
+  it('falls back cleanly to local AI assistant and resets when starting fresh on 404', async () => {
     jest.spyOn(apiClient, 'post').mockResolvedValue({
       success: false,
       statusCode: 404,
@@ -57,12 +81,20 @@ describe('supportService (Chatbox AI)', () => {
     expect(sent.data?.memberMessage.content).toBe('Làm sao để nạp Coin VNPay?');
     expect(sent.data?.aiMessage?.content).toContain('VNPay');
 
+    const catalogAsk = await supportService.sendMessage(
+      'local-ai-support',
+      'đang có bao nhiêu phim',
+      undefined,
+      { movieCount: 12, sampleTitles: ['Cyber Saigon', 'Void Core'] },
+    );
+    expect(catalogAsk.data?.aiMessage?.content).toContain('12 bộ phim AI');
+
     const escalated = await supportService.requestStaff('local-ai-support');
     expect(escalated.success).toBe(true);
     expect(escalated.data?.status).toBe('WAITING_FOR_STAFF');
 
-    const resolved = await supportService.confirmResolved('local-ai-support');
-    expect(resolved.success).toBe(true);
-    expect(resolved.data?.status).toBe('RESOLVED');
+    const freshLocal = await supportService.startFresh('local-ai-support');
+    expect(freshLocal.success).toBe(true);
+    expect(freshLocal.data?.status).toBe('AI_HANDLING');
   });
 });
