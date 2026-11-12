@@ -9,7 +9,14 @@ import type {
   SupportSendResult,
 } from '../types/support';
 
-const S = API_ROUTES.SUPPORT;
+const S = API_ROUTES.CHAT;
+
+type ConversationListResponse = SupportConversation[] | { conversations?: SupportConversation[]; items?: SupportConversation[] };
+
+function getConversationList(data: ConversationListResponse): SupportConversation[] | undefined {
+  if (Array.isArray(data)) return data;
+  return data.conversations ?? data.items;
+}
 
 const DEFAULT_QUICK_REPLIES: SupportQuickReply[] = [
   { label: 'Nạp Coin VNPay', message: 'Làm sao để nạp Coin qua VNPay?' },
@@ -30,7 +37,7 @@ function makeWelcomeMessage(): SupportMessage {
   };
 }
 
-// Local stateful fallback used when BE support module is not yet deployed (404) or for Guest FAQ mode.
+// Local FAQ mode is used only for guests.
 let localConv: SupportConversation = {
   id: 'local-ai-support',
   status: 'AI_HANDLING',
@@ -69,15 +76,39 @@ export function localAiReply(content: string, context?: SupportCatalogContext): 
 
 export const supportService = {
   async startOrGetOpen(): Promise<ApiResponse<SupportConversation>> {
-    const res = await apiClient.post<SupportConversation>(S.CONVERSATIONS, {});
-    if (res.success && res.data) return res;
-    if (res.statusCode === 404) {
-      return { success: true, data: localConv, statusCode: 200 };
+    const listRes = await apiClient.get<ConversationListResponse>(S.CONVERSATIONS);
+    if (!listRes.success || !listRes.data) {
+      return {
+        success: false,
+        data: null as unknown as SupportConversation,
+        message: listRes.message,
+        statusCode: listRes.statusCode,
+        reason: listRes.reason,
+      };
     }
-    return res;
+
+    const conversations = getConversationList(listRes.data);
+    if (!conversations) {
+      return {
+        success: false,
+        data: null as unknown as SupportConversation,
+        message: 'Dữ liệu danh sách hội thoại không hợp lệ.',
+        statusCode: listRes.statusCode,
+      };
+    }
+
+    const activeConversation = conversations.find((item) =>
+      ['AI_HANDLING', 'WAITING_FOR_STAFF', 'STAFF_HANDLING'].includes(item.status),
+    );
+    if (activeConversation) return { ...listRes, data: activeConversation };
+
+    return apiClient.post<SupportConversation>(S.CONVERSATIONS, {});
   },
 
-  async getDetail(id: string): Promise<ApiResponse<SupportConversationDetail>> {
+  async getDetail(
+    id: string,
+    conversation?: SupportConversation,
+  ): Promise<ApiResponse<SupportConversationDetail>> {
     if (id === localConv.id) {
       return {
         success: true,
@@ -85,27 +116,55 @@ export const supportService = {
         statusCode: 200,
       };
     }
-    const res = await apiClient.get<SupportConversationDetail | SupportConversation>(S.CONVERSATION(id));
-    if (res.success && res.data) {
-      const payload = res.data as SupportConversationDetail;
-      if (payload.conversation) return { ...res, data: payload };
+
+    let targetConversation = conversation;
+    if (!targetConversation) {
+      const conversationsRes = await apiClient.get<ConversationListResponse>(S.CONVERSATIONS);
+      if (!conversationsRes.success || !conversationsRes.data) {
+        return {
+          success: false,
+          data: null as unknown as SupportConversationDetail,
+          message: conversationsRes.message,
+          statusCode: conversationsRes.statusCode,
+          reason: conversationsRes.reason,
+        };
+      }
+      const conversations = getConversationList(conversationsRes.data);
+      if (!conversations) {
+        return {
+          success: false,
+          data: null as unknown as SupportConversationDetail,
+          message: 'Dữ liệu danh sách hội thoại không hợp lệ.',
+          statusCode: conversationsRes.statusCode,
+        };
+      }
+      targetConversation = conversations.find((item) => item.id === id);
+    }
+
+    if (!targetConversation) {
       return {
-        ...res,
-        data: {
-          conversation: res.data as SupportConversation,
-          messages: ((res.data as { messages?: SupportMessage[] }).messages) ?? [],
-          quickReplies: DEFAULT_QUICK_REPLIES,
-        },
+        success: false,
+        data: null as unknown as SupportConversationDetail,
+        message: 'Không tìm thấy hội thoại.',
       };
     }
-    if (res.statusCode === 404) {
+
+    const res = await apiClient.get<SupportMessage[] | { messages: SupportMessage[] }>(S.MESSAGES(id));
+    if (!res.success || !res.data) return res as ApiResponse<SupportConversationDetail>;
+
+    const messages = Array.isArray(res.data) ? res.data : res.data.messages;
+    if (!Array.isArray(messages)) {
       return {
-        success: true,
-        data: { conversation: localConv, messages: [...localMessages], quickReplies: DEFAULT_QUICK_REPLIES },
-        statusCode: 200,
+        success: false,
+        data: null as unknown as SupportConversationDetail,
+        message: 'Dữ liệu lịch sử trò chuyện không hợp lệ.',
       };
     }
-    return res as ApiResponse<SupportConversationDetail>;
+
+    return {
+      ...res,
+      data: { conversation: targetConversation, messages, quickReplies: DEFAULT_QUICK_REPLIES },
+    };
   },
 
   async sendMessage(
@@ -115,11 +174,7 @@ export const supportService = {
     context?: SupportCatalogContext,
   ): Promise<ApiResponse<SupportSendResult>> {
     const body = { content: content.trim(), ...(clientMessageId ? { clientMessageId } : {}) };
-    if (id !== localConv.id) {
-      const res = await apiClient.post<SupportSendResult>(S.MESSAGES(id), body);
-      if (res.success && res.data) return res;
-      if (res.statusCode !== 404) return res;
-    }
+    if (id !== localConv.id) return apiClient.post<SupportSendResult>(S.MESSAGES(id), body);
 
     const memberMessage: SupportMessage = {
       id: `m-${Date.now()}`,
@@ -152,8 +207,7 @@ export const supportService = {
 
   async requestStaff(id: string, note?: string): Promise<ApiResponse<SupportConversation>> {
     if (id !== localConv.id) {
-      const res = await apiClient.post<SupportConversation>(S.REQUEST_STAFF(id), note ? { note } : {});
-      if (res.success || res.statusCode !== 404) return res;
+      return apiClient.post<SupportConversation>(S.HANDOFF(id), note ? { note } : {});
     }
     localConv = { ...localConv, status: 'WAITING_FOR_STAFF' };
     localMessages = [
@@ -168,59 +222,12 @@ export const supportService = {
     return { success: true, data: localConv, statusCode: 200 };
   },
 
-  async confirmResolved(id: string, rating?: number, comment?: string): Promise<ApiResponse<SupportConversation>> {
-    if (id !== localConv.id) {
-      const res = await apiClient.post<SupportConversation>(S.CONFIRM_RESOLVED(id), {
-        ...(rating ? { rating } : {}),
-        ...(comment ? { comment } : {}),
-      });
-      if (res.success || res.statusCode !== 404) return res;
-    }
-    localConv = { ...localConv, status: 'RESOLVED' };
-    localMessages = [
-      ...localMessages,
-      {
-        id: `sys-${Date.now()}`,
-        senderType: 'SYSTEM',
-        content: 'Cảm ơn bạn đã xác nhận vấn đề đã được giải quyết.',
-        createdAt: new Date().toISOString(),
-      },
-    ];
-    return { success: true, data: localConv, statusCode: 200 };
-  },
-
-  async close(id: string, note?: string): Promise<ApiResponse<SupportConversation>> {
-    if (id !== localConv.id) {
-      const res = await apiClient.post<SupportConversation>(S.CLOSE(id), note ? { note } : {});
-      if (res.success || res.statusCode !== 404) return res;
-    }
-    localConv = { ...localConv, status: 'CLOSED' };
-    localMessages = [
-      ...localMessages,
-      {
-        id: `sys-${Date.now()}`,
-        senderType: 'SYSTEM',
-        content: 'Cuộc hội thoại đã được đóng.',
-        createdAt: new Date().toISOString(),
-      },
-    ];
-    return { success: true, data: localConv, statusCode: 200 };
-  },
-
-  /**
-   * Closes any active conversation immediately (so BE opens a brand new AI_HANDLING thread
-   * instead of locking into WAITING_FOR_STAFF or waiting 24h) and returns the new thread.
-   */
   async startFresh(currentId?: string): Promise<ApiResponse<SupportConversation>> {
-    if (currentId && currentId !== localConv.id) {
-      try {
-        await apiClient.post<SupportConversation>(S.CLOSE(currentId), { note: 'Người dùng tạo cuộc hội thoại mới' });
-      } catch {
-        // Ignore if already closed/resolved; POST /support/conversations will open a new thread.
-      }
+    if (currentId === localConv.id) {
+      await this.resetLocalConversation();
+      return { success: true, data: localConv, statusCode: 200 };
     }
-    await this.resetLocalConversation();
-    return this.startOrGetOpen();
+    return apiClient.post<SupportConversation>(S.CONVERSATIONS, {});
   },
 
   async resetLocalConversation(): Promise<void> {

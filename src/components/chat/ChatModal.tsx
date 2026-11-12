@@ -140,15 +140,19 @@ export const ChatModal: React.FC = () => {
 
       const startRes = await supportService.startOrGetOpen();
       if (!startRes.success || !startRes.data) {
+        setConversation(null);
+        setMessages([]);
         setErrorMsg(startRes.message || 'Không thể kết nối Trợ lý AI lúc này.');
         return;
       }
       setConversation(startRes.data);
-      const detailRes = await supportService.getDetail(startRes.data.id);
+      const detailRes = await supportService.getDetail(startRes.data.id, startRes.data);
       if (detailRes.success && detailRes.data) {
         setConversation(detailRes.data.conversation);
         setMessages(detailRes.data.messages);
         setQuickReplies(detailRes.data.quickReplies ?? []);
+      } else {
+        setErrorMsg(detailRes.message || 'Không thể tải lịch sử trò chuyện.');
       }
     } finally {
       setLoading(false);
@@ -188,11 +192,13 @@ export const ChatModal: React.FC = () => {
       const freshRes = await supportService.startFresh(conversation?.id);
       if (freshRes.success && freshRes.data) {
         setConversation(freshRes.data);
-        const detailRes = await supportService.getDetail(freshRes.data.id);
+        const detailRes = await supportService.getDetail(freshRes.data.id, freshRes.data);
         if (detailRes.success && detailRes.data) {
           setConversation(detailRes.data.conversation);
           setMessages(detailRes.data.messages);
           setQuickReplies(detailRes.data.quickReplies ?? []);
+        } else {
+          setErrorMsg(detailRes.message || 'Không thể tải lịch sử trò chuyện.');
         }
       } else {
         setErrorMsg(freshRes.message || 'Chưa tạo được cuộc hội thoại mới. Vui lòng thử lại.');
@@ -205,7 +211,11 @@ export const ChatModal: React.FC = () => {
   const sendText = async (textToSend: string) => {
     const clean = textToSend.trim();
     if (!clean || sending || loading) return;
-    const convId = conversation?.id ?? 'local-ai-support';
+    const convId = conversation?.id;
+    if (!convId) {
+      setErrorMsg('Hội thoại chưa sẵn sàng. Vui lòng thử lại hoặc tạo hội thoại mới.');
+      return;
+    }
     setDraft('');
     setErrorMsg(null);
     setSending(true);
@@ -247,32 +257,14 @@ export const ChatModal: React.FC = () => {
       const res = await supportService.requestStaff(conversation.id);
       if (res.success && res.data) {
         setConversation(res.data);
-        const detailRes = await supportService.getDetail(conversation.id);
+        const detailRes = await supportService.getDetail(conversation.id, res.data);
         if (detailRes.success && detailRes.data) {
           setMessages(detailRes.data.messages);
+        } else {
+          setErrorMsg(detailRes.message || 'Không thể tải lịch sử trò chuyện.');
         }
       } else {
         setErrorMsg(res.message || 'Không thể chuyển nhân viên CSKH lúc này.');
-      }
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleConfirmResolved = async () => {
-    if (!conversation || sending || loading) return;
-    setErrorMsg(null);
-    setSending(true);
-    try {
-      const res = await supportService.confirmResolved(conversation.id, 5);
-      if (res.success && res.data) {
-        setConversation(res.data);
-        const detailRes = await supportService.getDetail(conversation.id);
-        if (detailRes.success && detailRes.data) {
-          setMessages(detailRes.data.messages);
-        }
-      } else {
-        setErrorMsg(res.message || 'Chưa thể đóng hội thoại lúc này.');
       }
     } finally {
       setSending(false);
@@ -371,16 +363,6 @@ export const ChatModal: React.FC = () => {
                   style={[styles.iconBtn, { backgroundColor: colors.cardAlt }]}
                 >
                   <Ionicons name="headset-outline" size={16} color={colors.textSecondary} />
-                </TouchableOpacity>
-              )}
-              {!isClosed && conversation && isAuthenticated && (
-                <TouchableOpacity
-                  onPress={handleConfirmResolved}
-                  disabled={sending || loading}
-                  accessibilityLabel="Đã xong"
-                  style={[styles.actionPill, { backgroundColor: colors.rubySoft }]}
-                >
-                  <Text style={[styles.actionPillText, { color: colors.ruby }]}>Đã xong</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
