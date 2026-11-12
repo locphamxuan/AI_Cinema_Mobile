@@ -10,6 +10,9 @@ export const ROOM_EVENT = {
   PLAYBACK: 'ROOM_PLAYBACK',
   LEAVE: 'ROOM_LEAVE',
   VOTE_HOST: 'ROOM_VOTE_HOST',
+  INVITE: 'ROOM_INVITE',
+  INVITE_SENT: 'ROOM_INVITE_SENT',
+  INVITE_FAILED: 'ROOM_INVITE_FAILED',
   JOINED: 'ROOM_JOINED',
   PARTICIPANT_JOINED: 'ROOM_PARTICIPANT_JOINED',
   PARTICIPANT_LEFT: 'ROOM_PARTICIPANT_LEFT',
@@ -108,6 +111,15 @@ export function useWatchRoomSocket(roomId: string | undefined) {
       socket.on(ROOM_EVENT.SESSION_REPLACED, () =>
         patch({ closed: true, notice: 'Bạn đã tham gia phòng này từ một thiết bị khác.' }),
       );
+      socket.on(ROOM_EVENT.INVITE_SENT, () => patch({ notice: 'Đã gửi lời mời. Có thể mời lại người này sau 60 giây.' }));
+      socket.on(ROOM_EVENT.INVITE_FAILED, (outcome: { reason?: string }) =>
+        patch({
+          notice:
+            outcome?.reason === 'COOLDOWN'
+              ? 'Vừa mời người này rồi, đợi 60 giây nhé.'
+              : 'Chưa mời được: chỉ mời được bạn bè đã chấp nhận kết bạn.',
+        }),
+      );
       socket.on(ROOM_EVENT.ERROR, (error: { reason?: string; message?: string }) =>
         patch({ notice: error?.message ?? 'Không thể đồng bộ phòng xem nhóm.' }),
       );
@@ -126,8 +138,13 @@ export function useWatchRoomSocket(roomId: string | undefined) {
       socketRef.current?.emit(ROOM_EVENT.PLAYBACK, { roomId, state, positionSeconds: Math.max(0, positionSeconds) }),
     [roomId],
   );
+  /** Invite an accepted friend: a socket ping if online, else an in-app notification (60 s cooldown on the BE). */
+  const invite = useCallback(
+    (friendId: string) => socketRef.current?.emit(ROOM_EVENT.INVITE, { roomId, friendId }),
+    [roomId],
+  );
   const voteHost = useCallback(() => socketRef.current?.emit(ROOM_EVENT.VOTE_HOST, { roomId }), [roomId]);
   const leave = useCallback(() => socketRef.current?.emit(ROOM_EVENT.LEAVE, { roomId }), [roomId]);
 
-  return { live, sendPlayback, voteHost, leave };
+  return { live, sendPlayback, voteHost, leave, invite };
 }

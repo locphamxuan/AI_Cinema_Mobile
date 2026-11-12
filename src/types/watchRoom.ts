@@ -26,4 +26,15 @@ export interface Friendship {
   receiverId: string;
   status: 'PENDING' | 'ACCEPTED' | 'BLOCKED';
   createdAt: string;
+  /** The other member, named (GET /friends). */
+  friend?: { id: string; fullName: string };
+  /** True when this member received the request. */
+  incoming?: boolean;
+}
+
+/** ROOM_INVITED payload: a friend asks this member into their room for 10 minutes. */
+export interface RoomInvite {
+  roomId: string;
+  invitedBy: string;
+  expiresAt: number;
 }

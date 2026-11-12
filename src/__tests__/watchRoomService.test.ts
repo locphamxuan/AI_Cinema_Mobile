@@ -36,4 +36,14 @@ describe('watchRoomService (BR-69, Member only on the BE)', () => {
     expect(watchSocketUrl('http://10.0.2.2:3001/api')).toBe('http://10.0.2.2:3001/watch');
     expect(watchSocketUrl('https://api.example.com/api/')).toBe('https://api.example.com/watch');
   });
+
+  it('adds a friend by email and answers a request', async () => {
+    const post = jest.spyOn(apiClient, 'post').mockResolvedValue(ok({}));
+    await watchRoomService.addFriendByEmail(' ban@gmail.com ');
+    await watchRoomService.respond('f1', true);
+    expect(post.mock.calls).toEqual([
+      ['/friends', { receiverEmail: 'ban@gmail.com' }],
+      ['/friends/f1/respond', { accept: true }],
+    ]);
+  });
 });

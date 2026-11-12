@@ -26,5 +26,7 @@ export const watchRoomService = {
 
   friends: (): Promise<ApiResponse<Friendship[]>> => apiClient.get<Friendship[]>(F.LIST),
   addFriend: (receiverId: string) => apiClient.post<Friendship>(F.LIST, { receiverId }),
+  /** A member usually knows a friend's email, not their id. */
+  addFriendByEmail: (email: string) => apiClient.post<Friendship>(F.LIST, { receiverEmail: email.trim() }),
   respond: (friendshipId: string, accept: boolean) => apiClient.post<Friendship>(F.RESPOND(friendshipId), { accept }),
 };
