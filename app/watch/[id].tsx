@@ -179,24 +179,6 @@ export default function WatchScreen() {
       />
 
       <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
-        {isAuthenticated ? (
-          <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 12 }}>
-            <TouchableOpacity
-              onPress={() => void startWatchParty()}
-              style={{ flex: 1, backgroundColor: colors.ruby, borderRadius: 10, paddingVertical: 10, alignItems: 'center' }}
-              accessibilityLabel="Xem cùng nhóm"
-            >
-              <Text style={{ color: '#fff', fontWeight: '700' }}>Xem cùng nhóm</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => router.push('/watch-party/join' as Href)}
-              style={{ flex: 1, borderColor: colors.ruby, borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center' }}
-              accessibilityLabel="Nhập mã phòng"
-            >
-              <Text style={{ color: colors.ruby, fontWeight: '700' }}>Nhập mã phòng</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
         <RecommendationRail
           title="AI đề xuất cho bạn"
           caption={`Vì bạn vừa xem hết "${movie.title}"`}
@@ -229,6 +211,21 @@ export default function WatchScreen() {
             >
               <Ionicons name="share-outline" size={20} color={colors.text} />
             </TouchableOpacity>
+            {isAuthenticated ? (
+              <TouchableOpacity
+                style={[styles.iconBtn, { backgroundColor: colors.cardAlt }]}
+                onPress={() =>
+                  showDialog('Xem cùng nhóm', 'Mở phòng cho tập này hoặc vào phòng bạn bè đã tạo.', [
+                    { text: 'Huỷ', style: 'cancel' },
+                    { text: 'Nhập mã phòng', onPress: () => router.push('/watch-party/join' as Href) },
+                    { text: 'Tạo phòng', onPress: () => void startWatchParty() },
+                  ])
+                }
+                accessibilityLabel="Xem cùng nhóm"
+              >
+                <Ionicons name="people-outline" size={20} color={colors.text} />
+              </TouchableOpacity>
+            ) : null}
             <Text style={[styles.views, { color: colors.textMuted }]}>{compactCount(engagement?.viewCount ?? 0)} lượt xem</Text>
           </View>
         </View>

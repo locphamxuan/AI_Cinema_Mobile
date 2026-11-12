@@ -68,11 +68,11 @@ export default function FriendsScreen() {
         placeholderTextColor={colors.textMuted}
         autoCapitalize="none"
         keyboardType="email-address"
-        style={[styles.input, { color: colors.text, borderColor: colors.ruby, fontSize: 16, letterSpacing: 0 }]}
+        style={[styles.input, { color: colors.text, borderColor: colors.ruby, fontSize: 16, letterSpacing: 0, fontWeight: '400', textAlign: 'left' }]}
         accessibilityLabel="Email người bạn"
       />
       <TouchableOpacity
-        style={[styles.button, { backgroundColor: colors.ruby, opacity: busy || !email.includes('@') ? 0.6 : 1 }]}
+        style={[styles.button, { flex: 0, backgroundColor: colors.ruby, opacity: busy || !email.includes('@') ? 0.6 : 1 }]}
         disabled={busy || !email.includes('@')}
         onPress={() => void add()}
       >
