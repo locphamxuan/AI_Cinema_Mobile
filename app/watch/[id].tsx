@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import { ActivityIndicator, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { showDialog } from '../../src/lib/dialog';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAccountStore, useCatalogStore, useSessionStore } from '../../src/store';
@@ -18,6 +18,7 @@ import { AudioModeTabs, languageName, trackFor, type AudioMode } from '../../src
 import { EpisodeList } from '../../src/components/movie/EpisodeList';
 import { RecommendationRail } from '../../src/components/movie/RecommendationRail';
 import { recommendationService } from '../../src/services/recommendationService';
+import { watchRoomService } from '../../src/services/watchRoomService';
 import { LikeButton, compactCount, useMovieEngagement } from '../../src/components/movie/LikeButton';
 import { SaveButton } from '../../src/components/movie/SaveButton';
 import { Button } from '../../src/components/common/Button';
@@ -93,6 +94,14 @@ export default function WatchScreen() {
       if (res.success) setAfterWatching(res.data);
     });
   }, [isAuthenticated, movie, currentActiveEpisode, lastEpisodeNumber]);
+
+  // BR-69: open a watch room on this episode; the BE checks the Host's own right to watch it first.
+  const startWatchParty = useCallback(async () => {
+    if (!currentActiveEpisode) return;
+    const res = await watchRoomService.create(currentActiveEpisode.id);
+    if (res.success && res.data) router.push(`/watch-party/${res.data.id}` as Href);
+    else showDialog('Chưa tạo được phòng', res.message || 'Bạn cần có quyền xem tập này trước khi mở phòng.');
+  }, [currentActiveEpisode, router]);
 
   // MF-3: a granted episode plays through a streaming session (ads, stream limit, progress).
   const play = async (ep: Episode) => {
@@ -170,6 +179,24 @@ export default function WatchScreen() {
       />
 
       <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
+        {isAuthenticated ? (
+          <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 12 }}>
+            <TouchableOpacity
+              onPress={() => void startWatchParty()}
+              style={{ flex: 1, backgroundColor: colors.ruby, borderRadius: 10, paddingVertical: 10, alignItems: 'center' }}
+              accessibilityLabel="Xem cùng nhóm"
+            >
+              <Text style={{ color: '#fff', fontWeight: '700' }}>Xem cùng nhóm</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push('/watch-party/join' as Href)}
+              style={{ flex: 1, borderColor: colors.ruby, borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center' }}
+              accessibilityLabel="Nhập mã phòng"
+            >
+              <Text style={{ color: colors.ruby, fontWeight: '700' }}>Nhập mã phòng</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
         <RecommendationRail
           title="AI đề xuất cho bạn"
           caption={`Vì bạn vừa xem hết "${movie.title}"`}

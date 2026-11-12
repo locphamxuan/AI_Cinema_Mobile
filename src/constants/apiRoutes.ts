@@ -32,6 +32,21 @@ export const API_ROUTES = {
     SIMILAR: (movieId: string) => `/recommendations/similar/${movieId}`,
   },
 
+  // BR-69 Watch Party and friends (Member only, permission watch-party:use)
+  WATCH_ROOMS: {
+    CREATE: '/watch-rooms',
+    JOIN_BY_CODE: '/watch-rooms/join',
+    DETAIL: (roomId: string) => `/watch-rooms/${roomId}`,
+    JOIN: (roomId: string) => `/watch-rooms/${roomId}/join`,
+    NEXT_EPISODE: (roomId: string) => `/watch-rooms/${roomId}/next-episode`,
+    LEAVE: (roomId: string) => `/watch-rooms/${roomId}/leave`,
+  },
+  FRIENDS: {
+    LIST: '/friends',
+    RESPOND: (friendshipId: string) => `/friends/${friendshipId}/respond`,
+    BLOCK: (friendId: string) => `/friends/${friendId}/block`,
+  },
+
   // "Danh sách của tôi": movies the member saved to watch later
   SAVED_MOVIES: {
     LIST: '/saved-movies',
