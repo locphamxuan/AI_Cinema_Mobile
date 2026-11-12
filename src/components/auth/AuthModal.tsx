@@ -165,7 +165,7 @@ export const AuthModal: React.FC = () => {
 
             {!isLogin &&
               field(
-                'Ngày sinh (chỉ nhập số · từ 18 tuổi)',
+                'Ngày sinh',
                 <View style={styles.dobRow}>
                   <TextInput
                     value={dobDay}
@@ -216,7 +216,7 @@ export const AuthModal: React.FC = () => {
                     style={[inputStyle, styles.dobYear]}
                   />
                 </View>,
-                'Ví dụ: 14 / 05 / 2003. Bước tiếp theo sẽ hiển thị điều khoản & xác nhận 18+.',
+                'Ví dụ: 14 / 05 / 2003.',
               )}
 
             {field(
