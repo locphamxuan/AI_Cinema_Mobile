@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supportService, type SupportCatalogContext } from '../../services/supportService';
 import { useCatalogStore, useSessionStore, useUiStore } from '../../store';
-import { useTheme } from '../../theme';
+import { darkColors, lightColors, useTheme } from '../../theme';
 import type { SupportConversation, SupportMessage, SupportQuickReply, SupportStatus } from '../../types/support';
 import { styles } from '../../styles/components/chat/ChatModal.styles';
 import { AiOrb } from './AiOrb';
@@ -69,7 +69,10 @@ const HERO_CARDS: {
 
 export const ChatModal: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const { colors, isDark } = useTheme();
+  const { colors: appColors, isDark: appDark } = useTheme();
+  const [chatDarkOverride, setChatDarkOverride] = useState<boolean | null>(null);
+  const isDark = chatDarkOverride ?? appDark;
+  const colors = chatDarkOverride === null ? appColors : chatDarkOverride ? darkColors : lightColors;
   const isAuthenticated = useSessionStore((s) => s.isAuthenticated);
   const movies = useCatalogStore((s) => s.movies);
   const { isChatModalOpen, setChatModalOpen, openAuthModal } = useUiStore();
@@ -340,6 +343,17 @@ export const ChatModal: React.FC = () => {
             </View>
 
             <View style={styles.headerActions}>
+              <TouchableOpacity
+                onPress={() => setChatDarkOverride(!isDark)}
+                accessibilityLabel={isDark ? 'Chuyển khung chat sang màu trắng' : 'Chuyển khung chat sang màu đen'}
+                style={[styles.iconBtn, { backgroundColor: isDark ? colors.cardAlt : colors.card }]}
+              >
+                <Ionicons
+                  name={isDark ? 'sunny-outline' : 'moon-outline'}
+                  size={16}
+                  color={isDark ? colors.coin : colors.textSecondary}
+                />
+              </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleStartNewConversation}
                 disabled={sending || loading}
