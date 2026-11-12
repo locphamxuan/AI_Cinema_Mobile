@@ -4,3 +4,4 @@ export { walletService } from './walletService';
 export { episodeAccessService } from './episodeAccessService';
 export { rewardService } from './rewardService';
 export { supportService } from './supportService';
+export * from './recommendationService';

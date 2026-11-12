@@ -4,7 +4,7 @@ import { showDialog } from '../../src/lib/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAccountStore, useCatalogStore } from '../../src/store';
+import { useAccountStore, useCatalogStore, useSessionStore } from '../../src/store';
 import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
 import { movieService } from '../../src/services';
 import { engagementService } from '../../src/services/engagementService';
@@ -16,6 +16,8 @@ import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeMod
 import { EpisodePlayer } from '../../src/components/player/EpisodePlayer';
 import { AudioModeTabs, languageName, trackFor, type AudioMode } from '../../src/components/movie/AudioModeTabs';
 import { EpisodeList } from '../../src/components/movie/EpisodeList';
+import { RecommendationRail } from '../../src/components/movie/RecommendationRail';
+import { recommendationService } from '../../src/services/recommendationService';
 import { LikeButton, compactCount, useMovieEngagement } from '../../src/components/movie/LikeButton';
 import { SaveButton } from '../../src/components/movie/SaveButton';
 import { Button } from '../../src/components/common/Button';
@@ -79,6 +81,18 @@ export default function WatchScreen() {
   const currentActiveEpisode = activeEpisode || episodes[0] || null;
   const tracks = currentActiveEpisode?.subtitles ?? [];
   const subtitleTrackId = trackFor(audioMode, tracks, chosenTrack);
+
+  // BR-68: once the last episode plays to its end, the AI suggests what to watch next (Member only).
+  const { isAuthenticated } = useSessionStore();
+  const [afterWatching, setAfterWatching] = useState<Movie[]>([]);
+  const lastEpisodeNumber = episodes.reduce((max, e) => Math.max(max, e.episodeNumber), 0);
+  const onFinished = useCallback(() => {
+    if (!isAuthenticated || !movie || !currentActiveEpisode) return;
+    if (currentActiveEpisode.episodeNumber < lastEpisodeNumber) return;
+    void recommendationService.afterWatching(movie.id).then((res) => {
+      if (res.success) setAfterWatching(res.data);
+    });
+  }, [isAuthenticated, movie, currentActiveEpisode, lastEpisodeNumber]);
 
   // MF-3: a granted episode plays through a streaming session (ads, stream limit, progress).
   const play = async (ep: Episode) => {
@@ -152,9 +166,16 @@ export default function WatchScreen() {
         onSubtitleChange={changeTrack}
         audioLabel={languageName(movie.language)}
         onStarted={countView}
+        onFinished={onFinished}
       />
 
       <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
+        <RecommendationRail
+          title="AI đề xuất cho bạn"
+          caption={`Vì bạn vừa xem hết "${movie.title}"`}
+          movies={afterWatching}
+          onMoviePress={(m) => router.replace({ pathname: '/movie/[id]', params: { id: m.id } })}
+        />
         <View style={styles.head}>
           <TouchableOpacity style={styles.titleRow} onPress={() => router.back()} accessibilityLabel={`Quay lại ${movie.title}`}>
             <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
