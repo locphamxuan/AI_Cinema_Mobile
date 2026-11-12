@@ -65,4 +65,21 @@ describe('supportService (real AI Customer Support on the BE)', () => {
     expect(post).toHaveBeenNthCalledWith(2, '/support/conversations/conv-1/close', {});
     expect(fresh.data.id).toBe('conv-2');
   });
+
+  it('turns the BE action codes into labelled chips', async () => {
+    jest.spyOn(apiClient, 'post').mockResolvedValueOnce(
+      ok({
+        conversation,
+        memberMessage: { id: 'm1', senderType: 'MEMBER', content: 'x', createdAt: 'x' },
+        aiMessage: null,
+        systemMessage: null,
+        quickReplies: ['REQUEST_STAFF', 'CONFIRM_RESOLVED', 'UNKNOWN'],
+      }),
+    );
+    const res = await supportService.sendMessage('conv-1', 'x');
+    expect(res.data.quickReplies).toEqual([
+      { label: 'Gặp nhân viên', message: '__REQUEST_STAFF__' },
+      { label: 'Đã giải quyết', message: '__CONFIRM_RESOLVED__' },
+    ]);
+  });
 });

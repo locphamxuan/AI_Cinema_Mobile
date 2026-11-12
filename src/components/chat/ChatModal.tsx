@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supportService, type SupportCatalogContext } from '../../services/supportService';
+import { QUICK_ACTION, supportService, type SupportCatalogContext } from '../../services/supportService';
 import { useCatalogStore, useSessionStore, useUiStore } from '../../store';
 import { darkColors, lightColors, useTheme } from '../../theme';
 import type { SupportConversation, SupportMessage, SupportQuickReply, SupportStatus } from '../../types/support';
@@ -346,21 +346,10 @@ export const ChatModal: React.FC = () => {
                 onPress={handleStartNewConversation}
                 disabled={sending || loading}
                 accessibilityLabel="Cuộc hội thoại mới"
-                style={[styles.actionPill, { backgroundColor: isDark ? colors.cardAlt : colors.card }]}
+                style={[styles.iconBtn, { backgroundColor: isDark ? colors.cardAlt : colors.card }]}
               >
-                <Ionicons name="add-circle-outline" size={14} color={colors.text} />
-                <Text style={[styles.actionPillText, { color: colors.text }]}>Hội thoại mới</Text>
+                <Ionicons name="create-outline" size={16} color={colors.text} />
               </TouchableOpacity>
-              {canEscalate && isAuthenticated && (
-                <TouchableOpacity
-                  onPress={handleRequestStaff}
-                  disabled={sending || loading}
-                  accessibilityLabel="Gặp nhân viên"
-                  style={[styles.iconBtn, { backgroundColor: colors.cardAlt }]}
-                >
-                  <Ionicons name="headset-outline" size={16} color={colors.textSecondary} />
-                </TouchableOpacity>
-              )}
               <TouchableOpacity
                 onPress={() => setChatModalOpen(false)}
                 hitSlop={10}
@@ -370,6 +359,24 @@ export const ChatModal: React.FC = () => {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* Direct line to a human: always visible while the AI handles the case */}
+          {isAuthenticated && canEscalate && (
+            <View style={[styles.staffBar, { backgroundColor: isDark ? colors.cardAlt : colors.card, borderColor: colors.border }]}>
+              <Ionicons name="headset" size={18} color={colors.ruby} />
+              <Text style={[styles.staffBarText, { color: colors.textSecondary }]} numberOfLines={2}>
+                Cần người thật hỗ trợ? AI sẽ tóm tắt cuộc trò chuyện cho nhân viên.
+              </Text>
+              <TouchableOpacity
+                onPress={handleRequestStaff}
+                disabled={sending || loading || !conversation}
+                accessibilityLabel="Liên hệ trực tiếp nhân viên hỗ trợ"
+                style={[styles.staffBtn, { backgroundColor: colors.ruby, opacity: sending || loading ? 0.6 : 1 }]}
+              >
+                <Text style={styles.staffBtnText}>Liên hệ nhân viên</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* CSKH handoff banner so user never feels stuck for 24h */}
           {isWaitingStaff && (
@@ -527,7 +534,12 @@ export const ChatModal: React.FC = () => {
               {quickReplies.map((chip) => (
                 <TouchableOpacity
                   key={chip.label}
-                  onPress={() => sendText(chip.message)}
+                  onPress={() => {
+                    if (chip.message === QUICK_ACTION.REQUEST_STAFF) void handleRequestStaff();
+                    else if (chip.message === QUICK_ACTION.CONFIRM_RESOLVED && conversation)
+                      void supportService.confirmResolved(conversation.id).then(() => loadCurrentConversation());
+                    else void sendText(chip.message);
+                  }}
                   disabled={sending}
                   style={[
                     styles.chip,

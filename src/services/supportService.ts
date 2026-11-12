@@ -26,6 +26,18 @@ export const DEFAULT_QUICK_REPLIES: SupportQuickReply[] = [
   { label: 'Phim nên xem', message: 'Tôi nên xem phim gì tiếp theo?' },
 ];
 
+/** The BE answers with action codes; the chat shows them as labelled chips that trigger the action. */
+export const QUICK_ACTION = { REQUEST_STAFF: '__REQUEST_STAFF__', CONFIRM_RESOLVED: '__CONFIRM_RESOLVED__' } as const;
+const ACTION_CHIPS: Record<string, SupportQuickReply> = {
+  REQUEST_STAFF: { label: 'Gặp nhân viên', message: QUICK_ACTION.REQUEST_STAFF },
+  CONFIRM_RESOLVED: { label: 'Đã giải quyết', message: QUICK_ACTION.CONFIRM_RESOLVED },
+};
+function toChips(replies: unknown[] | undefined): SupportQuickReply[] {
+  return (replies ?? []).flatMap((reply) =>
+    typeof reply === 'string' ? (ACTION_CHIPS[reply] ? [ACTION_CHIPS[reply]] : []) : [reply as SupportQuickReply],
+  );
+}
+
 type BeSender = SupportSenderType | 'AI_CHATBOT' | 'SUPPORT_AGENT';
 type BeMessage = Omit<SupportMessage, 'senderType'> & { senderType: BeSender; isInternal?: boolean };
 
@@ -83,7 +95,7 @@ export const supportService = {
         memberMessage: normalize(d.memberMessage),
         aiMessage: d.aiMessage ? normalize(d.aiMessage) : null,
         systemMessage: d.systemMessage ? normalize(d.systemMessage) : null,
-        quickReplies: d.quickReplies ?? [],
+        quickReplies: toChips(d.quickReplies as unknown[]),
       },
     };
   },
