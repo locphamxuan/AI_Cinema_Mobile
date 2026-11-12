@@ -16,13 +16,20 @@ export const API_ROUTES = {
   MOVIES: {
     LIST: '/movies',
     RANKING: '/movies/ranking',
-    RECOMMENDATIONS: '/movies/recommendations',
     DETAIL: (id: string) => `/movies/${id}`,
     EPISODES: (movieId: string) => `/movies/${movieId}/episodes`,
     ENGAGEMENT: (movieId: string) => `/movies/${movieId}/engagement`,
     LIKE: (movieId: string) => `/movies/${movieId}/like`,
     VIEWS: (episodeId: string) => `/episodes/${episodeId}/views`,
     SUBTITLE: (subtitleId: string) => `/subtitles/${subtitleId}`,
+  },
+
+  // BR-68: AI recommendations read from the member's viewing behavior (BE RecommendationController)
+  RECOMMENDATIONS: {
+    FOR_YOU: '/recommendations/for-you',
+    TRENDING: '/recommendations/trending',
+    AFTER: (movieId: string) => `/recommendations/after/${movieId}`,
+    SIMILAR: (movieId: string) => `/recommendations/similar/${movieId}`,
   },
 
   // "Danh sách của tôi": movies the member saved to watch later
@@ -93,9 +100,14 @@ export const API_ROUTES = {
   },
 
   // AI Chatbox
+  // AI Customer Support (BE MemberSupportController): real Gemini assistant with RAG, Member only.
   CHAT: {
-    CONVERSATIONS: '/chat/conversations',
-    MESSAGES: (id: string) => `/chat/conversations/${id}/messages`,
-    HANDOFF: (id: string) => `/chat/conversations/${id}/handoff`,
+    CONVERSATIONS: '/support/conversations',
+    DETAIL: (id: string) => `/support/conversations/${id}`,
+    MESSAGES: (id: string) => `/support/conversations/${id}/messages`,
+    HANDOFF: (id: string) => `/support/conversations/${id}/request-staff`,
+    CONFIRM_RESOLVED: (id: string) => `/support/conversations/${id}/confirm-resolved`,
+    CLOSE: (id: string) => `/support/conversations/${id}/close`,
+    READ: (id: string) => `/support/conversations/${id}/read`,
   },
 } as const;

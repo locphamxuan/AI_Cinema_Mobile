@@ -128,13 +128,11 @@ export const ChatModal: React.FC = () => {
     setErrorMsg(null);
     try {
       if (!isAuthenticated) {
-        await supportService.resetLocalConversation();
-        const detail = await supportService.getDetail('local-ai-support');
-        if (detail.success && detail.data) {
-          setConversation(detail.data.conversation);
-          setMessages(detail.data.messages);
-          setQuickReplies(detail.data.quickReplies ?? []);
-        }
+        // The real assistant reads the member's own wallet, plan and history: Members only, no canned answers.
+        setConversation(null);
+        setMessages([]);
+        setQuickReplies([]);
+        setErrorMsg('Đăng nhập để trò chuyện với Trợ lý AI của AI Cinema.');
         return;
       }
 
@@ -179,13 +177,11 @@ export const ChatModal: React.FC = () => {
     setErrorMsg(null);
     try {
       if (!isAuthenticated) {
-        await supportService.resetLocalConversation();
-        const detail = await supportService.getDetail('local-ai-support');
-        if (detail.success && detail.data) {
-          setConversation(detail.data.conversation);
-          setMessages(detail.data.messages);
-          setQuickReplies(detail.data.quickReplies ?? []);
-        }
+        // The real assistant reads the member's own wallet, plan and history: Members only, no canned answers.
+        setConversation(null);
+        setMessages([]);
+        setQuickReplies([]);
+        setErrorMsg('Đăng nhập để trò chuyện với Trợ lý AI của AI Cinema.');
         return;
       }
 
