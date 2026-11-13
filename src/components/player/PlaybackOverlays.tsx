@@ -1,5 +1,6 @@
 import React from 'react';
 import { Linking, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
 import { adSecondsLeft } from '../../lib/playback';
@@ -7,13 +8,16 @@ import { clock } from '../../lib/vtt';
 import type { AdScheduleItem } from '../../types/playback';
 import { styles } from '../../styles/components/player/PlaybackOverlays.styles';
 
+/** How long an ad may sit still at the start before the member is offered a play button. */
+const AUTOPLAY_GRACE_MS = 1500;
+
 /**
  * The mid-roll ad over the paused episode (BR-33). It plays to the end: "Bỏ qua quảng cáo" counts down
  * and only takes a tap once the ad is over. An ad that fails to load hands the picture back at once.
  */
 export function AdBreakOverlay({ cue, onDone }: { cue: AdScheduleItem; onDone: (watched: boolean) => void }) {
   const ad = useVideoPlayer({ uri: cue.ad.mediaUrl }, (p) => p.play());
-  const { currentTime, duration } = usePlayerClock(ad);
+  const { currentTime, duration, playing } = usePlayerClock(ad);
   const [ended, setEnded] = React.useState(false);
   const done = React.useRef(onDone);
   React.useEffect(() => {
@@ -31,10 +35,22 @@ export function AdBreakOverlay({ cue, onDone }: { cue: AdScheduleItem; onDone: (
 
   const left = adSecondsLeft(currentTime, duration, cue.ad.durationSeconds, ended);
   const over = left === 0;
+  // A browser blocks an ad with sound from starting on its own: the member starts it with one tap.
+  const [graceOver, setGraceOver] = React.useState(false);
+  React.useEffect(() => {
+    const timer = setTimeout(() => setGraceOver(true), AUTOPLAY_GRACE_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  const blocked = graceOver && !playing && !over;
   const clickUrl = cue.ad.clickUrl;
   return (
     <View style={styles.ad} testID="ad-break">
       <VideoView style={styles.fill} player={ad} nativeControls={false} contentFit="contain" />
+      {blocked ? (
+        <TouchableOpacity style={styles.adPlay} onPress={() => ad.play()} accessibilityLabel="Phát quảng cáo" testID="ad-play">
+          <Ionicons name="play" size={30} color="#FFFFFF" />
+        </TouchableOpacity>
+      ) : null}
       <Text style={styles.adBadge}>{over ? 'Quảng cáo đã kết thúc' : `Quảng cáo · ${clock(left)}`}</Text>
       <Text style={styles.adTitle} numberOfLines={1}>
         {cue.ad.title}
