@@ -203,6 +203,16 @@ describe('usePlaybackSession', () => {
     hook.unmount();
   });
 
+  it('never plays an ad of its own for a watch-room member (the room sees the Host ad)', () => {
+    const { adStarted } = spies();
+    const hook = renderHook((t: number) => usePlaybackSession(player, session, t, false), 10 as number);
+    hook.rerender(30.4);
+    expect(adStarted).not.toHaveBeenCalled();
+    expect(mockPlayer.pause).not.toHaveBeenCalled();
+    expect(hook.last().activeAd).toBeNull();
+    hook.unmount();
+  });
+
   it('seeks to the saved position only when the viewer accepts', () => {
     spies();
     mockPlayer.currentTime = 0;

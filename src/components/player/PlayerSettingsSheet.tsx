@@ -18,11 +18,18 @@ interface PlayerSettingsSheetProps {
   audioLabel: string;
   rate: number;
   onRateChange: (rate: number) => void;
+  /** Watch room: the stream quality (`auto` or `720p`…); hidden when absent. */
+  quality?: { options: string[]; value: string; onChange?: (quality: string) => void };
+  /** Watch room: everyone plays at 1x, so the speed row is hidden. */
+  hideRate?: boolean;
 }
+
+const qualityLabel = (q: string) => (q === 'auto' ? 'Tự động' : q);
 
 /** Player settings: subtitle language (or off), the film's own audio language, and playback speed. */
 export function PlayerSettingsSheet(props: PlayerSettingsSheetProps) {
-  const { visible, onClose, subtitles, subtitleTrackId, onSubtitleChange, audioLabel, rate, onRateChange } = props;
+  const { visible, onClose, subtitles, subtitleTrackId, onSubtitleChange, audioLabel, rate, onRateChange, quality, hideRate } =
+    props;
   const { colors } = useTheme();
 
   const option = (key: string, label: string, selected: boolean, onPress: () => void) => (
@@ -43,8 +50,23 @@ export function PlayerSettingsSheet(props: PlayerSettingsSheetProps) {
           {subtitles.map((track) => option(track.id, track.label, subtitleTrackId === track.id, () => onSubtitleChange(track.id)))}
           {subtitles.length === 0 && <Text style={[styles.note, { color: colors.textMuted }]}>Tập này chưa có phụ đề.</Text>}
 
-          <Text style={[styles.heading, { color: colors.textMuted }]}>Tốc độ</Text>
-          <View style={styles.rates}>
+          {quality ? (
+            <>
+              <Text style={[styles.heading, { color: colors.textMuted }]}>Chất lượng</Text>
+              {quality.onChange ? (
+                quality.options.map((q) =>
+                  option(`q-${q}`, qualityLabel(q), quality.value === q, () => quality.onChange?.(q)),
+                )
+              ) : (
+                <Text style={[styles.note, { color: colors.textMuted }]}>
+                  Theo chủ phòng: {qualityLabel(quality.value)}
+                </Text>
+              )}
+            </>
+          ) : null}
+
+          {hideRate ? null : <Text style={[styles.heading, { color: colors.textMuted }]}>Tốc độ</Text>}
+          <View style={[styles.rates, hideRate && { display: 'none' }]}>
             {PLAYBACK_RATES.map((r) => {
               const on = rate === r;
               return (
