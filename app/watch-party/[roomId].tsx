@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PartyPlayer } from '../../src/components/watchParty/PartyPlayer';
+import { RoomChat } from '../../src/components/watchParty/RoomChat';
 import { useWatchRoomSocket } from '../../src/hooks/useWatchRoomSocket';
 import { showDialog } from '../../src/lib/dialog';
 import { movieService } from '../../src/services';
@@ -28,7 +29,7 @@ export default function WatchPartyScreen() {
   const [error, setError] = useState<string | null>(null);
   const [friends, setFriends] = useState<Friendship[]>([]);
   const [subtitles, setSubtitles] = useState<SubtitleTrack[]>([]);
-  const { live, sendPlayback, voteHost, leave, invite } = useWatchRoomSocket(roomId);
+  const { live, sendPlayback, voteHost, leave, invite, sendChat, sendAd, sendQuality } = useWatchRoomSocket(roomId);
 
   // The BE checks this member's own right to the episode, age and device limit before any stream opens.
   useEffect(() => {
@@ -152,6 +153,10 @@ export default function WatchPartyScreen() {
           audioLabel="Âm thanh gốc của phim"
           onHostAction={onHostAction}
           onEnded={onEnded}
+          roomAd={live.ad}
+          onAdChange={sendAd}
+          quality={live.quality}
+          onQualityChange={sendQuality}
         />
       ) : (
         <View style={styles.playerPlaceholder}>
@@ -176,6 +181,8 @@ export default function WatchPartyScreen() {
         {live.notice ? (
           <Text style={[styles.notice, { color: colors.text, backgroundColor: colors.rubySoft }]}>{live.notice}</Text>
         ) : null}
+
+        <RoomChat messages={live.chat} me={me} hostId={hostId} disabled={live.closed} onSend={sendChat} />
 
         {current ? (
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
