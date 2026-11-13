@@ -101,4 +101,10 @@ describe('adSecondsLeft', () => {
     expect(adSecondsLeft(29.7, 30, 15, false)).toBe(0);
     expect(adSecondsLeft(3, 30, 15, true)).toBe(0);
   });
+
+  it('is over when a video shorter than the admin-set length reaches its own end', () => {
+    expect(adSecondsLeft(12, 12, 15, false)).toBe(0);
+    expect(adSecondsLeft(11.8, 12, 15, false)).toBe(0);
+    expect(adSecondsLeft(6, 12, 15, false)).toBe(9);
+  });
 });
