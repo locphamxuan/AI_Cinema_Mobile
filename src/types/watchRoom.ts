@@ -38,3 +38,28 @@ export interface RoomInvite {
   invitedBy: string;
   expiresAt: number;
 }
+
+/** ROOM_CHAT_MESSAGE: one line of the room chat. */
+export interface RoomChatMessage {
+  id: string;
+  userId: string;
+  fullName: string;
+  text: string;
+  sentAt: number;
+}
+
+/** ROOM_AD_STATE: the Host's mid-roll, shown to the whole room until the Host skips it. */
+export interface RoomAdState {
+  active: boolean;
+  title?: string;
+  mediaUrl?: string;
+  durationSeconds?: number;
+  startedAt?: number;
+}
+
+/** ROOM_SCREEN: what a member who just joined needs to catch up. */
+export interface RoomScreen {
+  quality: string;
+  ad: RoomAdState;
+  chat: RoomChatMessage[];
+}

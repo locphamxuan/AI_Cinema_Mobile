@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { API_CONFIG } from '../constants/config';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-import type { RoomPlaybackState, RoomSync, WatchRoom } from '../types/watchRoom';
+import type { RoomAdState, RoomChatMessage, RoomPlaybackState, RoomScreen, RoomSync, WatchRoom } from '../types/watchRoom';
 
 /** Event names of the BE WatchRoomGateway (room-events.ts). */
 export const ROOM_EVENT = {
@@ -26,8 +26,24 @@ export const ROOM_EVENT = {
   EPISODE_CHANGED: 'ROOM_EPISODE_CHANGED',
   TERMINATED: 'ROOM_TERMINATED',
   SESSION_REPLACED: 'ROOM_SESSION_REPLACED',
+  // Shared screen (13/11/2026): chat, the Host's ad and quality, the catch-up snapshot.
+  CHAT: 'ROOM_CHAT',
+  AD_BREAK: 'ROOM_AD_BREAK',
+  QUALITY: 'ROOM_QUALITY',
+  SCREEN_STATE: 'ROOM_SCREEN_STATE',
+  CHAT_MESSAGE: 'ROOM_CHAT_MESSAGE',
+  CHAT_REJECTED: 'ROOM_CHAT_REJECTED',
+  AD_STATE: 'ROOM_AD_STATE',
+  QUALITY_CHANGED: 'ROOM_QUALITY_CHANGED',
+  SCREEN: 'ROOM_SCREEN',
   ERROR: 'ROOM_ERROR',
 } as const;
+
+const CHAT_KEEP = 50;
+const CHAT_REJECTED_NOTICE: Record<string, string> = {
+  RATE_LIMITED: 'Bạn gửi nhanh quá, đợi vài giây nhé.',
+  TOO_LONG: 'Tin nhắn dài quá (tối đa 300 ký tự).',
+};
 
 /** The socket lives on the API host without the /api prefix, namespace /watch. */
 export const watchSocketUrl = (baseUrl = API_CONFIG.BASE_URL) => `${baseUrl.replace(/\/api\/?$/, '')}/watch`;
@@ -43,6 +59,12 @@ export interface WatchRoomLive {
   notice: string | null;
   /** True once the room is gone for good (disbanded, episode taken down, signed in elsewhere). */
   closed: boolean;
+  /** The room chat, oldest first (the latest 50 lines). */
+  chat: RoomChatMessage[];
+  /** The Host's ad the whole room is watching; members wait for the Host to skip it. */
+  ad: RoomAdState;
+  /** The stream quality the Host picked for everyone (`auto` = adaptive). */
+  quality: string;
 }
 
 const NOTICES: Record<string, string> = {
@@ -69,6 +91,9 @@ export function useWatchRoomSocket(roomId: string | undefined) {
     voteOpen: false,
     notice: null,
     closed: false,
+    chat: [],
+    ad: { active: false },
+    quality: 'auto',
   });
 
   useEffect(() => {
@@ -85,9 +110,21 @@ export function useWatchRoomSocket(roomId: string | undefined) {
         socket?.emit(ROOM_EVENT.JOIN, { roomId });
       });
       socket.on('disconnect', () => patch({ connected: false }));
-      socket.on(ROOM_EVENT.JOINED, ({ room }: { room: WatchRoom }) =>
-        patch({ room, hostUserId: room.hostUserId, participantCount: room.participantCount ?? 1 }),
+      socket.on(ROOM_EVENT.JOINED, ({ room }: { room: WatchRoom }) => {
+        patch({ room, hostUserId: room.hostUserId, participantCount: room.participantCount ?? 1 });
+        socket?.emit(ROOM_EVENT.SCREEN_STATE, { roomId });
+      });
+      socket.on(ROOM_EVENT.SCREEN, (screen: RoomScreen) =>
+        patch({ chat: screen.chat ?? [], ad: screen.ad ?? { active: false }, quality: screen.quality ?? 'auto' }),
       );
+      socket.on(ROOM_EVENT.CHAT_MESSAGE, (message: RoomChatMessage) =>
+        setLive((prev) => ({ ...prev, chat: [...prev.chat, message].slice(-CHAT_KEEP) })),
+      );
+      socket.on(ROOM_EVENT.CHAT_REJECTED, ({ reason }: { reason?: string }) =>
+        patch({ notice: CHAT_REJECTED_NOTICE[reason ?? ''] ?? 'Chưa gửi được tin nhắn.' }),
+      );
+      socket.on(ROOM_EVENT.AD_STATE, (ad: RoomAdState) => patch({ ad }));
+      socket.on(ROOM_EVENT.QUALITY_CHANGED, ({ quality }: { quality: string }) => patch({ quality }));
       const onSync = (sync: RoomSync) => patch({ lastSync: sync, voteOpen: false });
       socket.on(ROOM_EVENT.SYNC_PLAYBACK, onSync);
       socket.on(ROOM_EVENT.HEARTBEAT_SYNC, onSync);
@@ -96,7 +133,12 @@ export function useWatchRoomSocket(roomId: string | undefined) {
         setLive((prev) => ({ ...prev, participantCount: count ?? Math.max(1, prev.participantCount - 1) })),
       );
       socket.on(ROOM_EVENT.HOST_CHANGED, ({ newHostUserId }: { newHostUserId: string }) =>
-        patch({ hostUserId: newHostUserId, notice: NOTICES[ROOM_EVENT.HOST_CHANGED], voteOpen: false }),
+        patch({
+          hostUserId: newHostUserId,
+          notice: NOTICES[ROOM_EVENT.HOST_CHANGED],
+          voteOpen: false,
+          ad: { active: false },
+        }),
       );
       for (const event of [ROOM_EVENT.HOST_DISCONNECTED, ROOM_EVENT.HOST_RECONNECTED, ROOM_EVENT.EPISODE_ENDED]) {
         socket.on(event, () => patch({ notice: NOTICES[event] }));
@@ -145,6 +187,17 @@ export function useWatchRoomSocket(roomId: string | undefined) {
   );
   const voteHost = useCallback(() => socketRef.current?.emit(ROOM_EVENT.VOTE_HOST, { roomId }), [roomId]);
   const leave = useCallback(() => socketRef.current?.emit(ROOM_EVENT.LEAVE, { roomId }), [roomId]);
+  const sendChat = useCallback((text: string) => socketRef.current?.emit(ROOM_EVENT.CHAT, { roomId, text }), [roomId]);
+  /** Host only: the BE looks the ad up in the Host's own session by breakId and mirrors it to the room. */
+  const sendAd = useCallback(
+    (active: boolean, breakId?: string) => socketRef.current?.emit(ROOM_EVENT.AD_BREAK, { roomId, active, breakId }),
+    [roomId],
+  );
+  /** Host only: `auto` or a rendition name such as `720p`. */
+  const sendQuality = useCallback(
+    (quality: string) => socketRef.current?.emit(ROOM_EVENT.QUALITY, { roomId, quality }),
+    [roomId],
+  );
 
-  return { live, sendPlayback, voteHost, leave, invite };
+  return { live, sendPlayback, voteHost, leave, invite, sendChat, sendAd, sendQuality };
 }
