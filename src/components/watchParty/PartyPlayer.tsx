@@ -4,6 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
 import { usePlaybackSession } from '../../hooks/usePlaybackSession';
+import { useRoomQuality } from '../../hooks/useRoomQuality';
 import { useSubtitleCues } from '../../hooks/useSubtitleCues';
 import { attachWebStream, toggleWebFullscreen, watchWebFullscreen } from '../../lib/attachWebStream';
 import { lockLandscape, lockPortrait } from '../../lib/orientation';
@@ -11,10 +12,11 @@ import { seekTarget } from '../../lib/seek';
 import { cueAt } from '../../lib/vtt';
 import type { SubtitleTrack } from '../../types/movie';
 import type { StreamingSession } from '../../types/playback';
-import type { RoomPlaybackState, RoomSync } from '../../types/watchRoom';
+import type { RoomAdState, RoomPlaybackState, RoomSync } from '../../types/watchRoom';
 import { PlayerControls } from '../player/PlayerControls';
 import { PlayerSettingsSheet } from '../player/PlayerSettingsSheet';
 import { AdBreakOverlay } from '../player/PlaybackOverlays';
+import { RoomAdOverlay } from './RoomAdOverlay';
 import { styles } from '../../styles/components/player/EpisodePlayer.styles';
 import { styles as party } from '../../styles/components/watchParty/PartyPlayer.styles';
 
@@ -30,22 +32,34 @@ interface PartyPlayerProps {
   audioLabel: string;
   onHostAction: (state: RoomPlaybackState, positionSeconds: number) => void;
   onEnded: () => void;
+  /** The Host's ad the room is watching (members wait for the Host to skip it). */
+  roomAd: RoomAdState;
+  /** Host only: tell the room an ad started (its breakId) or ended. */
+  onAdChange: (active: boolean, breakId?: string) => void;
+  /** The quality the Host picked for the room. */
+  quality: string;
+  /** Host only: pick the room quality. */
+  onQualityChange: (quality: string) => void;
 }
 
 /**
- * The shared screen of a watch room (BR-69). The Host gets the full controls (play, ±10 s, seek bar, fullscreen) and
- * every action reaches the room; members follow the Host's clock and pick their own subtitles. The stream is HLS
- * with adaptive quality (the best the connection allows), on the web through the same hls.js stage as the normal
- * player. The AI label stays on top the whole time (BR-10, mandatory).
+ * The shared screen of a watch room (BR-69, 13/11/2026): the room watches the Host's screen. The Host has the full
+ * controls (play, ±10 s, seek bar, quality) and every action reaches the room; members follow the Host's clock and
+ * quality and only pick their own subtitles. Only the Host is served mid-roll ads: the room sees the same ad and
+ * waits until the Host skips it. The AI label stays on top the whole time (BR-10, mandatory).
  */
-export function PartyPlayer({ session, isHost, sync, subtitles, audioLabel, onHostAction, onEnded }: PartyPlayerProps) {
+export function PartyPlayer(props: PartyPlayerProps) {
+  const { session, isHost, sync, subtitles, audioLabel, onHostAction, onEnded } = props;
+  const { roomAd, onAdChange, quality, onQualityChange } = props;
   const player = useVideoPlayer({ uri: session.stream.masterUrl }, (p) => {
     p.timeUpdateEventInterval = 0.25;
   });
   const { currentTime, duration, playing } = usePlayerClock(player);
   // Heartbeats keep this viewer's own streaming session alive; it also schedules the Admin's mid-roll ads for a
   // viewer without the Monthly plan (BR-32), exactly as outside a room.
-  const playback = usePlaybackSession(player, session, currentTime);
+  const playback = usePlaybackSession(player, session, currentTime, isHost);
+  const stream = useRoomQuality(player, session, quality);
+  const memberAd = !isHost && roomAd.active;
   const adShown = useRef(false);
   const host = useRef<React.ComponentRef<typeof View>>(null);
   const [controls, setControls] = useState(true);
@@ -56,7 +70,7 @@ export function PartyPlayer({ session, isHost, sync, subtitles, audioLabel, onHo
   const cues = useSubtitleCues(trackId);
   const line = trackId ? cueAt(cues, currentTime) : null;
 
-  useEffect(() => attachWebStream(host.current, session.stream.masterUrl), [session.stream.masterUrl]);
+  useEffect(() => attachWebStream(host.current, stream.url), [stream.url]);
   useEffect(() => watchWebFullscreen(host.current, setFullscreen), []);
   useEffect(() => () => void lockPortrait(), []);
   useEffect(() => {
@@ -69,28 +83,34 @@ export function PartyPlayer({ session, isHost, sync, subtitles, audioLabel, onHo
     if (playback.resumeAt !== null) playback.answerResume(false);
   }, [playback]);
 
-  // Mid-roll ad of the Host: the whole room waits (PAUSED) until the Host's ad is over, then plays on.
+  // Mid-roll ad of the Host: the room sees the same ad and stays PAUSED until the Host skips it, then plays on.
   useEffect(() => {
     if (!isHost) return;
     if (playback.activeAd && !adShown.current) {
       adShown.current = true;
       onHostAction('PAUSED', player.currentTime);
+      onAdChange(true, playback.activeAd.breakId);
     } else if (!playback.activeAd && adShown.current) {
       adShown.current = false;
+      onAdChange(false);
       onHostAction('PLAYING', player.currentTime);
     }
-  }, [isHost, playback.activeAd, onHostAction, player]);
+  }, [isHost, playback.activeAd, onHostAction, onAdChange, player]);
 
-  // Members follow the Host: jump when drifting, mirror play / pause. During a member's own ad the room keeps going;
-  // once it ends the member catches up with the Host.
+  // A member pauses under the Host's ad; the Host's PLAYING sync after the skip resumes everyone together.
   useEffect(() => {
-    if (isHost || !sync || playback.activeAd) return;
+    if (memberAd) player.pause();
+  }, [memberAd, player]);
+
+  // Members follow the Host: jump when drifting, mirror play / pause.
+  useEffect(() => {
+    if (isHost || !sync || memberAd) return;
     const lag = sync.state === 'PLAYING' ? (Date.now() - sync.serverTimestamp) / 1000 : 0;
     const target = sync.positionSeconds + Math.max(0, lag);
     if (Math.abs(player.currentTime - target) > DRIFT_TOLERANCE_S) player.currentTime = target;
     if (sync.state === 'PLAYING') player.play();
     else player.pause();
-  }, [sync, isHost, player, playback.activeAd]);
+  }, [sync, isHost, player, memberAd]);
 
   useEffect(() => {
     if (!controls || !playing || settings) return;
@@ -156,14 +176,14 @@ export function PartyPlayer({ session, isHost, sync, subtitles, audioLabel, onHo
             onToggleFullscreen={() => touched(toggleFullscreen)()}
           />
         ) : null}
-        {controls && !isHost && !playback.activeAd ? (
+        {controls && !isHost && !memberAd ? (
           <View style={party.memberBar}>
             <View style={party.followPill}>
               <Ionicons name="people" size={13} color="#fff" />
               <Text style={party.followText}>Đang xem theo chủ phòng</Text>
             </View>
             <View style={party.memberActions}>
-              <TouchableOpacity onPress={() => setSettings(true)} accessibilityLabel="Phụ đề" hitSlop={8}>
+              <TouchableOpacity onPress={() => setSettings(true)} accessibilityLabel="Phụ đề và chất lượng" hitSlop={8}>
                 <Ionicons name="settings-outline" size={20} color="#fff" />
               </TouchableOpacity>
               <TouchableOpacity onPress={toggleFullscreen} accessibilityLabel="Toàn màn hình" hitSlop={8}>
@@ -175,6 +195,7 @@ export function PartyPlayer({ session, isHost, sync, subtitles, audioLabel, onHo
         {playback.activeAd ? (
           <AdBreakOverlay key={playback.activeAd.breakId} cue={playback.activeAd} onDone={playback.finishAd} />
         ) : null}
+        {memberAd ? <RoomAdOverlay key={roomAd.startedAt ?? 0} ad={roomAd} /> : null}
       </View>
       <PlayerSettingsSheet
         visible={settings}
@@ -186,6 +207,8 @@ export function PartyPlayer({ session, isHost, sync, subtitles, audioLabel, onHo
         rate={1}
         // Everyone in the room plays at 1×: a different speed would drift from the Host.
         onRateChange={() => undefined}
+        hideRate
+        quality={{ options: stream.options, value: quality, onChange: isHost ? onQualityChange : undefined }}
       />
     </View>
   );
