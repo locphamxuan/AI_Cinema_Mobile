@@ -2,99 +2,84 @@ import { API_ROUTES } from '../constants/apiRoutes';
 import { supportService } from '../services';
 import { apiClient } from '../services/apiClient';
 
-describe('supportService (Chatbox AI)', () => {
-  beforeEach(async () => {
-    jest.restoreAllMocks();
-    await supportService.resetLocalConversation();
+const ok = <T,>(data: T) => ({ success: true, statusCode: 200, data });
+const conversation = { id: 'conv-1', status: 'AI_HANDLING' as const, createdAt: '2026-11-13T00:00:00Z' };
+
+describe('supportService (real AI Customer Support on the BE)', () => {
+  beforeEach(() => jest.restoreAllMocks());
+
+  it('opens or reuses the member case on the BE support routes', async () => {
+    const post = jest.spyOn(apiClient, 'post').mockResolvedValueOnce(ok(conversation));
+    const res = await supportService.startOrGetOpen();
+    expect(post).toHaveBeenCalledWith('/support/conversations', {});
+    expect(res.data).toEqual(conversation);
   });
 
-  it('uses backend MemberSupportController endpoints when available', async () => {
-    const postSpy = jest.spyOn(apiClient, 'post').mockResolvedValueOnce({
-      success: true,
-      statusCode: 201,
-      data: { id: 'conv-1', status: 'AI_HANDLING', createdAt: '2026-11-10T00:00:00Z' },
-    });
+  it('shows the transcript with BE sender names mapped and internal notes hidden', async () => {
+    jest.spyOn(apiClient, 'get').mockResolvedValueOnce(
+      ok({
+        conversation,
+        messages: [
+          { id: 'm1', senderType: 'MEMBER', content: 'Số dư?', createdAt: 'x' },
+          { id: 'm2', senderType: 'AI_CHATBOT', content: 'Bạn còn 120 Coin.', createdAt: 'x' },
+          { id: 'm3', senderType: 'SUPPORT_AGENT', content: 'Ghi chú', createdAt: 'x', isInternal: true },
+          { id: 'm4', senderType: 'SUPPORT_AGENT', content: 'Chào bạn', createdAt: 'x' },
+        ],
+      }),
+    );
+    const post = jest.spyOn(apiClient, 'post').mockResolvedValue(ok({}));
+    const res = await supportService.getDetail('conv-1');
+    expect(res.data.messages.map((m) => [m.id, m.senderType])).toEqual([
+      ['m1', 'MEMBER'],
+      ['m2', 'AI'],
+      ['m4', 'STAFF'],
+    ]);
+    expect(post).toHaveBeenCalledWith(API_ROUTES.CHAT.READ('conv-1'), {});
+  });
 
-    const convRes = await supportService.startOrGetOpen();
-    expect(postSpy).toHaveBeenCalledWith(API_ROUTES.SUPPORT.CONVERSATIONS, {});
-    expect(convRes.success).toBe(true);
-    expect(convRes.data?.id).toBe('conv-1');
-
-    postSpy.mockResolvedValueOnce({
-      success: true,
-      statusCode: 201,
-      data: {
-        conversation: { id: 'conv-1', status: 'AI_HANDLING', createdAt: '2026-11-10T00:00:00Z' },
-        memberMessage: { id: 'u1', senderType: 'MEMBER', content: 'Hỏi về Coin', createdAt: '2026-11-10T00:01:00Z' },
-        aiMessage: { id: 'a1', senderType: 'AI', content: 'Bạn vào Ví Coin nhé.', createdAt: '2026-11-10T00:01:01Z' },
+  it('sends a question to the real assistant and maps its answer', async () => {
+    const post = jest.spyOn(apiClient, 'post').mockResolvedValueOnce(
+      ok({
+        conversation,
+        memberMessage: { id: 'm1', senderType: 'MEMBER', content: 'Phim hot?', createdAt: 'x' },
+        aiMessage: { id: 'm2', senderType: 'AI_CHATBOT', content: 'Top 1 là Phim A.', createdAt: 'x' },
         systemMessage: null,
         quickReplies: [],
-      },
-    });
-
-    const msgRes = await supportService.sendMessage('conv-1', ' Hỏi về Coin ', 'client-123');
-    expect(postSpy).toHaveBeenLastCalledWith(API_ROUTES.SUPPORT.MESSAGES('conv-1'), {
-      content: 'Hỏi về Coin',
-      clientMessageId: 'client-123',
-    });
-    expect(msgRes.data?.aiMessage?.content).toBe('Bạn vào Ví Coin nhé.');
-  });
-
-  it('closes old thread and starts a fresh AI conversation via startFresh', async () => {
-    const postSpy = jest
-      .spyOn(apiClient, 'post')
-      .mockResolvedValueOnce({
-        success: true,
-        statusCode: 200,
-        data: { id: 'conv-old', status: 'CLOSED', createdAt: '2026-11-10T00:00:00Z' },
-      })
-      .mockResolvedValueOnce({
-        success: true,
-        statusCode: 201,
-        data: { id: 'conv-new', status: 'AI_HANDLING', createdAt: '2026-11-11T00:00:00Z' },
-      });
-
-    const fresh = await supportService.startFresh('conv-old');
-    expect(postSpy).toHaveBeenNthCalledWith(1, API_ROUTES.SUPPORT.CLOSE('conv-old'), {
-      note: 'Người dùng tạo cuộc hội thoại mới',
-    });
-    expect(postSpy).toHaveBeenNthCalledWith(2, API_ROUTES.SUPPORT.CONVERSATIONS, {});
-    expect(fresh.success).toBe(true);
-    expect(fresh.data?.id).toBe('conv-new');
-    expect(fresh.data?.status).toBe('AI_HANDLING');
-  });
-
-  it('falls back cleanly to local AI assistant and resets when starting fresh on 404', async () => {
-    jest.spyOn(apiClient, 'post').mockResolvedValue({
-      success: false,
-      statusCode: 404,
-      data: null,
-      message: 'Not found',
-    });
-
-    const conv = await supportService.startOrGetOpen();
-    expect(conv.success).toBe(true);
-    expect(conv.data?.id).toBe('local-ai-support');
-
-    const sent = await supportService.sendMessage('local-ai-support', 'Làm sao để nạp Coin VNPay?');
-    expect(sent.success).toBe(true);
-    expect(sent.data?.memberMessage.content).toBe('Làm sao để nạp Coin VNPay?');
-    expect(sent.data?.aiMessage?.content).toContain('VNPay');
-
-    const catalogAsk = await supportService.sendMessage(
-      'local-ai-support',
-      'đang có bao nhiêu phim',
-      undefined,
-      { movieCount: 12, sampleTitles: ['Cyber Saigon', 'Void Core'] },
+      }),
     );
-    expect(catalogAsk.data?.aiMessage?.content).toContain('12 bộ phim AI');
+    const res = await supportService.sendMessage('conv-1', 'Phim hot?', 'mob-1');
+    expect(post).toHaveBeenCalledWith('/support/conversations/conv-1/messages', { content: 'Phim hot?', clientMessageId: 'mob-1' });
+    expect(res.data.aiMessage).toMatchObject({ senderType: 'AI', content: 'Top 1 là Phim A.' });
+  });
 
-    const escalated = await supportService.requestStaff('local-ai-support');
-    expect(escalated.success).toBe(true);
-    expect(escalated.data?.status).toBe('WAITING_FOR_STAFF');
+  it('hands the case to Staff with request-staff and starts fresh by closing the old case', async () => {
+    const post = jest
+      .spyOn(apiClient, 'post')
+      .mockResolvedValueOnce(ok({ conversation: { ...conversation, status: 'WAITING_FOR_STAFF' } }))
+      .mockResolvedValueOnce(ok({}))
+      .mockResolvedValueOnce(ok({ ...conversation, id: 'conv-2' }));
+    const staff = await supportService.requestStaff('conv-1');
+    expect(post).toHaveBeenNthCalledWith(1, '/support/conversations/conv-1/request-staff', {});
+    expect(staff.data.status).toBe('WAITING_FOR_STAFF');
+    const fresh = await supportService.startFresh('conv-1');
+    expect(post).toHaveBeenNthCalledWith(2, '/support/conversations/conv-1/close', {});
+    expect(fresh.data.id).toBe('conv-2');
+  });
 
-    const freshLocal = await supportService.startFresh('local-ai-support');
-    expect(freshLocal.success).toBe(true);
-    expect(freshLocal.data?.status).toBe('AI_HANDLING');
+  it('turns the BE action codes into labelled chips', async () => {
+    jest.spyOn(apiClient, 'post').mockResolvedValueOnce(
+      ok({
+        conversation,
+        memberMessage: { id: 'm1', senderType: 'MEMBER', content: 'x', createdAt: 'x' },
+        aiMessage: null,
+        systemMessage: null,
+        quickReplies: ['REQUEST_STAFF', 'CONFIRM_RESOLVED', 'UNKNOWN'],
+      }),
+    );
+    const res = await supportService.sendMessage('conv-1', 'x');
+    expect(res.data.quickReplies).toEqual([
+      { label: 'Gặp nhân viên', message: '__REQUEST_STAFF__' },
+      { label: 'Đã giải quyết', message: '__CONFIRM_RESOLVED__' },
+    ]);
   });
 });

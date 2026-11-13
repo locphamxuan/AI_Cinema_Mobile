@@ -36,6 +36,8 @@ interface EpisodePlayerProps {
   audioLabel?: string;
   /** Called once the stream starts, e.g. to count a play. */
   onStarted?: () => void;
+  /** Called when the episode plays to its end (e.g. to show the AI suggestions after the last one). */
+  onFinished?: () => void;
 }
 
 /** The AI label sits over the poster, the playing video and fullscreen; it is never hidden. */
@@ -50,11 +52,11 @@ function AiLabelOverlay({ text }: { text: string | null }) {
   );
 }
 
-type StreamPlayerProps = Required<Omit<EpisodePlayerProps, 'posterUrl' | 'checking' | 'onRequestPlay' | 'onStarted' | 'session'>> &
-  Pick<EpisodePlayerProps, 'onStarted' | 'session'>;
+type StreamPlayerProps = Required<Omit<EpisodePlayerProps, 'posterUrl' | 'checking' | 'onRequestPlay' | 'onStarted' | 'onFinished' | 'session'>> &
+  Pick<EpisodePlayerProps, 'onStarted' | 'onFinished' | 'session'>;
 
 function StreamPlayer(props: StreamPlayerProps) {
-  const { streamUrl, session, aiLabel, subtitles, subtitleTrackId, onSubtitleChange, audioLabel, onStarted } = props;
+  const { streamUrl, session, aiLabel, subtitles, subtitleTrackId, onSubtitleChange, audioLabel, onStarted, onFinished } = props;
   const player = useVideoPlayer({ uri: streamUrl }, (p) => {
     p.timeUpdateEventInterval = 0.25;
     p.play();
@@ -72,6 +74,10 @@ function StreamPlayer(props: StreamPlayerProps) {
   const started = React.useRef(false);
   const host = React.useRef<React.ComponentRef<typeof View>>(null);
 
+  React.useEffect(() => {
+    const end = player.addListener('playToEnd', () => onFinished?.());
+    return () => end.remove();
+  }, [player, onFinished]);
   React.useEffect(() => attachWebStream(host.current, streamUrl), [streamUrl]);
   React.useEffect(() => watchWebFullscreen(host.current, setFullscreen), []);
   React.useEffect(() => {
@@ -193,6 +199,7 @@ export function EpisodePlayer({
   onSubtitleChange = () => undefined,
   audioLabel = 'tiếng gốc',
   onStarted,
+  onFinished,
 }: EpisodePlayerProps) {
   return (
     <View style={styles.container}>
@@ -208,6 +215,7 @@ export function EpisodePlayer({
           onSubtitleChange={onSubtitleChange}
           audioLabel={audioLabel}
           onStarted={onStarted}
+          onFinished={onFinished}
         />
       ) : (
         <>

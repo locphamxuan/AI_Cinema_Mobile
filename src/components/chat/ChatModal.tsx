@@ -9,13 +9,15 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
+  type GestureResponderEvent,
   type TextInputKeyPressEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supportService, type SupportCatalogContext } from '../../services/supportService';
+import { QUICK_ACTION, supportService, type SupportCatalogContext } from '../../services/supportService';
 import { useCatalogStore, useSessionStore, useUiStore } from '../../store';
-import { useTheme } from '../../theme';
+import { darkColors, lightColors, useTheme } from '../../theme';
 import type { SupportConversation, SupportMessage, SupportQuickReply, SupportStatus } from '../../types/support';
 import { styles } from '../../styles/components/chat/ChatModal.styles';
 import { AiOrb } from './AiOrb';
@@ -67,7 +69,10 @@ const HERO_CARDS: {
 
 export const ChatModal: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const { colors, isDark } = useTheme();
+  const { colors: appColors, isDark: appDark } = useTheme();
+  const [chatDarkOverride, setChatDarkOverride] = useState<boolean | null>(null);
+  const isDark = chatDarkOverride ?? appDark;
+  const colors = chatDarkOverride === null ? appColors : chatDarkOverride ? darkColors : lightColors;
   const isAuthenticated = useSessionStore((s) => s.isAuthenticated);
   const movies = useCatalogStore((s) => s.movies);
   const { isChatModalOpen, setChatModalOpen, openAuthModal } = useUiStore();
@@ -79,7 +84,36 @@ export const ChatModal: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [webOffset, setWebOffset] = useState({ x: 0, y: 0 });
+  const [webDragStart, setWebDragStart] = useState<{
+    pageX: number;
+    pageY: number;
+    startX: number;
+    startY: number;
+  } | null>(null);
+  const { width: winWidth, height: winHeight } = useWindowDimensions();
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+
+  const handleWebHeaderGrant = (e: GestureResponderEvent) => {
+    setWebDragStart({
+      pageX: e.nativeEvent.pageX,
+      pageY: e.nativeEvent.pageY,
+      startX: webOffset.x,
+      startY: webOffset.y,
+    });
+  };
+
+  const handleWebHeaderMove = (e: GestureResponderEvent) => {
+    if (!webDragStart) return;
+    const dx = e.nativeEvent.pageX - webDragStart.pageX;
+    const dy = e.nativeEvent.pageY - webDragStart.pageY;
+    const maxLeft = Math.max(0, winWidth - 440);
+    const maxUp = Math.max(0, winHeight - 630);
+    setWebOffset({
+      x: Math.min(20, Math.max(-maxLeft, webDragStart.startX + dx)),
+      y: Math.min(20, Math.max(-maxUp, webDragStart.startY + dy)),
+    });
+  };
 
   const catalogContext: SupportCatalogContext = useMemo(
     () => ({
@@ -94,27 +128,29 @@ export const ChatModal: React.FC = () => {
     setErrorMsg(null);
     try {
       if (!isAuthenticated) {
-        await supportService.resetLocalConversation();
-        const detail = await supportService.getDetail('local-ai-support');
-        if (detail.success && detail.data) {
-          setConversation(detail.data.conversation);
-          setMessages(detail.data.messages);
-          setQuickReplies(detail.data.quickReplies ?? []);
-        }
+        // The real assistant reads the member's own wallet, plan and history: Members only, no canned answers.
+        setConversation(null);
+        setMessages([]);
+        setQuickReplies([]);
+        setErrorMsg('Đăng nhập để trò chuyện với Trợ lý AI của AI Cinema.');
         return;
       }
 
       const startRes = await supportService.startOrGetOpen();
       if (!startRes.success || !startRes.data) {
+        setConversation(null);
+        setMessages([]);
         setErrorMsg(startRes.message || 'Không thể kết nối Trợ lý AI lúc này.');
         return;
       }
       setConversation(startRes.data);
-      const detailRes = await supportService.getDetail(startRes.data.id);
+      const detailRes = await supportService.getDetail(startRes.data.id, startRes.data);
       if (detailRes.success && detailRes.data) {
         setConversation(detailRes.data.conversation);
         setMessages(detailRes.data.messages);
         setQuickReplies(detailRes.data.quickReplies ?? []);
+      } else {
+        setErrorMsg(detailRes.message || 'Không thể tải lịch sử trò chuyện.');
       }
     } finally {
       setLoading(false);
@@ -141,24 +177,24 @@ export const ChatModal: React.FC = () => {
     setErrorMsg(null);
     try {
       if (!isAuthenticated) {
-        await supportService.resetLocalConversation();
-        const detail = await supportService.getDetail('local-ai-support');
-        if (detail.success && detail.data) {
-          setConversation(detail.data.conversation);
-          setMessages(detail.data.messages);
-          setQuickReplies(detail.data.quickReplies ?? []);
-        }
+        // The real assistant reads the member's own wallet, plan and history: Members only, no canned answers.
+        setConversation(null);
+        setMessages([]);
+        setQuickReplies([]);
+        setErrorMsg('Đăng nhập để trò chuyện với Trợ lý AI của AI Cinema.');
         return;
       }
 
       const freshRes = await supportService.startFresh(conversation?.id);
       if (freshRes.success && freshRes.data) {
         setConversation(freshRes.data);
-        const detailRes = await supportService.getDetail(freshRes.data.id);
+        const detailRes = await supportService.getDetail(freshRes.data.id, freshRes.data);
         if (detailRes.success && detailRes.data) {
           setConversation(detailRes.data.conversation);
           setMessages(detailRes.data.messages);
           setQuickReplies(detailRes.data.quickReplies ?? []);
+        } else {
+          setErrorMsg(detailRes.message || 'Không thể tải lịch sử trò chuyện.');
         }
       } else {
         setErrorMsg(freshRes.message || 'Chưa tạo được cuộc hội thoại mới. Vui lòng thử lại.');
@@ -171,7 +207,11 @@ export const ChatModal: React.FC = () => {
   const sendText = async (textToSend: string) => {
     const clean = textToSend.trim();
     if (!clean || sending || loading) return;
-    const convId = conversation?.id ?? 'local-ai-support';
+    const convId = conversation?.id;
+    if (!convId) {
+      setErrorMsg('Hội thoại chưa sẵn sàng. Vui lòng thử lại hoặc tạo hội thoại mới.');
+      return;
+    }
     setDraft('');
     setErrorMsg(null);
     setSending(true);
@@ -213,32 +253,14 @@ export const ChatModal: React.FC = () => {
       const res = await supportService.requestStaff(conversation.id);
       if (res.success && res.data) {
         setConversation(res.data);
-        const detailRes = await supportService.getDetail(conversation.id);
+        const detailRes = await supportService.getDetail(conversation.id, res.data);
         if (detailRes.success && detailRes.data) {
           setMessages(detailRes.data.messages);
+        } else {
+          setErrorMsg(detailRes.message || 'Không thể tải lịch sử trò chuyện.');
         }
       } else {
         setErrorMsg(res.message || 'Không thể chuyển nhân viên CSKH lúc này.');
-      }
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleConfirmResolved = async () => {
-    if (!conversation || sending || loading) return;
-    setErrorMsg(null);
-    setSending(true);
-    try {
-      const res = await supportService.confirmResolved(conversation.id, 5);
-      if (res.success && res.data) {
-        setConversation(res.data);
-        const detailRes = await supportService.getDetail(conversation.id);
-        if (detailRes.success && detailRes.data) {
-          setMessages(detailRes.data.messages);
-        }
-      } else {
-        setErrorMsg(res.message || 'Chưa thể đóng hội thoại lúc này.');
       }
     } finally {
       setSending(false);
@@ -277,10 +299,20 @@ export const ChatModal: React.FC = () => {
               borderColor: colors.border,
               paddingBottom: Math.max(insets.bottom, 12) + 8,
             },
+            Platform.OS === 'web'
+              ? { transform: [{ translateX: webOffset.x }, { translateY: webOffset.y }] }
+              : null,
           ]}
         >
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}>
+          {/* Header (draggable on Web) */}
+          <View
+            onMoveShouldSetResponder={() => Platform.OS === 'web'}
+            onResponderGrant={handleWebHeaderGrant}
+            onResponderMove={handleWebHeaderMove}
+            onResponderRelease={() => setWebDragStart(null)}
+            onResponderTerminate={() => setWebDragStart(null)}
+            style={[styles.header, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}
+          >
             <View style={styles.headerBrand}>
               <AiOrb size="sm" />
               <View style={styles.headerText}>
@@ -300,34 +332,24 @@ export const ChatModal: React.FC = () => {
 
             <View style={styles.headerActions}>
               <TouchableOpacity
+                onPress={() => setChatDarkOverride(!isDark)}
+                accessibilityLabel={isDark ? 'Chuyển khung chat sang màu trắng' : 'Chuyển khung chat sang màu đen'}
+                style={[styles.iconBtn, { backgroundColor: isDark ? colors.cardAlt : colors.card }]}
+              >
+                <Ionicons
+                  name={isDark ? 'sunny-outline' : 'moon-outline'}
+                  size={16}
+                  color={isDark ? colors.coin : colors.textSecondary}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={handleStartNewConversation}
                 disabled={sending || loading}
                 accessibilityLabel="Cuộc hội thoại mới"
-                style={[styles.actionPill, { backgroundColor: isDark ? colors.cardAlt : colors.card }]}
+                style={[styles.iconBtn, { backgroundColor: isDark ? colors.cardAlt : colors.card }]}
               >
-                <Ionicons name="add-circle-outline" size={14} color={colors.text} />
-                <Text style={[styles.actionPillText, { color: colors.text }]}>Hội thoại mới</Text>
+                <Ionicons name="create-outline" size={16} color={colors.text} />
               </TouchableOpacity>
-              {canEscalate && isAuthenticated && (
-                <TouchableOpacity
-                  onPress={handleRequestStaff}
-                  disabled={sending || loading}
-                  accessibilityLabel="Gặp nhân viên"
-                  style={[styles.iconBtn, { backgroundColor: colors.cardAlt }]}
-                >
-                  <Ionicons name="headset-outline" size={16} color={colors.textSecondary} />
-                </TouchableOpacity>
-              )}
-              {!isClosed && conversation && isAuthenticated && (
-                <TouchableOpacity
-                  onPress={handleConfirmResolved}
-                  disabled={sending || loading}
-                  accessibilityLabel="Đã xong"
-                  style={[styles.actionPill, { backgroundColor: colors.rubySoft }]}
-                >
-                  <Text style={[styles.actionPillText, { color: colors.ruby }]}>Đã xong</Text>
-                </TouchableOpacity>
-              )}
               <TouchableOpacity
                 onPress={() => setChatModalOpen(false)}
                 hitSlop={10}
@@ -337,6 +359,24 @@ export const ChatModal: React.FC = () => {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* Direct line to a human: always visible while the AI handles the case */}
+          {isAuthenticated && canEscalate && (
+            <View style={[styles.staffBar, { backgroundColor: isDark ? colors.cardAlt : colors.card, borderColor: colors.border }]}>
+              <Ionicons name="headset" size={18} color={colors.ruby} />
+              <Text style={[styles.staffBarText, { color: colors.textSecondary }]} numberOfLines={2}>
+                Cần người thật hỗ trợ? AI sẽ tóm tắt cuộc trò chuyện cho nhân viên.
+              </Text>
+              <TouchableOpacity
+                onPress={handleRequestStaff}
+                disabled={sending || loading || !conversation}
+                accessibilityLabel="Liên hệ trực tiếp nhân viên hỗ trợ"
+                style={[styles.staffBtn, { backgroundColor: colors.ruby, opacity: sending || loading ? 0.6 : 1 }]}
+              >
+                <Text style={styles.staffBtnText}>Liên hệ nhân viên</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* CSKH handoff banner so user never feels stuck for 24h */}
           {isWaitingStaff && (
@@ -494,7 +534,12 @@ export const ChatModal: React.FC = () => {
               {quickReplies.map((chip) => (
                 <TouchableOpacity
                   key={chip.label}
-                  onPress={() => sendText(chip.message)}
+                  onPress={() => {
+                    if (chip.message === QUICK_ACTION.REQUEST_STAFF) void handleRequestStaff();
+                    else if (chip.message === QUICK_ACTION.CONFIRM_RESOLVED && conversation)
+                      void supportService.confirmResolved(conversation.id).then(() => loadCurrentConversation());
+                    else void sendText(chip.message);
+                  }}
                   disabled={sending}
                   style={[
                     styles.chip,

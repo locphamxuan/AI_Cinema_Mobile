@@ -14,6 +14,8 @@ import { AIComplianceModal } from '../../src/components/player/AIComplianceModal
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
 import { AudioModeTabs, trackFor, type AudioMode } from '../../src/components/movie/AudioModeTabs';
 import { EpisodeList } from '../../src/components/movie/EpisodeList';
+import { RecommendationRail } from '../../src/components/movie/RecommendationRail';
+import { recommendationService } from '../../src/services/recommendationService';
 import { LikeButton, compactCount, useMovieEngagement } from '../../src/components/movie/LikeButton';
 import { SaveButton } from '../../src/components/movie/SaveButton';
 import { Button } from '../../src/components/common/Button';
@@ -21,6 +23,8 @@ import { useTheme } from '../../src/theme';
 import { styles } from '../../src/styles/screens/movie/id.styles';
 
 export default function MovieDetailScreen() {
+  // BR-68: "Phim tương tự" — same genres / country, released only; Guests see it too.
+  const [similar, setSimilar] = useState<Movie[]>([]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -78,6 +82,17 @@ export default function MovieDetailScreen() {
   const gate = useEpisodeGate(watch);
   const handleSelectEpisode = (ep: Episode) => void gate.open(ep);
 
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    void recommendationService.similar(String(id)).then((res) => {
+      if (active) setSimilar(res.success ? res.data : []);
+    });
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
   if (loading || !movie) {
     return (
       <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
@@ -98,6 +113,7 @@ export default function MovieDetailScreen() {
   const resume = resumeEpisode(history, movie.id, episodes);
   const next = resume ?? episodes[0];
   const heroHeight = Math.min(Math.round(width * 1.1), 520);
+
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -160,6 +176,12 @@ export default function MovieDetailScreen() {
         />
 
         <EpisodeList episodes={episodes} isVIPMode={isVIPMode} posterUrl={movie.posterUrl} onSelect={handleSelectEpisode} />
+        <RecommendationRail
+          title="Phim tương tự"
+          caption="AI chọn theo thể loại và quốc gia của phim này"
+          movies={similar}
+          onMoviePress={(m) => router.push({ pathname: '/movie/[id]', params: { id: m.id } })}
+        />
       </ScrollView>
 
       <View style={[styles.topBar, { top: Math.max(insets.top, 10) }]} pointerEvents="box-none">

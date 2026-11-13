@@ -16,13 +16,35 @@ export const API_ROUTES = {
   MOVIES: {
     LIST: '/movies',
     RANKING: '/movies/ranking',
-    RECOMMENDATIONS: '/movies/recommendations',
     DETAIL: (id: string) => `/movies/${id}`,
     EPISODES: (movieId: string) => `/movies/${movieId}/episodes`,
     ENGAGEMENT: (movieId: string) => `/movies/${movieId}/engagement`,
     LIKE: (movieId: string) => `/movies/${movieId}/like`,
     VIEWS: (episodeId: string) => `/episodes/${episodeId}/views`,
     SUBTITLE: (subtitleId: string) => `/subtitles/${subtitleId}`,
+  },
+
+  // BR-68: AI recommendations read from the member's viewing behavior (BE RecommendationController)
+  RECOMMENDATIONS: {
+    FOR_YOU: '/recommendations/for-you',
+    TRENDING: '/recommendations/trending',
+    AFTER: (movieId: string) => `/recommendations/after/${movieId}`,
+    SIMILAR: (movieId: string) => `/recommendations/similar/${movieId}`,
+  },
+
+  // BR-69 Watch Party and friends (Member only, permission watch-party:use)
+  WATCH_ROOMS: {
+    CREATE: '/watch-rooms',
+    JOIN_BY_CODE: '/watch-rooms/join',
+    DETAIL: (roomId: string) => `/watch-rooms/${roomId}`,
+    JOIN: (roomId: string) => `/watch-rooms/${roomId}/join`,
+    NEXT_EPISODE: (roomId: string) => `/watch-rooms/${roomId}/next-episode`,
+    LEAVE: (roomId: string) => `/watch-rooms/${roomId}/leave`,
+  },
+  FRIENDS: {
+    LIST: '/friends',
+    RESPOND: (friendshipId: string) => `/friends/${friendshipId}/respond`,
+    BLOCK: (friendId: string) => `/friends/${friendId}/block`,
   },
 
   // "Danh sách của tôi": movies the member saved to watch later
@@ -92,13 +114,14 @@ export const API_ROUTES = {
     SPINS: '/rewards/spins',
   },
 
-  // AI Support Chatbox
-  SUPPORT: {
+  // AI Chatbox
+  // AI Customer Support (BE MemberSupportController): real Gemini assistant with RAG, Member only.
+  CHAT: {
     CONVERSATIONS: '/support/conversations',
-    CONVERSATION: (id: string) => `/support/conversations/${id}`,
+    DETAIL: (id: string) => `/support/conversations/${id}`,
     MESSAGES: (id: string) => `/support/conversations/${id}/messages`,
+    HANDOFF: (id: string) => `/support/conversations/${id}/request-staff`,
     CONFIRM_RESOLVED: (id: string) => `/support/conversations/${id}/confirm-resolved`,
-    REQUEST_STAFF: (id: string) => `/support/conversations/${id}/request-staff`,
     CLOSE: (id: string) => `/support/conversations/${id}/close`,
     READ: (id: string) => `/support/conversations/${id}/read`,
   },
