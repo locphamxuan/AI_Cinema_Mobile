@@ -1,3 +1,4 @@
+import { recommendationService } from './recommendationService';
 import { apiClient } from './apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
 import { adaptApiMovieToMovie, adaptApiEpisodeToEpisode } from '../lib/apiAdapter';
@@ -38,10 +39,9 @@ class MovieService {
     return { ...res, data: res.success && Array.isArray(res.data) ? res.data.map(adaptApiMovieToMovie) : [] };
   }
 
-  /** Personalized recommendations for the signed-in member; empty when the BE endpoint is unavailable. */
-  async recommendations(): Promise<ApiResponse<Movie[]>> {
-    const res = await apiClient.get<CatalogMovieDto[]>(API_ROUTES.MOVIES.RECOMMENDATIONS);
-    return { ...res, data: res.success && Array.isArray(res.data) ? res.data.map(adaptApiMovieToMovie) : [] };
+  /** Personalized AI recommendations for the signed-in member (BR-68, behavior-based). */
+  recommendations(): Promise<ApiResponse<Movie[]>> {
+    return recommendationService.forYou();
   }
 
   async getMovieDetail(id: string): Promise<ApiResponse<Movie>> {

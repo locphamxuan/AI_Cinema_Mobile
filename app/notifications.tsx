@@ -1,3 +1,4 @@
+import { useRouter, type Href } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +23,7 @@ function when(iso: string, now = new Date()): string {
 
 /** The Member's notifications in tabs: Coin in and out, the monthly plan, refunds and rewards. */
 export default function NotificationsScreen() {
+  const router = useRouter();
   const { colors } = useTheme();
   const isAuthenticated = useSessionStore((s) => s.isAuthenticated);
   const [tab, setTab] = React.useState(MEMBER_NOTIFICATION_TABS[0]);
@@ -62,6 +64,9 @@ export default function NotificationsScreen() {
       await notificationService.markRead(item.id);
       setItems((list) => list.map((n) => (n.id === item.id ? { ...n, readAt: new Date().toISOString() } : n)));
     }
+    // BR-69: a friend's invite opens their watch room (the BE links it as /watch-rooms/:roomId).
+    const roomId = item.type === 'ROOM_INVITE' ? item.link?.match(/\/watch-rooms\/([^/?#]+)/)?.[1] : undefined;
+    if (roomId) router.push(`/watch-party/${roomId}` as Href);
   };
 
   const readAll = async () => {

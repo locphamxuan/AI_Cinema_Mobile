@@ -63,4 +63,6 @@ export interface Movie {
   badge?: string;
   /** Plays of all its episodes; only the ranking carries it. */
   viewCount?: number;
+  /** Why the AI suggests it (BR-68), e.g. "Hợp gu Hành động bạn hay xem hết"; only recommendations carry it. */
+  recommendReason?: string;
 }

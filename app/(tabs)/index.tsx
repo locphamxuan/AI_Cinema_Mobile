@@ -9,7 +9,7 @@ import { PosterGrid } from '../../src/components/home/PosterGrid';
 import { RankingList } from '../../src/components/home/RankingList';
 import { useTheme } from '../../src/theme';
 import { useSessionStore, useAccountStore, useCatalogStore, loadInitialData } from '../../src/store';
-import { movieService } from '../../src/services';
+import { movieService, recommendationService } from '../../src/services';
 import { savedMovieService } from '../../src/services/savedMovieService';
 import { useWatchHistory } from '../../src/hooks/useWatchHistory';
 import {
@@ -52,6 +52,18 @@ export default function HomeScreen() {
   useEffect(() => {
     void loadInitialData();
   }, []);
+
+  // Guests: the AI trending list of the catalog (BR-68 cold start); Members get theirs below.
+  useEffect(() => {
+    if (isAuthenticated) return;
+    let active = true;
+    void recommendationService.trending().then((res) => {
+      if (active && res.success && res.data.length > 0) setBeRecommended(res.data);
+    });
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
