@@ -15,6 +15,18 @@ export const styles = StyleSheet.create({
   ad: { ...StyleSheet.absoluteFill, backgroundColor: '#000000' },
   adBadge: { ...chip, top: 10, left: 10, color: '#FCD34D', fontFamily: fonts.semibold, fontSize: 11 },
   adTitle: { position: 'absolute', left: 10, bottom: 14, maxWidth: '40%', color: 'rgba(255,255,255,0.75)', fontSize: 11 },
+  adPlay: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: '50%',
+    marginTop: -32,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
   adActions: { position: 'absolute', right: 10, bottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
   adLink: {
     paddingHorizontal: 10,
