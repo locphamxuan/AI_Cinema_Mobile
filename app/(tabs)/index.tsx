@@ -1,21 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HomeTopBar } from '../../src/components/home/HomeTopBar';
 import { HomeTabBar } from '../../src/components/home/HomeTabBar';
 import { PosterGrid } from '../../src/components/home/PosterGrid';
 import { RankingList } from '../../src/components/home/RankingList';
+import { GenreTile } from '../../src/components/explore/GenreTile';
 import { useTheme } from '../../src/theme';
 import { useSessionStore, useAccountStore, useCatalogStore, loadInitialData } from '../../src/store';
 import { movieService } from '../../src/services';
 import { savedMovieService } from '../../src/services/savedMovieService';
 import { useWatchHistory } from '../../src/hooks/useWatchHistory';
 import {
-  ALL_GENRES,
-  collectGenres,
   filterByGenre,
+  genreShelves,
   newestFirst,
   personalizedRecommendations,
   suggestionPage,
@@ -23,6 +24,7 @@ import {
   type HomeTabKey,
 } from '../../src/lib/homeFeed';
 import { Movie } from '../../src/types/movie';
+import { GRID_GAP as GAP, GRID_SIDE as SIDE } from '../../src/styles/layout';
 import { styles } from '../../src/styles/screens/tabs/index.styles';
 
 const RECOMMEND_SIZE = 9;
@@ -30,6 +32,7 @@ const RECOMMEND_SIZE = 9;
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { colors } = useTheme();
   const { isAuthenticated } = useSessionStore();
   const { loadDailyReward } = useAccountStore();
@@ -37,7 +40,7 @@ export default function HomeScreen() {
   const watchHistory = useWatchHistory(isAuthenticated);
 
   const [tab, setTab] = useState<HomeTabKey>('recommend');
-  const [genre, setGenre] = useState(ALL_GENRES);
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [ranked, setRanked] = useState<Movie[]>([]);
@@ -83,9 +86,13 @@ export default function HomeScreen() {
     if (isAuthenticated) void loadDailyReward();
   }, [isAuthenticated, loadDailyReward]);
 
-  const genres = useMemo(() => [ALL_GENRES, ...collectGenres(movies)], [movies]);
+  const shelves = useMemo(() => genreShelves(movies), [movies]);
+  const selectedGenreMovies = useMemo(
+    () => (selectedGenre ? filterByGenre(movies, selectedGenre) : []),
+    [movies, selectedGenre],
+  );
+  const tileWidth = Math.floor((Math.min(width, 600) - SIDE * 2 - GAP) / 2);
   const newest = useMemo(() => newestFirst(movies), [movies]);
-  const byGenre = useMemo(() => filterByGenre(movies, genre), [movies, genre]);
 
   const preferredGenres = useMemo(
     () => (isAuthenticated ? topPreferredGenres(movies, watchHistory, savedMovieIds) : []),
@@ -127,7 +134,13 @@ export default function HomeScreen() {
       />
       <View style={{ paddingTop: Math.max(insets.top, 10) }}>
         <HomeTopBar hint={movies[0]?.title} />
-        <HomeTabBar active={tab} onChange={setTab} />
+        <HomeTabBar
+          active={tab}
+          onChange={(nextTab) => {
+            setTab(nextTab);
+            setSelectedGenre(null);
+          }}
+        />
       </View>
 
       <ScrollView
@@ -172,34 +185,48 @@ export default function HomeScreen() {
         {tab === 'new' && <PosterGrid movies={newest} onMoviePress={openMovie} />}
 
         {tab === 'genre' && (
-          <>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.genreRow} style={styles.genreScroll}>
-              {genres.map((name) => {
-                const selected = name === genre;
-                return (
-                  <TouchableOpacity
-                    key={name}
-                    onPress={() => setGenre(name)}
-                    style={[styles.genrePill, selected && { backgroundColor: colors.rubySoft }]}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected }}
-                  >
-                    <Text style={[selected ? styles.genreOn : styles.genreOff, { color: selected ? colors.ruby : colors.textMuted }]}>
-                      {name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-            <PosterGrid movies={byGenre} onMoviePress={openMovie} />
-          </>
+          selectedGenre ? (
+            <>
+              <View style={{ paddingHorizontal: SIDE, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <TouchableOpacity
+                  onPress={() => setSelectedGenre(null)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 }}
+                  accessibilityLabel="Về danh sách thể loại"
+                >
+                  <Ionicons name="chevron-back" size={20} color={colors.ruby} />
+                  <Text style={{ color: colors.ruby, fontSize: 14, fontWeight: '700' }}>Tất cả thể loại</Text>
+                </TouchableOpacity>
+                <Text style={{ color: colors.textMuted, fontSize: 13, fontWeight: '600' }}>
+                  {selectedGenre} ({selectedGenreMovies.length} phim)
+                </Text>
+              </View>
+              {selectedGenreMovies.length > 0 ? (
+                <PosterGrid movies={selectedGenreMovies} onMoviePress={openMovie} />
+              ) : (
+                <Text style={[styles.empty, { color: colors.textMuted }]}>Thể loại này chưa có phim.</Text>
+              )}
+            </>
+          ) : (
+            <>
+              <View style={{ paddingHorizontal: SIDE, paddingBottom: 10 }}>
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>Danh mục thể loại</Text>
+                <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Chọn thể loại để khám phá các bộ phim phù hợp</Text>
+              </View>
+              {shelves.length > 0 ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: GAP, paddingHorizontal: SIDE }}>
+                  {shelves.map((shelf) => (
+                    <GenreTile key={shelf.name} shelf={shelf} width={tileWidth} onPress={() => setSelectedGenre(shelf.name)} />
+                  ))}
+                </View>
+              ) : (
+                <Text style={[styles.empty, { color: colors.textMuted }]}>Chưa có danh mục thể loại nào.</Text>
+              )}
+            </>
+          )
         )}
 
         {movies.length === 0 && (
           <Text style={[styles.empty, { color: colors.textMuted }]}>Chưa tải được phim. Kéo xuống để thử lại.</Text>
-        )}
-        {movies.length > 0 && tab === 'genre' && byGenre.length === 0 && (
-          <Text style={[styles.empty, { color: colors.textMuted }]}>Thể loại này chưa có phim.</Text>
         )}
       </ScrollView>
     </View>
