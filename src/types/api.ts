@@ -23,6 +23,13 @@ export interface GoogleLoginRequestDto {
   idToken: string;
 }
 
+/** Body of POST /auth/reset-password: the 6-digit code e-mailed by POST /auth/forgot-password. */
+export interface ResetPasswordRequestDto {
+  email: string;
+  otp: string;
+  newPassword: string;
+}
+
 export interface RegisterRequestDto {
   name?: string;
   fullName?: string;
