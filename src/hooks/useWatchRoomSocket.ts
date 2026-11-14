@@ -46,7 +46,15 @@ const CHAT_REJECTED_NOTICE: Record<string, string> = {
 };
 
 /** The socket lives on the API host without the /api prefix, namespace /watch. */
-export const watchSocketUrl = (baseUrl = API_CONFIG.BASE_URL) => `${baseUrl.replace(/\/api\/?$/, '')}/watch`;
+/**
+ * The `/watch` namespace on the backend. On the web the REST calls go through the same-origin `/api` proxy
+ * of the dev server, which does not forward WebSockets, so the socket talks to the backend directly
+ * (EXPO_PUBLIC_API_URL, else the local backend): a WebSocket is not held back by CORS.
+ */
+export const watchSocketUrl = (baseUrl = API_CONFIG.BASE_URL, directUrl = process.env.EXPO_PUBLIC_API_URL) => {
+  const origin = baseUrl.startsWith('/') ? directUrl || 'http://localhost:3001/api' : baseUrl;
+  return `${origin.replace(/\/api\/?$/, '')}/watch`;
+};
 
 export interface WatchRoomLive {
   connected: boolean;
