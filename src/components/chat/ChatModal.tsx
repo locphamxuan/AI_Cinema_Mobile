@@ -47,7 +47,7 @@ const HERO_CARDS: {
   {
     title: 'Gói Tháng VIP',
     desc: 'Quyền lợi xem phim không giới hạn',
-    icon: 'sparkles-outline',
+    icon: 'diamond-outline',
     tint: '#EC4899',
     message: 'Quyền lợi và cách đăng ký Gói Tháng?',
   },
@@ -566,7 +566,7 @@ export const ChatModal: React.FC = () => {
                 disabled={loading}
                 style={[styles.newConvBtn, { backgroundColor: colors.ruby }]}
               >
-                <Ionicons name="sparkles" size={15} color="#FFFFFF" />
+                <Ionicons name="add-circle-outline" size={15} color="#FFFFFF" />
                 <Text style={styles.newConvBtnText}>Cuộc hội thoại mới</Text>
               </TouchableOpacity>
             </View>
