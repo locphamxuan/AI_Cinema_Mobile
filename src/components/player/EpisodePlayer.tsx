@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
@@ -8,6 +8,7 @@ import { useSubtitleCues } from '../../hooks/useSubtitleCues';
 import { lockLandscape, lockPortrait } from '../../lib/orientation';
 import { seekTarget } from '../../lib/seek';
 import { cueAt } from '../../lib/vtt';
+import { attachWebStream, toggleWebFullscreen, watchWebFullscreen } from '../../lib/attachWebStream';
 import type { SubtitleTrack } from '../../types/movie';
 import type { StreamingSession } from '../../types/playback';
 import { PlayerControls } from './PlayerControls';
@@ -35,6 +36,8 @@ interface EpisodePlayerProps {
   audioLabel?: string;
   /** Called once the stream starts, e.g. to count a play. */
   onStarted?: () => void;
+  /** Called when the episode plays to its end (e.g. to show the AI suggestions after the last one). */
+  onFinished?: () => void;
 }
 
 /** The AI label sits over the poster, the playing video and fullscreen; it is never hidden. */
@@ -49,11 +52,11 @@ function AiLabelOverlay({ text }: { text: string | null }) {
   );
 }
 
-type StreamPlayerProps = Required<Omit<EpisodePlayerProps, 'posterUrl' | 'checking' | 'onRequestPlay' | 'onStarted' | 'session'>> &
-  Pick<EpisodePlayerProps, 'onStarted' | 'session'>;
+type StreamPlayerProps = Required<Omit<EpisodePlayerProps, 'posterUrl' | 'checking' | 'onRequestPlay' | 'onStarted' | 'onFinished' | 'session'>> &
+  Pick<EpisodePlayerProps, 'onStarted' | 'onFinished' | 'session'>;
 
 function StreamPlayer(props: StreamPlayerProps) {
-  const { streamUrl, session, aiLabel, subtitles, subtitleTrackId, onSubtitleChange, audioLabel, onStarted } = props;
+  const { streamUrl, session, aiLabel, subtitles, subtitleTrackId, onSubtitleChange, audioLabel, onStarted, onFinished } = props;
   const player = useVideoPlayer({ uri: streamUrl }, (p) => {
     p.timeUpdateEventInterval = 0.25;
     p.play();
@@ -69,6 +72,17 @@ function StreamPlayer(props: StreamPlayerProps) {
   const [fullscreen, setFullscreen] = React.useState(false);
   const [rate, setRate] = React.useState(1);
   const started = React.useRef(false);
+  const host = React.useRef<React.ComponentRef<typeof View>>(null);
+
+  React.useEffect(() => {
+    const end = player.addListener('playToEnd', () => onFinished?.());
+    return () => end.remove();
+  }, [player, onFinished]);
+  React.useEffect(() => attachWebStream(host.current, streamUrl), [streamUrl]);
+  React.useEffect(() => watchWebFullscreen(host.current, setFullscreen), []);
+  React.useEffect(() => {
+    if (Platform.OS === 'web') player.play();
+  }, [player]);
 
   React.useEffect(() => {
     if (playing && !started.current) {
@@ -97,6 +111,8 @@ function StreamPlayer(props: StreamPlayerProps) {
   React.useEffect(() => () => void lockPortrait(), []);
 
   const toggleFullscreen = () => {
+    // A Modal would recreate the <video> on the web and lose its place: the browser enlarges the stage instead.
+    if (Platform.OS === 'web') return toggleWebFullscreen(host.current);
     const next = !fullscreen;
     setFullscreen(next);
     void (next ? lockLandscape() : lockPortrait());
@@ -107,8 +123,15 @@ function StreamPlayer(props: StreamPlayerProps) {
   };
 
   const stage = (
-    <Pressable style={styles.fill} onPress={touched(() => setControls((v) => !v))} accessibilityLabel="Hiện điều khiển">
+    <View style={styles.fill} ref={host}>
       <VideoView style={styles.fill} player={player} nativeControls={false} contentFit="contain" />
+      {/* The native video surface swallows touches, so a clear layer above it takes the tap that shows or hides the controls. */}
+      <Pressable
+        style={styles.fill}
+        onPress={touched(() => setControls((v) => !v))}
+        accessibilityLabel={controls ? 'Ẩn điều khiển' : 'Hiện điều khiển'}
+        testID="player-tap-layer"
+      />
       {line ? (
         <View style={[styles.subtitleBox, controls && styles.subtitleRaised]} pointerEvents="none">
           <Text style={[styles.subtitle, fullscreen && styles.subtitleLarge]} testID="subtitle-line">
@@ -127,7 +150,7 @@ function StreamPlayer(props: StreamPlayerProps) {
           onSeekBy={touched((s: number) => seekTo(currentTime + s))}
           onSeekTo={touched(seekTo)}
           onSettings={() => setSettings(true)}
-          onToggleFullscreen={touched(toggleFullscreen)}
+          onToggleFullscreen={() => touched(toggleFullscreen)()}
         />
       )}
       {playback.resumeAt !== null && !playback.activeAd ? (
@@ -135,12 +158,12 @@ function StreamPlayer(props: StreamPlayerProps) {
       ) : null}
       {playback.activeAd ? <AdBreakOverlay key={playback.activeAd.breakId} cue={playback.activeAd} onDone={playback.finishAd} /> : null}
       <AiLabelOverlay text={aiLabel} />
-    </Pressable>
+    </View>
   );
 
   return (
     <>
-      {fullscreen ? (
+      {fullscreen && Platform.OS !== 'web' ? (
         <Modal visible animationType="fade" supportedOrientations={['landscape', 'portrait']} onRequestClose={toggleFullscreen}>
           <View style={styles.fullscreen}>{stage}</View>
         </Modal>
@@ -176,6 +199,7 @@ export function EpisodePlayer({
   onSubtitleChange = () => undefined,
   audioLabel = 'tiếng gốc',
   onStarted,
+  onFinished,
 }: EpisodePlayerProps) {
   return (
     <View style={styles.container}>
@@ -191,6 +215,7 @@ export function EpisodePlayer({
           onSubtitleChange={onSubtitleChange}
           audioLabel={audioLabel}
           onStarted={onStarted}
+          onFinished={onFinished}
         />
       ) : (
         <>

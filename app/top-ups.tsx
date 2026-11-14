@@ -4,17 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { walletService } from '../src/services/walletService';
 import { canResumePayment, formatVnd, orderTime, TOP_UP_STATUS, type StatusTone } from '../src/lib/topUps';
-import { useAppStore } from '../src/store/useAppStore';
+import { useSessionStore } from '../src/store';
 import { useTheme } from '../src/theme';
 import type { CoinTopUp } from '../src/types/episodeAccess';
 import { styles } from '../src/styles/screens/topUps.styles';
 
-const PROVIDER_NAME: Record<string, string> = { VNPAY: 'VNPay', MOMO: 'MoMo' };
+const PROVIDER_NAME: Record<string, string> = { VNPAY: 'VNPay' };
 
 /** "Lịch sử nạp Coin": every top-up order of the member, newest first, with its payment state. */
 export default function TopUpHistoryScreen() {
   const { colors } = useTheme();
-  const isAuthenticated = useAppStore((s) => s.isAuthenticated);
+  const isAuthenticated = useSessionStore((s) => s.isAuthenticated);
   const [orders, setOrders] = React.useState<CoinTopUp[]>([]);
   const [page, setPage] = React.useState(1);
   const [totalPages, setTotalPages] = React.useState(1);
@@ -22,24 +22,31 @@ export default function TopUpHistoryScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const load = React.useCallback(async (next: number) => {
-    setLoading(true);
-    const res = await walletService.getTopUps(next);
-    setLoading(false);
-    if (!res.success || !res.data) {
-      setError(res.message || 'Không tải được lịch sử nạp Coin.');
-      return;
-    }
-    setError(null);
-    const rows = res.data.data ?? [];
-    setOrders((prev) => (next === 1 ? rows : [...prev, ...rows]));
-    setTotalPages(res.data.meta?.totalPages ?? 1);
-    setPage(next);
-  }, []);
+  const fetchPage = React.useCallback(
+    (next: number) =>
+      walletService.getTopUps(next).then((res) => {
+        setLoading(false);
+        if (!res.success || !res.data) {
+          setError(res.message || 'Không tải được lịch sử nạp Coin.');
+          return;
+        }
+        setError(null);
+        const rows = res.data.data ?? [];
+        setOrders((prev) => (next === 1 ? rows : [...prev, ...rows]));
+        setTotalPages(res.data.meta?.totalPages ?? 1);
+        setPage(next);
+      }),
+    [],
+  );
 
   React.useEffect(() => {
-    if (isAuthenticated) void load(1);
-  }, [isAuthenticated, load]);
+    if (isAuthenticated) void fetchPage(1);
+  }, [isAuthenticated, fetchPage]);
+
+  const load = (next: number) => {
+    setLoading(true);
+    return fetchPage(next);
+  };
 
   const refresh = async () => {
     setRefreshing(true);
@@ -62,11 +69,11 @@ export default function TopUpHistoryScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.ruby} />}
           onEndReached={() => !loading && page < totalPages && void load(page + 1)}
           onEndReachedThreshold={0.3}
-          ListHeaderComponent={error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
+          ListHeaderComponent={error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : undefined}
           ListEmptyComponent={
-            loading ? null : <Text style={[styles.empty, { color: colors.textMuted }]}>Bạn chưa nạp Coin lần nào.</Text>
+            loading ? undefined : <Text style={[styles.empty, { color: colors.textMuted }]}>Bạn chưa nạp Coin lần nào.</Text>
           }
-          ListFooterComponent={loading ? <ActivityIndicator color={colors.ruby} style={styles.loading} /> : null}
+          ListFooterComponent={loading ? <ActivityIndicator color={colors.ruby} style={styles.loading} /> : undefined}
           renderItem={({ item }) => {
             const status = TOP_UP_STATUS[item.status];
             const tint = toneColor[status.tone];

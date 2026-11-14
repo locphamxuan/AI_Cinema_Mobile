@@ -2,7 +2,7 @@ import { apiClient } from './apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import { adaptUserProfile } from '../lib/apiAdapter';
-import type { ApiResponse, AuthResponseDto, GoogleLoginRequestDto, LoginRequestDto, RegisterRequestDto } from '../types/api';
+import type { ApiResponse, AuthResponseDto, GoogleLoginRequestDto, LoginRequestDto, ProfileDto, RegisterRequestDto, ResetPasswordRequestDto } from '../types/api';
 import type { UserProfile } from '../types/auth';
 
 // Auth calls answer 401 for bad credentials; that must not trigger a token refresh.
@@ -12,12 +12,14 @@ const AUTH_CALL = { skipAuthRefresh: true } as const;
 const MEMBER_ROLE = 'MEMBER';
 const STAFF_ON_MOBILE_MESSAGE =
   'Tài khoản Sản xuất, Kiểm duyệt và Quản trị dùng trên Web Studio ở máy tính. App điện thoại chỉ dành cho người xem.';
+/** MF-1 (07/11/2026): a partner studio logs in on its own Studio Web, never on the viewer app. */
+const STUDIO_ROLE = 'STUDIO';
+const STUDIO_ON_MOBILE_MESSAGE =
+  'Tài khoản Studio đối tác dùng trên Studio Web để ký hợp đồng và nộp phim. App điện thoại chỉ dành cho người xem.';
 
 class AuthService {
   async login(dto: LoginRequestDto): Promise<ApiResponse<AuthResponseDto>> {
     const trimmedEmail = dto.email.trim().toLowerCase();
-
-    // Kết nối trực tiếp tới Backend NestJS (/api/auth/login)
     const res = await apiClient.post<AuthResponseDto>(
       API_ROUTES.AUTH.LOGIN,
       { email: trimmedEmail, password: dto.password },
@@ -27,12 +29,33 @@ class AuthService {
   }
 
   /**
-   * Signs in with a Google ID token. A first sign-in may come back with `reason` asking for a
-   * birthday (new member, BR-54) or the password of the account that already owns the email.
+   * Signs in with a Google ID token in one tap; a new email opens a member account under the
+   * Google name. Google sign-in is for members only: the backend refuses staff accounts.
    */
   async googleLogin(dto: GoogleLoginRequestDto): Promise<ApiResponse<AuthResponseDto>> {
     const res = await apiClient.post<AuthResponseDto>(API_ROUTES.AUTH.GOOGLE, dto, AUTH_CALL);
     return this.acceptSession(res, 'Chưa đăng nhập được bằng Google. Thử lại sau ít phút.');
+  }
+
+  /**
+   * Asks the backend to e-mail a 6-digit reset code. It answers 200 whether or not the account
+   * exists (and sends at most one code a minute), so success says nothing about the account.
+   */
+  async forgotPassword(email: string): Promise<ApiResponse<null>> {
+    return apiClient.post<null>(API_ROUTES.AUTH.FORGOT_PASSWORD, { email: email.trim().toLowerCase() }, AUTH_CALL);
+  }
+
+  /** Sets a new password with the e-mailed code; the answer is a session, kept like a sign-in. */
+  async resetPassword(dto: ResetPasswordRequestDto): Promise<ApiResponse<AuthResponseDto>> {
+    const res = await apiClient.post<AuthResponseDto>(
+      API_ROUTES.AUTH.RESET_PASSWORD,
+      { email: dto.email.trim().toLowerCase(), otp: dto.otp.trim(), newPassword: dto.newPassword },
+      AUTH_CALL,
+    );
+    const fallback = 'Chưa đặt lại được mật khẩu. Thử lại sau ít phút.';
+    // Keep the real status (none for a network failure): 401 here means a wrong code, not a bad password.
+    if (!res.success) return { ...res, message: res.message || fallback };
+    return this.acceptSession(res, fallback);
   }
 
   /** Keeps a member session; any other role works on the web portal, so its session is ended. */
@@ -44,14 +67,14 @@ class AuthService {
     const user = res.data?.user;
 
     if (res.success && token && user && user.role !== MEMBER_ROLE) {
-      // Creator, Reviewer, Staff and Admin work on the web portal; end the session just opened.
+      // Creator, Reviewer, Staff and Admin work on the web portal, a studio on the Studio Web; end the session.
       if (res.data.refreshToken) {
         await apiClient.post(API_ROUTES.AUTH.LOGOUT, { refreshToken: res.data.refreshToken }, AUTH_CALL);
       }
       return {
         success: false,
         data: null as unknown as AuthResponseDto,
-        message: STAFF_ON_MOBILE_MESSAGE,
+        message: user.role === STUDIO_ROLE ? STUDIO_ON_MOBILE_MESSAGE : STAFF_ON_MOBILE_MESSAGE,
         statusCode: 403,
       };
     }
@@ -74,9 +97,7 @@ class AuthService {
   async register(dto: RegisterRequestDto): Promise<ApiResponse<AuthResponseDto>> {
     const trimmedEmail = dto.email.trim().toLowerCase();
     const fullName = (dto.fullName || dto.name || '').trim();
-    const dateOfBirth = (dto.dateOfBirth || '2003-05-14').trim();
-
-    // Gửi request tạo tài khoản tới Backend NestJS (/api/auth/register) -> lưu vào Neon PostgreSQL
+    const dateOfBirth = dto.dateOfBirth.trim();
     const res = await apiClient.post<AuthResponseDto>(
       API_ROUTES.AUTH.REGISTER,
       { email: trimmedEmail, password: dto.password, fullName, dateOfBirth },
@@ -84,7 +105,7 @@ class AuthService {
     );
 
     if (res.success) {
-      return res;
+      return this.acceptSession(res, 'Chưa tạo được tài khoản. Thử lại sau ít phút.');
     }
 
     return {
@@ -96,7 +117,7 @@ class AuthService {
   }
 
   async getProfile(): Promise<ApiResponse<UserProfile>> {
-    const res = await apiClient.get<unknown>(API_ROUTES.AUTH.PROFILE);
+    const res = await apiClient.get<ProfileDto>(API_ROUTES.AUTH.PROFILE);
     return { ...res, data: res.success ? adaptUserProfile(res.data) : (null as unknown as UserProfile) };
   }
 

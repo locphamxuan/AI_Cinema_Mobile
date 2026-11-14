@@ -3,7 +3,8 @@ import { storage, STORAGE_KEYS } from '../lib/storage';
 import type { ApiResponse } from '../types/api';
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
-  body?: any;
+  /** Sent as is when a string, otherwise as JSON. */
+  body?: unknown;
   params?: Record<string, string | number | boolean | undefined>;
   timeoutMs?: number;
   /** Set on the retry after a token refresh (and on auth calls) so a 401 is not retried again. */
@@ -24,8 +25,8 @@ const joinMessage = (value: unknown): string | undefined => {
 
 /** Refusals the viewer can act on, keyed by the BE `details.reason` (Main Flow 3). */
 const REASON_MESSAGES: Record<string, string> = {
-  GOOGLE_SIGNUP_NEEDS_BIRTHDAY: 'Nhập ngày sinh để hoàn tất đăng ký (từ 18 tuổi).',
-  GOOGLE_LINK_NEEDS_PASSWORD: 'Email này đã có tài khoản. Nhập mật khẩu của tài khoản đó để liên kết với Google.',
+  GOOGLE_STAFF_ACCOUNT: 'Đăng nhập Google chỉ dành cho thành viên. Tài khoản quản trị / nhân sự hãy đăng nhập bằng mật khẩu.',
+  GOOGLE_EMAIL_REGISTERED: 'Email này đã có tài khoản. Hãy đăng nhập bằng mật khẩu.',
   GOOGLE_ACCOUNT_MISMATCH: 'Email này đã được liên kết với một tài khoản Google khác.',
   PROVIDER_NOT_CONFIGURED: 'Đăng nhập bằng Google hiện chưa được bật.',
   CONCURRENT_LIMIT_REACHED: 'Tài khoản đang xem trên quá nhiều thiết bị cùng lúc. Hãy dừng xem ở thiết bị khác rồi thử lại.',
@@ -37,18 +38,35 @@ const REASON_MESSAGES: Record<string, string> = {
   PLAYBACK_ACCESS_REVOKED: 'Quyền xem tập này đã hết hiệu lực.',
 };
 
+/** The BE error envelope; `details` is a list of validation messages or a `{ reason }` object. */
+interface ErrorBody {
+  message?: unknown;
+  error?: { code?: string; message?: unknown; details?: unknown };
+}
+
+const reasonOf = (body: ErrorBody | null | undefined): string | undefined => {
+  const details = body?.error?.details;
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return undefined;
+  const reason = (details as { reason?: unknown }).reason;
+  return typeof reason === 'string' ? reason : undefined;
+};
+
 /**
  * The backend wraps errors as `{ error: { code, message, details[] } }`; validation details
  * are more useful to the user than the generic message. Plain `{ message }` is still accepted.
  */
-export const extractErrorMessage = (body: any): string | undefined =>
-  REASON_MESSAGES[body?.error?.details?.reason] ??
-  joinMessage(body?.error?.details) ??
-  joinMessage(body?.error?.message) ??
-  joinMessage(body?.message);
+export const extractErrorMessage = (body: ErrorBody | null | undefined): string | undefined => {
+  const reason = reasonOf(body);
+  return (
+    (reason ? REASON_MESSAGES[reason] : undefined) ??
+    joinMessage(body?.error?.details) ??
+    joinMessage(body?.error?.message) ??
+    joinMessage(body?.message)
+  );
+};
 
 class ApiClient {
-  private baseUrl: string;
+  private readonly baseUrl: string;
   private refreshInFlight: Promise<boolean> | null = null;
   private sessionExpiredHandler: (() => void) | null = null;
 
@@ -106,10 +124,6 @@ class ApiClient {
     return this.refreshInFlight;
   }
 
-  public setBaseUrl(url: string) {
-    this.baseUrl = url;
-  }
-
   public getBaseUrl(): string {
     return this.baseUrl;
   }
@@ -151,7 +165,7 @@ class ApiClient {
     return url;
   }
 
-  public async request<T = any>(
+  public async request<T = unknown>(
     endpoint: string,
     options: RequestOptions = {}
   ): Promise<ApiResponse<T>> {
@@ -195,9 +209,9 @@ class ApiClient {
         let errorMessage = `HTTP error! status: ${response.status}`;
         let reason: string | undefined;
         try {
-          const errJson = await response.json();
+          const errJson = (await response.json()) as ErrorBody | null;
           errorMessage = extractErrorMessage(errJson) || errorMessage;
-          reason = errJson?.error?.details?.reason;
+          reason = reasonOf(errJson);
         } catch {
           // Keep the returned status/message useful without logging response bodies or URLs.
         }
@@ -219,13 +233,15 @@ class ApiClient {
         data: data?.data !== undefined && !keepEnvelope ? data.data : data,
         statusCode: response.status,
       };
-    } catch (err: any) {
+    } catch (err) {
       clearTimeout(timeoutId);
-      const isTimeout = err?.name === 'AbortError';
+      // An abort can surface as a DOMException-like object, so read name/message without instanceof.
+      const failure = typeof err === 'object' && err !== null ? (err as { name?: string; message?: string }) : null;
+      const isTimeout = failure?.name === 'AbortError';
       return {
         success: false,
         data: null as unknown as T,
-        message: isTimeout ? 'Yêu cầu kết nối quá thời gian quy định (Timeout)' : (err?.message || 'Lỗi kết nối mạng máy chủ'),
+        message: isTimeout ? 'Yêu cầu kết nối quá thời gian quy định (Timeout)' : (failure?.message || 'Lỗi kết nối mạng máy chủ'),
       };
     }
   }
@@ -234,15 +250,15 @@ class ApiClient {
     return this.request<T>(endpoint, { ...options, method: 'GET' });
   }
 
-  public post<T>(endpoint: string, body?: any, options?: RequestOptions) {
+  public post<T>(endpoint: string, body?: unknown, options?: RequestOptions) {
     return this.request<T>(endpoint, { ...options, method: 'POST', body });
   }
 
-  public put<T>(endpoint: string, body?: any, options?: RequestOptions) {
+  public put<T>(endpoint: string, body?: unknown, options?: RequestOptions) {
     return this.request<T>(endpoint, { ...options, method: 'PUT', body });
   }
 
-  public patch<T>(endpoint: string, body?: any, options?: RequestOptions) {
+  public patch<T>(endpoint: string, body?: unknown, options?: RequestOptions) {
     return this.request<T>(endpoint, { ...options, method: 'PATCH', body });
   }
 

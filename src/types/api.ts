@@ -2,7 +2,7 @@
  * Standard API Response and Request Types for AI Cinema Mobile
  */
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data: T;
   message?: string;
@@ -18,11 +18,16 @@ export interface LoginRequestDto {
   password?: string;
 }
 
-/** Body of POST /auth/google; the extras answer the step a first Google sign-in asks for. */
+/** Body of POST /auth/google. */
 export interface GoogleLoginRequestDto {
   idToken: string;
-  dateOfBirth?: string;
-  password?: string;
+}
+
+/** Body of POST /auth/reset-password: the 6-digit code e-mailed by POST /auth/forgot-password. */
+export interface ResetPasswordRequestDto {
+  email: string;
+  otp: string;
+  newPassword: string;
 }
 
 export interface RegisterRequestDto {
@@ -30,7 +35,8 @@ export interface RegisterRequestDto {
   fullName?: string;
   email: string;
   password?: string;
-  dateOfBirth?: string;
+  /** YYYY-MM-DD; the BE turns away anyone under 18. */
+  dateOfBirth: string;
 }
 
 export interface BEUserDto {
@@ -44,6 +50,13 @@ export interface BEUserDto {
   isVip?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+/** GET /auth/me; the plan fields are older names the adapter still accepts. */
+export interface ProfileDto extends Partial<BEUserDto> {
+  isVIP?: boolean;
+  vipExpiresAt?: string;
+  subscription?: { endDate?: string } | null;
 }
 
 export interface AuthResponseDto {

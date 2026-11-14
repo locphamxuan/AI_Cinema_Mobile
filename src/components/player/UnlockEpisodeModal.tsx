@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Modal, Pressable, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppStore } from '../../store/useAppStore';
+import { useAccountStore, useCatalogStore, useUiStore } from '../../store';
 import { useTheme } from '../../theme';
 import { episodeAccessService } from '../../services/episodeAccessService';
 import { episodeLabel } from '../../lib/episodeLabel';
@@ -29,7 +29,9 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { setWalletBalance, markEpisodeUnlocked, setTopUpModalOpen, currentMovie } = useAppStore();
+  const { setWalletBalance } = useAccountStore();
+  const { markEpisodeUnlocked, currentMovie } = useCatalogStore();
+  const { setTopUpModalOpen } = useUiStore();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   // One key per opened episode: a double tap or a retry is charged once.

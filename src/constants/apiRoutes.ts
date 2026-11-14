@@ -10,6 +10,8 @@ export const API_ROUTES = {
     GOOGLE: '/auth/google',
     PROFILE: '/auth/me',
     LOGOUT: '/auth/logout',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    RESET_PASSWORD: '/auth/reset-password',
   },
 
   // Movies & Catalog
@@ -22,6 +24,29 @@ export const API_ROUTES = {
     LIKE: (movieId: string) => `/movies/${movieId}/like`,
     VIEWS: (episodeId: string) => `/episodes/${episodeId}/views`,
     SUBTITLE: (subtitleId: string) => `/subtitles/${subtitleId}`,
+  },
+
+  // BR-68: AI recommendations read from the member's viewing behavior (BE RecommendationController)
+  RECOMMENDATIONS: {
+    FOR_YOU: '/recommendations/for-you',
+    TRENDING: '/recommendations/trending',
+    AFTER: (movieId: string) => `/recommendations/after/${movieId}`,
+    SIMILAR: (movieId: string) => `/recommendations/similar/${movieId}`,
+  },
+
+  // BR-69 Watch Party and friends (Member only, permission watch-party:use)
+  WATCH_ROOMS: {
+    CREATE: '/watch-rooms',
+    JOIN_BY_CODE: '/watch-rooms/join',
+    DETAIL: (roomId: string) => `/watch-rooms/${roomId}`,
+    JOIN: (roomId: string) => `/watch-rooms/${roomId}/join`,
+    NEXT_EPISODE: (roomId: string) => `/watch-rooms/${roomId}/next-episode`,
+    LEAVE: (roomId: string) => `/watch-rooms/${roomId}/leave`,
+  },
+  FRIENDS: {
+    LIST: '/friends',
+    RESPOND: (friendshipId: string) => `/friends/${friendshipId}/respond`,
+    BLOCK: (friendId: string) => `/friends/${friendId}/block`,
   },
 
   // "Danh sách của tôi": movies the member saved to watch later
@@ -70,6 +95,7 @@ export const API_ROUTES = {
     COMPLETE: (sessionId: string) => `/playback/sessions/${sessionId}/complete`,
     AD_STARTED: (sessionId: string, breakId: string) => `/playback/sessions/${sessionId}/ad-breaks/${breakId}/played`,
     AD_FINISHED: (sessionId: string, breakId: string) => `/playback/sessions/${sessionId}/ad-breaks/${breakId}/completed`,
+    HISTORY: '/playback/history',
   },
 
   // MF-2 - monthly plan
@@ -90,9 +116,15 @@ export const API_ROUTES = {
     SPINS: '/rewards/spins',
   },
 
-  // Chat & AI Support
+  // AI Chatbox
+  // AI Customer Support (BE MemberSupportController): real Gemini assistant with RAG, Member only.
   CHAT: {
-    SEND_MESSAGE: '/chat/message',
-    TICKET: '/chat/ticket',
+    CONVERSATIONS: '/support/conversations',
+    DETAIL: (id: string) => `/support/conversations/${id}`,
+    MESSAGES: (id: string) => `/support/conversations/${id}/messages`,
+    HANDOFF: (id: string) => `/support/conversations/${id}/request-staff`,
+    CONFIRM_RESOLVED: (id: string) => `/support/conversations/${id}/confirm-resolved`,
+    CLOSE: (id: string) => `/support/conversations/${id}/close`,
+    READ: (id: string) => `/support/conversations/${id}/read`,
   },
 } as const;

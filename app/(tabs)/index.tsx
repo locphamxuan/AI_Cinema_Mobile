@@ -8,9 +8,20 @@ import { HomeTabBar } from '../../src/components/home/HomeTabBar';
 import { PosterGrid } from '../../src/components/home/PosterGrid';
 import { RankingList } from '../../src/components/home/RankingList';
 import { useTheme } from '../../src/theme';
-import { useAppStore } from '../../src/store/useAppStore';
-import { movieService } from '../../src/services';
-import { ALL_GENRES, collectGenres, filterByGenre, newestFirst, suggestionPage, type HomeTabKey } from '../../src/lib/homeFeed';
+import { useSessionStore, useAccountStore, useCatalogStore, loadInitialData } from '../../src/store';
+import { movieService, recommendationService } from '../../src/services';
+import { savedMovieService } from '../../src/services/savedMovieService';
+import { useWatchHistory } from '../../src/hooks/useWatchHistory';
+import {
+  ALL_GENRES,
+  collectGenres,
+  filterByGenre,
+  newestFirst,
+  personalizedRecommendations,
+  suggestionPage,
+  topPreferredGenres,
+  type HomeTabKey,
+} from '../../src/lib/homeFeed';
 import { Movie } from '../../src/types/movie';
 import { styles } from '../../src/styles/screens/tabs/index.styles';
 
@@ -20,22 +31,59 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { movies, loadInitialData, isAuthenticated, loadDailyReward } = useAppStore();
+  const { isAuthenticated } = useSessionStore();
+  const { loadDailyReward } = useAccountStore();
+  const { movies } = useCatalogStore();
+  const watchHistory = useWatchHistory(isAuthenticated);
 
   const [tab, setTab] = useState<HomeTabKey>('recommend');
   const [genre, setGenre] = useState(ALL_GENRES);
   const [page, setPage] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [ranked, setRanked] = useState<Movie[]>([]);
+  const [beRecommended, setBeRecommended] = useState<Movie[]>([]);
+  const [savedMovieIds, setSavedMovieIds] = useState<string[]>([]);
 
-  const loadRanking = async () => {
-    const res = await movieService.ranking();
-    if (res.success) setRanked(res.data);
-  };
+  const loadRanking = () =>
+    movieService.ranking().then((res) => {
+      if (res.success) setRanked(res.data);
+    });
 
   useEffect(() => {
     void loadInitialData();
-  }, [loadInitialData]);
+  }, []);
+
+  // Guests: the AI trending list of the catalog (BR-68 cold start); Members get theirs below.
+  useEffect(() => {
+    if (isAuthenticated) return;
+    let active = true;
+    void recommendationService.trending().then((res) => {
+      if (active && res.success && res.data.length > 0) setBeRecommended(res.data);
+    });
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let active = true;
+    const loadPersonalContext = async () => {
+      const [recRes, savedRes] = await Promise.all([
+        movieService.recommendations(),
+        savedMovieService.list(),
+      ]);
+      if (!active) return;
+      if (recRes.success && recRes.data.length > 0) setBeRecommended(recRes.data);
+      if (savedRes.success && Array.isArray(savedRes.data)) {
+        setSavedMovieIds(savedRes.data.map((m) => m.id));
+      }
+    };
+    void loadPersonalContext();
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated]);
 
   // Plays change all the time: the ranking is read from the BE each time the tab opens.
   useEffect(() => {
@@ -50,11 +98,30 @@ export default function HomeScreen() {
   const genres = useMemo(() => [ALL_GENRES, ...collectGenres(movies)], [movies]);
   const newest = useMemo(() => newestFirst(movies), [movies]);
   const byGenre = useMemo(() => filterByGenre(movies, genre), [movies, genre]);
-  const recommended = useMemo(() => suggestionPage(movies, page, RECOMMEND_SIZE), [movies, page]);
+
+  const preferredGenres = useMemo(
+    () => (isAuthenticated ? topPreferredGenres(movies, watchHistory, savedMovieIds) : []),
+    [isAuthenticated, movies, watchHistory, savedMovieIds],
+  );
+
+  const personalizedPool = useMemo(() => {
+    if (isAuthenticated && beRecommended.length > 0) return beRecommended;
+    return personalizedRecommendations(movies, isAuthenticated ? watchHistory : [], isAuthenticated ? savedMovieIds : []);
+  }, [isAuthenticated, beRecommended, movies, watchHistory, savedMovieIds]);
+
+  const recommended = useMemo(() => suggestionPage(personalizedPool, page, RECOMMEND_SIZE), [personalizedPool, page]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadInitialData(), tab === 'ranking' ? loadRanking() : undefined]);
+    await Promise.all([
+      loadInitialData(),
+      tab === 'ranking' ? loadRanking() : undefined,
+      isAuthenticated
+        ? movieService.recommendations().then((res) => {
+            if (res.success && res.data.length > 0) setBeRecommended(res.data);
+          })
+        : undefined,
+    ]);
     setRefreshing(false);
   };
 
@@ -82,6 +149,18 @@ export default function HomeScreen() {
       >
         {tab === 'recommend' && (
           <>
+            {movies.length > 0 && (
+              <View style={{ paddingHorizontal: 16, paddingBottom: 10 }}>
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>
+                  {isAuthenticated ? 'Đề xuất dành riêng cho bạn' : 'Đề xuất nổi bật hôm nay'}
+                </Text>
+                {preferredGenres.length > 0 && (
+                  <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>
+                    Dựa trên gu phim {preferredGenres.join(', ')} bạn đã xem & lưu
+                  </Text>
+                )}
+              </View>
+            )}
             <PosterGrid movies={recommended} onMoviePress={openMovie} />
             {movies.length > 0 && (
               <View style={styles.moreRow}>

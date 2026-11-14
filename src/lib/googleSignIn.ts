@@ -1,15 +1,5 @@
-import { Platform } from 'react-native';
+import { Platform, TurboModuleRegistry } from 'react-native';
 import type { GoogleSignin as GoogleSigninApi } from '@react-native-google-signin/google-signin';
-
-/** Why a first Google sign-in needs one more answer; the same token is sent again with it. */
-export const GOOGLE_STEP = {
-  BIRTHDAY: 'GOOGLE_SIGNUP_NEEDS_BIRTHDAY',
-  PASSWORD: 'GOOGLE_LINK_NEEDS_PASSWORD',
-} as const;
-export type GoogleStep = (typeof GOOGLE_STEP)[keyof typeof GOOGLE_STEP];
-
-export const isGoogleStep = (reason?: string): reason is GoogleStep =>
-  reason === GOOGLE_STEP.BIRTHDAY || reason === GOOGLE_STEP.PASSWORD;
 
 // The ID token must be issued for the Web client ID: that is the audience the backend checks.
 const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
@@ -25,6 +15,9 @@ let google: typeof GoogleSigninApi | null | undefined;
 function nativeGoogle(): typeof GoogleSigninApi | null {
   if (google !== undefined) return google;
   if (Platform.OS === 'web') return (google = null);
+  // The library looks the module up with getEnforcing as soon as it loads, and the dev runtime
+  // shows that failure as a red screen even when the require below is caught. Ask first instead.
+  if (!TurboModuleRegistry.get('RNGoogleSignin')) return (google = null);
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { GoogleSignin } = require('@react-native-google-signin/google-signin');

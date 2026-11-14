@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { engagementService, type MovieEngagement } from '../../services/engagementService';
-import { useAppStore } from '../../store/useAppStore';
+import { useSessionStore, useUiStore } from '../../store';
 import { useTheme } from '../../theme';
 import { styles } from '../../styles/components/movie/LikeButton.styles';
 
@@ -15,7 +15,7 @@ export function compactCount(n: number): string {
 
 /** Hearts and plays of a movie from the BE; a Guest is asked to sign in before giving a heart. */
 export function useMovieEngagement(movieId: string | undefined) {
-  const isAuthenticated = useAppStore((s) => s.isAuthenticated);
+  const isAuthenticated = useSessionStore((s) => s.isAuthenticated);
   const [data, setData] = React.useState<MovieEngagement | null>(null);
 
   React.useEffect(() => {
@@ -33,7 +33,8 @@ export function useMovieEngagement(movieId: string | undefined) {
 /** Heart with its count beside it. */
 export function LikeButton({ movieId }: { movieId: string }) {
   const { colors } = useTheme();
-  const { isAuthenticated, openAuthModal } = useAppStore();
+  const { isAuthenticated } = useSessionStore();
+  const { openAuthModal } = useUiStore();
   const [data, setData] = useMovieEngagement(movieId);
   const [busy, setBusy] = React.useState(false);
   const liked = Boolean(data?.likedByMe);

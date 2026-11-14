@@ -1,119 +1,125 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useRef, useState, useEffect } from 'react';
+import { View, Text, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { showDialog } from '../../lib/dialog';
+import { useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppStore } from '../../store/useAppStore';
+import { useSessionStore, useUiStore } from '../../store';
 import { fonts, useTheme } from '../../theme';
-import { storage, STORAGE_KEYS } from '../../lib/storage';
-import { MIN_PASSWORD, authFormError } from '../../lib/authForm';
+import { forgetRememberedEmail, readRememberedEmail, rememberEmail } from '../../lib/rememberedLogin';
+import { PASSWORD_HINT, authFormError, normalizeDateOfBirth } from '../../lib/authForm';
 import { Button } from '../common/Button';
+import { AgeConfirmModal } from './AgeConfirmModal';
+import { ForgotPasswordView } from './ForgotPasswordView';
 import { GoogleSignInSection } from './GoogleSignInSection';
 import { styles } from '../../styles/components/auth/AuthModal.styles';
+
+const digitsOnly = (value: string, maxLen: number) => value.replace(/\D/g, '').slice(0, maxLen);
 
 export const AuthModal: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isAuthModalOpen, closeAuthModal, authModalMode, openAuthModal, login, register, initialAuthEmail } = useAppStore();
+  const { login, register } = useSessionStore();
+  const { isAuthModalOpen, closeAuthModal, authModalMode, openAuthModal, initialAuthEmail } = useUiStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [dobDay, setDobDay] = useState('');
+  const [dobMonth, setDobMonth] = useState('');
+  const [dobYear, setDobYear] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
-  const [hasSavedCredentials, setHasSavedCredentials] = useState(false);
+  const [hasSavedEmail, setHasSavedEmail] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [ageModalOpen, setAgeModalOpen] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+
+  const monthRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const yearRef = useRef<React.ComponentRef<typeof TextInput>>(null);
 
   const isLogin = authModalMode === 'login';
+  const dateOfBirthInput =
+    dobDay || dobMonth || dobYear
+      ? `${dobDay.padStart(2, '0')}/${dobMonth.padStart(2, '0')}/${dobYear}`
+      : '';
 
-  // Fill in what this device remembered when the dialog opens.
+  // Each opening starts without the previous attempt's error.
+  const [wasOpen, setWasOpen] = useState(false);
+  if (isAuthModalOpen !== wasOpen) {
+    setWasOpen(isAuthModalOpen);
+    if (isAuthModalOpen) {
+      setError(null);
+      setAgeModalOpen(false);
+      setForgotOpen(false);
+    }
+  }
+
+  // Each opening fills in the email this device remembered; the password is always typed again.
   useEffect(() => {
     if (!isAuthModalOpen) return;
-    setError(null);
-    const loadSaved = async () => {
-      try {
-        const [savedEmail, savedPassword, savedRemember] = await Promise.all([
-          storage.getString(STORAGE_KEYS.REMEMBERED_EMAIL),
-          storage.getString(STORAGE_KEYS.REMEMBERED_PASSWORD),
-          storage.getString(STORAGE_KEYS.REMEMBER_ME),
-        ]);
-        if (savedEmail && savedPassword) {
-          setEmail(savedEmail);
-          setPassword(savedPassword);
-          setRememberMe(savedRemember !== 'false');
-          setHasSavedCredentials(true);
-          return;
-        }
-      } catch (e) {
-        console.error('Error loading saved credentials:', e);
-      }
-      setEmail(initialAuthEmail || '');
-      if (!initialAuthEmail) setPassword('');
+    void readRememberedEmail().then((saved) => {
+      setEmail(saved || initialAuthEmail || '');
+      setPassword('');
       setRememberMe(true);
-      setHasSavedCredentials(false);
-    };
-    void loadSaved();
+      setHasSavedEmail(Boolean(saved));
+    });
   }, [isAuthModalOpen, initialAuthEmail]);
 
   const forgetSaved = async () => {
-    try {
-      await Promise.all([
-        storage.remove(STORAGE_KEYS.REMEMBERED_EMAIL),
-        storage.remove(STORAGE_KEYS.REMEMBERED_PASSWORD),
-        storage.remove(STORAGE_KEYS.REMEMBER_ME),
-      ]);
-      setEmail('');
-      setPassword('');
-      setHasSavedCredentials(false);
-    } catch (e) {
-      console.error('Failed to clear credentials:', e);
-    }
+    await forgetRememberedEmail();
+    setEmail('');
+    setPassword('');
+    setHasSavedEmail(false);
   };
 
   const switchMode = () => {
     setError(null);
+    setAgeModalOpen(false);
+    setForgotOpen(false);
     openAuthModal(isLogin ? 'register' : 'login');
   };
 
+  const handleConfirmAgeAndRegister = async () => {
+    const normalizedDob = normalizeDateOfBirth(dateOfBirthInput);
+    if (!normalizedDob) {
+      setAgeModalOpen(false);
+      setError('Ngày sinh chưa hợp lệ (nhập dạng DD/MM/YYYY, ví dụ 14/05/2003).');
+      return;
+    }
+    setAgeModalOpen(false);
+    setLoading(true);
+    const result = await register(name, email, password, normalizedDob);
+    if (result.success) {
+      showDialog('Đã tạo tài khoản', 'Bạn đã là thành viên và có thể bắt đầu xem phim.');
+    } else {
+      setError(result.error || 'Chưa tạo được tài khoản. Kiểm tra kết nối rồi thử lại.');
+    }
+    setLoading(false);
+  };
+
   const handleSubmit = async () => {
-    const problem = authFormError(isLogin, { name, email, password, confirmPassword, dateOfBirth });
+    const rawDob = dobDay.trim() && dobMonth.trim() && dobYear.trim() ? dateOfBirthInput : '';
+    const problem = authFormError(isLogin, { name, email, password, confirmPassword, dateOfBirth: rawDob });
     setError(problem);
     if (problem) return;
-    setLoading(true);
 
-    if (isLogin) {
-      const result = await login(email, password);
-      if (result.success) {
-        try {
-          if (rememberMe) {
-            await Promise.all([
-              storage.set(STORAGE_KEYS.REMEMBERED_EMAIL, email.trim()),
-              storage.set(STORAGE_KEYS.REMEMBERED_PASSWORD, password),
-              storage.set(STORAGE_KEYS.REMEMBER_ME, 'true'),
-            ]);
-          } else {
-            await forgetSaved();
-          }
-        } catch (e) {
-          console.error('Failed to update remembered credentials:', e);
-        }
-        if (result.redirectUrl) router.replace(result.redirectUrl as any);
-      } else {
-        setError(result.error || 'Chưa đăng nhập được. Kiểm tra email, mật khẩu và kết nối mạng.');
-      }
+    if (!isLogin) {
+      setAgeModalOpen(true);
+      return;
+    }
+
+    setLoading(true);
+    const result = await login(email, password);
+    if (result.success) {
+      if (rememberMe) await rememberEmail(email);
+      else await forgetSaved();
+      if (result.redirectUrl) router.replace(result.redirectUrl as Href);
     } else {
-      const result = await register(name, email, password, dateOfBirth);
-      if (result.success) {
-        Alert.alert('Đã tạo tài khoản', 'Đăng nhập bằng email vừa đăng ký để bắt đầu xem.', [
-          { text: 'Đăng nhập', onPress: () => openAuthModal('login', email.trim()) },
-        ], { cancelable: false });
-      } else {
-        setError(result.error || 'Chưa tạo được tài khoản. Kiểm tra kết nối rồi thử lại.');
-      }
+      setError(result.error || 'Chưa đăng nhập được. Kiểm tra email, mật khẩu và kết nối mạng.');
     }
     setLoading(false);
   };
@@ -132,30 +138,94 @@ export const AuthModal: React.FC = () => {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.backdrop, { backgroundColor: colors.overlay }]}>
         <View style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>{isLogin ? 'Đăng nhập' : 'Tạo tài khoản'}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{forgotOpen ? 'Quên mật khẩu' : isLogin ? 'Đăng nhập' : 'Tạo tài khoản'}</Text>
             <TouchableOpacity onPress={closeAuthModal} hitSlop={10} accessibilityLabel="Đóng">
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form} showsVerticalScrollIndicator={false}>
-            {hasSavedCredentials && isLogin && (
+            {forgotOpen ? (
+              <ForgotPasswordView initialEmail={email} onBack={() => setForgotOpen(false)} />
+            ) : (<>
+            {hasSavedEmail && isLogin && (
               <View style={[styles.saved, { backgroundColor: colors.card }]}>
-                <Text style={[styles.savedText, { color: colors.textSecondary }]}>Đã điền sẵn tài khoản lưu trên máy này.</Text>
+                <Text style={[styles.savedText, { color: colors.textSecondary }]}>Đã điền sẵn email lưu trên máy này.</Text>
                 <TouchableOpacity onPress={forgetSaved} hitSlop={8}>
-                  <Text style={[styles.savedAction, { color: colors.ruby }]}>Quên tài khoản này</Text>
+                  <Text style={[styles.savedAction, { color: colors.ruby }]}>Quên email này</Text>
                 </TouchableOpacity>
               </View>
             )}
 
             {!isLogin &&
-              field('Họ và tên', <TextInput value={name} onChangeText={setName} placeholder="Nguyễn Văn A" placeholderTextColor={colors.textMuted} style={inputStyle} />)}
+              field(
+                'Họ và tên',
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Nguyễn Văn A"
+                  placeholderTextColor={colors.textMuted}
+                  autoComplete="name"
+                  style={inputStyle}
+                />,
+              )}
+
             {!isLogin &&
               field(
                 'Ngày sinh',
-                <TextInput value={dateOfBirth} onChangeText={setDateOfBirth} placeholder="2003-05-14" placeholderTextColor={colors.textMuted} keyboardType="numbers-and-punctuation" style={inputStyle} />,
-                'Viết theo dạng năm-tháng-ngày.',
+                <View style={styles.dobRow}>
+                  <TextInput
+                    value={dobDay}
+                    onChangeText={(v) => {
+                      const next = digitsOnly(v, 2);
+                      setDobDay(next);
+                      if (next.length === 2) monthRef.current?.focus();
+                    }}
+                    placeholder="Ngày (14)"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    autoComplete="off"
+                    importantForAutofill="no"
+                    accessibilityLabel="Ngày sinh"
+                    style={[inputStyle, styles.dobPart]}
+                  />
+                  <Text style={[styles.dobSlash, { color: colors.textMuted }]}>/</Text>
+                  <TextInput
+                    ref={monthRef}
+                    value={dobMonth}
+                    onChangeText={(v) => {
+                      const next = digitsOnly(v, 2);
+                      setDobMonth(next);
+                      if (next.length === 2) yearRef.current?.focus();
+                    }}
+                    placeholder="Tháng (05)"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    autoComplete="off"
+                    importantForAutofill="no"
+                    accessibilityLabel="Tháng sinh"
+                    style={[inputStyle, styles.dobPart]}
+                  />
+                  <Text style={[styles.dobSlash, { color: colors.textMuted }]}>/</Text>
+                  <TextInput
+                    ref={yearRef}
+                    value={dobYear}
+                    onChangeText={(v) => setDobYear(digitsOnly(v, 4))}
+                    placeholder="Năm (2003)"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    autoComplete="off"
+                    importantForAutofill="no"
+                    accessibilityLabel="Năm sinh"
+                    style={[inputStyle, styles.dobYear]}
+                  />
+                </View>,
+                'Ví dụ: 14 / 05 / 2003.',
               )}
+
             {field(
               'Email',
               <TextInput value={email} onChangeText={setEmail} placeholder="ten@email.com" placeholderTextColor={colors.textMuted} autoCapitalize="none" keyboardType="email-address" autoComplete="email" style={inputStyle} />,
@@ -175,7 +245,7 @@ export const AuthModal: React.FC = () => {
                   <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>,
-              isLogin ? undefined : `Ít nhất ${MIN_PASSWORD} ký tự, có cả chữ và số.`,
+              isLogin ? undefined : PASSWORD_HINT,
             )}
             {!isLogin &&
               field(
@@ -188,15 +258,10 @@ export const AuthModal: React.FC = () => {
                 <View style={[styles.box, rememberMe ? { backgroundColor: colors.ruby, borderColor: colors.ruby } : { borderColor: colors.textMuted }]}>
                   {rememberMe && <Ionicons name="checkmark" size={13} color="#FFFFFF" />}
                 </View>
-                <Text style={[styles.checkLabel, { color: colors.textSecondary }]}>Nhớ đăng nhập trên máy này</Text>
+                <Text style={[styles.checkLabel, { color: colors.textSecondary }]}>Nhớ email trên máy này</Text>
               </TouchableOpacity>
               {isLogin && (
-                <TouchableOpacity
-                  hitSlop={8}
-                  onPress={() =>
-                    Alert.alert('Quên mật khẩu', 'App chưa đặt lại mật khẩu được. Nhắn cho Hỗ trợ trong mục Hồ sơ để lấy lại tài khoản.')
-                  }
-                >
+                <TouchableOpacity hitSlop={8} accessibilityRole="button" onPress={() => { setError(null); setForgotOpen(true); }}>
                   <Text style={[styles.link, { color: colors.textSecondary }]}>Quên mật khẩu?</Text>
                 </TouchableOpacity>
               )}
@@ -204,7 +269,7 @@ export const AuthModal: React.FC = () => {
 
             {error && <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>}
 
-            <Button label={isLogin ? 'Đăng nhập' : 'Tạo tài khoản'} onPress={handleSubmit} loading={loading} />
+            <Button label={isLogin ? 'Đăng nhập' : 'Tiếp tục'} onPress={handleSubmit} loading={loading} />
 
             <GoogleSignInSection />
 
@@ -214,9 +279,17 @@ export const AuthModal: React.FC = () => {
                 <Text style={{ color: colors.ruby, fontFamily: fonts.semibold }}>{isLogin ? 'Tạo tài khoản' : 'Đăng nhập'}</Text>
               </Text>
             </TouchableOpacity>
+            </>)}
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
+      <AgeConfirmModal
+        visible={ageModalOpen && !isLogin}
+        dateOfBirth={dateOfBirthInput}
+        loading={loading}
+        onCancel={() => setAgeModalOpen(false)}
+        onConfirm={handleConfirmAgeAndRegister}
+      />
     </Modal>
   );
 };

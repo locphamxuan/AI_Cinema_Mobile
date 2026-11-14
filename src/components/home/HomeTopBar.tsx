@@ -3,25 +3,29 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme';
-import { useAppStore } from '../../store/useAppStore';
+import { useSessionStore, useAccountStore, useUiStore } from '../../store';
 import { styles } from '../../styles/components/home/HomeTopBar.styles';
+import { AiOrb } from '../chat/AiOrb';
 
 interface HomeTopBarProps {
   /** A film title shown as the search hint. */
   hint?: string;
 }
 
-/** Search pill and the reward gift (check-in / spins) at the top of the home screen. */
+/** Search pill, AI Assistant button, and the reward gift at the top of the home screen. */
 export const HomeTopBar: React.FC<HomeTopBarProps> = ({ hint }) => {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { isAuthenticated, dailyReward, openAuthModal, setCheckInModalOpen } = useAppStore();
+  const { isAuthenticated } = useSessionStore();
+  const { dailyReward } = useAccountStore();
+  const { openAuthModal, setCheckInModalOpen, setChatModalOpen } = useUiStore();
 
   // Something to collect today: check-in not done yet, or spins left (both from the BE).
   const spins = dailyReward?.availableSpins ?? 0;
   const checkInWaiting = Boolean(dailyReward && !dailyReward.checkedInToday);
 
   const openRewards = () => (isAuthenticated ? setCheckInModalOpen(true) : openAuthModal('login'));
+  const openChat = () => setChatModalOpen(true);
 
   return (
     <View style={styles.row}>
@@ -36,6 +40,22 @@ export const HomeTopBar: React.FC<HomeTopBarProps> = ({ hint }) => {
         <Text style={[styles.hint, { color: colors.textMuted }]} numberOfLines={1}>
           {hint || 'Tìm tên phim'}
         </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={openChat}
+        style={[
+          styles.aiPill,
+          {
+            backgroundColor: isDark ? 'rgba(236, 72, 153, 0.16)' : 'rgba(236, 72, 153, 0.12)',
+            borderColor: 'rgba(236, 72, 153, 0.45)',
+          },
+        ]}
+        accessibilityLabel="Mở Trợ lý AI"
+      >
+        <AiOrb size="xs" />
+        <Text style={[styles.aiLabel, { color: colors.text }]}>AI</Text>
       </TouchableOpacity>
 
       <TouchableOpacity

@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
-import { Alert } from 'react-native';
+import {} from 'react-native';
+import { showDialog } from '../lib/dialog';
 import { episodeAccessService } from '../services/episodeAccessService';
-import { useAppStore } from '../store/useAppStore';
+import { useCatalogStore, useUiStore } from '../store';
 import type { Episode } from '../types/movie';
 import type { AccessDecision } from '../types/episodeAccess';
 
@@ -16,21 +17,22 @@ export interface LockedEpisode {
  * modal together with the BE's decision: its price, the wallet and whether the plan is an option.
  */
 export function useEpisodeGate(onGranted: (episode: Episode) => void) {
-  const { openAuthModal, markEpisodeUnlocked } = useAppStore();
+  const { markEpisodeUnlocked } = useCatalogStore();
+  const { openAuthModal } = useUiStore();
   const [locked, setLocked] = useState<LockedEpisode | null>(null);
   const [checkingId, setCheckingId] = useState<string | null>(null);
 
   const open = useCallback(
     async (episode: Episode) => {
       if (episode.availability === 'UNDER_REVISION') {
-        Alert.alert('Tập đang bảo trì', episode.notice || 'Tập phim đang được chỉnh sửa, vui lòng quay lại sau.');
+        showDialog('Tập đang bảo trì', episode.notice || 'Tập phim đang được chỉnh sửa, vui lòng quay lại sau.');
         return;
       }
       setCheckingId(episode.id);
       const res = await episodeAccessService.checkAccess(episode.id);
       setCheckingId(null);
       if (!res.success || !res.data) {
-        Alert.alert('Không kiểm tra được quyền xem', res.message || 'Vui lòng thử lại.');
+        showDialog('Không kiểm tra được quyền xem', res.message || 'Vui lòng thử lại.');
         return;
       }
       if (res.data.accessGranted) {

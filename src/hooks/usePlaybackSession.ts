@@ -5,33 +5,43 @@ import { playbackService } from '../services/playbackService';
 import type { AdScheduleItem, StreamingSession } from '../types/playback';
 
 /** The BE expects a beat every 10-15s and closes a silent session, paused or not. */
-export const HEARTBEAT_SECONDS = 15;
+const HEARTBEAT_SECONDS = 15;
 
 /**
  * Main Flow 3 inside the player: beats while the episode plays, pauses it at each mid-roll cue
  * (and at the one a forward seek jumped over), completes the session at the end and stops it when
  * the viewer leaves. `currentTime` is the player clock the controls already read.
  */
-export function usePlaybackSession(player: VideoPlayer, session: StreamingSession | undefined, currentTime: number) {
+export function usePlaybackSession(
+  player: VideoPlayer,
+  session: StreamingSession | undefined,
+  currentTime: number,
+  /** False for a watch-room member: the room sees the Host's ad instead of its own (BR-69). */
+  ads = true,
+) {
   const [activeAd, setActiveAd] = useState<AdScheduleItem | null>(null);
   const [resumeAt, setResumeAt] = useState(() => (session ? resumePointOf(session) : null));
   const handled = useRef(new Set<string>());
   const activeRef = useRef<AdScheduleItem | null>(null);
   const finished = useRef(false);
   const position = useRef(0);
-  position.current = Math.floor(currentTime);
   const sessionId = session?.sessionId;
+
+  // Declared first so the effects below already read this render's position.
+  useEffect(() => {
+    position.current = Math.floor(currentTime);
+  }, [currentTime]);
 
   const startAd = useCallback(
     (cue: AdScheduleItem) => {
-      if (!sessionId || activeRef.current) return;
+      if (!sessionId || activeRef.current || !ads) return;
       handled.current.add(cue.breakId);
       activeRef.current = cue;
       player.pause();
       setActiveAd(cue);
       void playbackService.adStarted(sessionId, cue.breakId, position.current);
     },
-    [player, sessionId],
+    [player, sessionId, ads],
   );
 
   // Heartbeat, completion at the end and stop on leave.
@@ -68,12 +78,12 @@ export function usePlaybackSession(player: VideoPlayer, session: StreamingSessio
 
   // The cue the playhead reached; a seek over several plays only the nearest one.
   useEffect(() => {
-    if (!session?.adSchedule.length || activeRef.current) return;
+    if (!ads || !session?.adSchedule.length || activeRef.current) return;
     const due = cuesReached(session.adSchedule, currentTime, handled.current);
     if (!due) return;
     due.passed.forEach((id) => handled.current.add(id));
     startAd(due.play);
-  }, [session, currentTime, startAd]);
+  }, [session, currentTime, startAd, ads]);
 
   /** `watched` is false when the ad could not load: the episode resumes without a completed view. */
   const finishAd = useCallback(

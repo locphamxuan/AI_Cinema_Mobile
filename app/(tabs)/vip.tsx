@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { View, Text, ScrollView, Switch, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Switch, ActivityIndicator } from 'react-native';
+import { showDialog } from '../../src/lib/dialog';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenHeader } from '../../src/components/common/ScreenHeader';
 import { Button } from '../../src/components/common/Button';
 import { useTheme } from '../../src/theme';
-import { useAppStore, planIsRunning } from '../../src/store/useAppStore';
+import { useSessionStore, useAccountStore, useUiStore, planIsRunning } from '../../src/store';
 import { episodeAccessService } from '../../src/services';
 import type { MembershipPlan, MySubscription } from '../../src/types/episodeAccess';
 import { styles } from '../../src/styles/screens/tabs/vip.styles';
@@ -27,7 +28,9 @@ export function cancelWindowText(plan: MySubscription, now = Date.now()): string
 
 export default function VipScreen() {
   const { colors } = useTheme();
-  const { isAuthenticated, openAuthModal, setTopUpModalOpen, setWalletBalance, loadAccountData, subscription, wallet } = useAppStore();
+  const { isAuthenticated } = useSessionStore();
+  const { setWalletBalance, loadAccountData, subscription, wallet } = useAccountStore();
+  const { openAuthModal, setTopUpModalOpen } = useUiStore();
   const [plans, setPlans] = useState<MembershipPlan[] | null>(null);
   const [plansLoadFailed, setPlansLoadFailed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -69,7 +72,7 @@ export default function VipScreen() {
       openAuthModal('login');
       return;
     }
-    Alert.alert(
+    showDialog(
       `Đăng ký ${plan.name}`,
       `Trừ ${plan.priceCoins} Coin cho ${plan.durationDays} ngày: Coin chính trước, Coin thưởng bù phần còn thiếu. Gói tự gia hạn mỗi kỳ và bạn tắt được trước ngày gia hạn.`,
       [
@@ -82,7 +85,7 @@ export default function VipScreen() {
             setBusy(null);
             if (!res.success || !res.data) {
               const short = res.statusCode === 422;
-              Alert.alert('Chưa đăng ký được', res.message || 'Kiểm tra kết nối rồi thử lại.', [
+              showDialog('Chưa đăng ký được', res.message || 'Kiểm tra kết nối rồi thử lại.', [
                 { text: 'Đóng', style: 'cancel' },
                 ...(short ? [{ text: 'Nạp Coin', onPress: () => setTopUpModalOpen(true) }] : []),
               ]);
@@ -90,7 +93,7 @@ export default function VipScreen() {
             }
             setWalletBalance(res.data.mainBalance, res.data.bonusBalance);
             await reload();
-            Alert.alert('Đã kích hoạt', `${plan.name} dùng được đến ${formatDateTime(res.data.currentPeriodEnd)}.`);
+            showDialog('Đã kích hoạt', `${plan.name} dùng được đến ${formatDateTime(res.data.currentPeriodEnd)}.`);
           },
         },
       ],
@@ -103,7 +106,7 @@ export default function VipScreen() {
     const res = await episodeAccessService.setAutoRenew(open.id, on);
     setBusy(null);
     if (!res.success) {
-      Alert.alert('Chưa đổi được', res.message || 'Kiểm tra kết nối rồi thử lại.');
+      showDialog('Chưa đổi được', res.message || 'Kiểm tra kết nối rồi thử lại.');
       return;
     }
     await reload();

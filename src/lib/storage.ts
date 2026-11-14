@@ -2,13 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const STORAGE_KEYS = {
   REMEMBERED_EMAIL: 'ai_cinema_remembered_email',
-  REMEMBERED_PASSWORD: 'ai_cinema_remembered_password',
-  REMEMBER_ME: 'ai_cinema_remember_me',
   AUTH_TOKEN: 'ai_cinema_auth_token',
   REFRESH_TOKEN: 'ai_cinema_refresh_token',
   USER_DATA: 'ai_cinema_user_data',
   WALLET_DATA: 'ai_cinema_wallet_data',
   RECENT_SEARCHES: 'ai_cinema_recent_searches',
+  /** 'light' or 'dark', picked in Cài đặt. */
+  THEME_MODE: 'ai_cinema_theme_mode',
   /** UUID v4 that owns a guest's playback session (X-Guest-Key). */
   GUEST_KEY: 'ai_cinema_guest_key',
   /** UUID v4 of this install, sent as X-Device-Id when a member plays (MF-4). */

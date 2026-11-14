@@ -1,8 +1,33 @@
-﻿{
-  "cli": { "version": ">= 12.0.0", "appVersionSource": "remote" },
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote"
+  },
   "build": {
-    "development": { "developmentClient": true, "distribution": "internal" },
-    "preview": { "distribution": "internal", "android": { "buildType": "apk" } },
-    "production": { "autoIncrement": true }
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "440650077495-fjea3pvoj35lt770sqp6ile9ib8ufafp.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "440650077495-qd0877qbt43i6mbgfi0nb27b8jap7o6k.apps.googleusercontent.com"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "440650077495-fjea3pvoj35lt770sqp6ile9ib8ufafp.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "440650077495-qd0877qbt43i6mbgfi0nb27b8jap7o6k.apps.googleusercontent.com"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "440650077495-fjea3pvoj35lt770sqp6ile9ib8ufafp.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "440650077495-qd0877qbt43i6mbgfi0nb27b8jap7o6k.apps.googleusercontent.com"
+      }
+    }
   }
 }

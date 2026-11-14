@@ -4,14 +4,18 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppStore } from '../../src/store/useAppStore';
+import { useSessionStore, useAccountStore, useCatalogStore } from '../../src/store';
 import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
+import { useWatchHistory } from '../../src/hooks/useWatchHistory';
+import { resumeEpisode } from '../../src/lib/watchHistory';
 import { movieService } from '../../src/services';
 import { Movie, Episode } from '../../src/types/movie';
 import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
 import { AudioModeTabs, trackFor, type AudioMode } from '../../src/components/movie/AudioModeTabs';
 import { EpisodeList } from '../../src/components/movie/EpisodeList';
+import { RecommendationRail } from '../../src/components/movie/RecommendationRail';
+import { recommendationService } from '../../src/services/recommendationService';
 import { LikeButton, compactCount, useMovieEngagement } from '../../src/components/movie/LikeButton';
 import { SaveButton } from '../../src/components/movie/SaveButton';
 import { Button } from '../../src/components/common/Button';
@@ -19,17 +23,24 @@ import { useTheme } from '../../src/theme';
 import { styles } from '../../src/styles/screens/movie/id.styles';
 
 export default function MovieDetailScreen() {
+  // BR-68: "Phim tương tự" — same genres / country, released only; Guests see it too.
+  const [similar, setSimilar] = useState<Movie[]>([]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { colors } = useTheme();
-  const { currentMovie, setCurrentMovie, movies, isVIPMode, watchHistory } = useAppStore();
+  const { isAuthenticated } = useSessionStore();
+  const { isVIPMode } = useAccountStore();
+  const { currentMovie, setCurrentMovie, movies } = useCatalogStore();
+  const history = useWatchHistory(isAuthenticated);
 
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
 
   const [movie, setMovie] = useState<Movie | null>(foundMovie);
-  const [loading, setLoading] = useState(!foundMovie);
+  // The movie whose fetch has finished, found or not: only an unknown movie waits for it.
+  const [settledId, setSettledId] = useState<string | null>(null);
+  const loading = !foundMovie && settledId !== id;
   const [audioMode, setAudioMode] = useState<AudioMode>('subtitle');
   const [chosenTrack, setChosenTrack] = useState<string | null>(null);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
@@ -40,9 +51,8 @@ export default function MovieDetailScreen() {
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
-    const { movies: listed, currentMovie: selected } = useAppStore.getState();
+    const { movies: listed, currentMovie: selected } = useCatalogStore.getState();
     const known = listed.find((item) => item.id === id) || (selected?.id === id ? selected : null);
-    setLoading(!known);
 
     Promise.all([
       known ? Promise.resolve(known) : movieService.getMovieDetail(id).then((res) => (res.success ? res.data : null)),
@@ -55,7 +65,7 @@ export default function MovieDetailScreen() {
         setMovie(loaded);
         setCurrentMovie(loaded);
       }
-      setLoading(false);
+      setSettledId(id);
     });
 
     return () => {
@@ -71,6 +81,17 @@ export default function MovieDetailScreen() {
   // Every episode is opened through the BE access decision (free starter, plan, purchase).
   const gate = useEpisodeGate(watch);
   const handleSelectEpisode = (ep: Episode) => void gate.open(ep);
+
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    void recommendationService.similar(String(id)).then((res) => {
+      if (active) setSimilar(res.success ? res.data : []);
+    });
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
   if (loading || !movie) {
     return (
@@ -88,11 +109,11 @@ export default function MovieDetailScreen() {
     );
   }
 
-  // "Xem tiếp" picks up the last episode opened on this device; otherwise the first one.
-  const lastSeen = watchHistory.find((item) => item.movieId === movie.id);
-  const resume = lastSeen ? episodes.find((ep) => ep.id === lastSeen.episodeId) : undefined;
+  // "Xem tiếp" picks up from the member's BE watch history; otherwise the first episode.
+  const resume = resumeEpisode(history, movie.id, episodes);
   const next = resume ?? episodes[0];
   const heroHeight = Math.min(Math.round(width * 1.1), 520);
+
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -155,6 +176,12 @@ export default function MovieDetailScreen() {
         />
 
         <EpisodeList episodes={episodes} isVIPMode={isVIPMode} posterUrl={movie.posterUrl} onSelect={handleSelectEpisode} />
+        <RecommendationRail
+          title="Phim tương tự"
+          caption="AI chọn theo thể loại và quốc gia của phim này"
+          movies={similar}
+          onMoviePress={(m) => router.push({ pathname: '/movie/[id]', params: { id: m.id } })}
+        />
       </ScrollView>
 
       <View style={[styles.topBar, { top: Math.max(insets.top, 10) }]} pointerEvents="box-none">

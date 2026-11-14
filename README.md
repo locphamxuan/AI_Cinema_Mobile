@@ -26,7 +26,7 @@ that bucket for the origin the app runs on (for example `http://localhost:8081`)
 ```bash
 npm run lint
 npm run typecheck
-npm test               # Jest; `npm run test:cov` also writes coverage/lcov.info for SonarCloud
+npm test               # Jest; `npm run test:cov` also writes coverage/lcov.info
 npx expo export --platform android   # the release bundle must build
 ```
 
@@ -41,17 +41,20 @@ Rules the code must keep (also enforced in review):
 
 ```
 app/            Expo Router screens (tabs, movie/[id], watch/[id])
-src/components  UI, grouped by feature (player, wallet, chat, auth, ...)
+src/components  UI, grouped by feature (player, wallet, auth, ...)
+src/styles      StyleSheets of the components and screens, mirroring their paths
+src/hooks       screen logic shared by components (episode gate, playback session, ...)
 src/services    one module per backend area; apiClient.ts is the only HTTP client
 src/store       Zustand store (useAppStore)
 src/types       DTOs and view models
-src/lib, utils  small helpers (orientation lock, ids, storage, dates)
+src/lib         small helpers (orientation lock, ids, storage, dates)
+src/theme       color tokens, fonts, ThemeContext
 ```
 
 ## CI/CD
 
-`.github/workflows/ci.yml`: lint, typecheck, tests with coverage, Android bundle, SonarCloud quality
-gate (needs the `SONAR_TOKEN` repository secret) and a production dependency audit. Release builds go
+`.github/workflows/ci.yml`: lint, typecheck, tests with coverage, Android bundle and a production
+dependency audit. Release builds go
 through EAS (`eas.json`: `development`, `preview` APK, `production`):
 
 ```bash

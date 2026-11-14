@@ -4,10 +4,6 @@ import { extractErrorMessage } from '../services/apiClient';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import type { AdScheduleItem } from '../types/playback';
 
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
-
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 const cue = (breakId: string, positionSeconds: number): AdScheduleItem => ({
@@ -92,13 +88,23 @@ describe('adSecondsLeft', () => {
     expect(adSecondsLeft(4.2, 0, 15, false)).toBe(11);
   });
 
-  it('prefers the length the player read from the video', () => {
-    expect(adSecondsLeft(10, 30, 15, false)).toBe(20);
+  it('prefers the admin-set length over the player-read length', () => {
+    expect(adSecondsLeft(10, 30, 15, false)).toBe(5);
+  });
+
+  it('falls back to the player-read length when the stored length is absent', () => {
+    expect(adSecondsLeft(10, 30, 0, false)).toBe(20);
   });
 
   it('is over at the end of the video, a few frames short, or once the player says so', () => {
     expect(adSecondsLeft(30, 30, 15, false)).toBe(0);
     expect(adSecondsLeft(29.7, 30, 15, false)).toBe(0);
     expect(adSecondsLeft(3, 30, 15, true)).toBe(0);
+  });
+
+  it('is over when a video shorter than the admin-set length reaches its own end', () => {
+    expect(adSecondsLeft(12, 12, 15, false)).toBe(0);
+    expect(adSecondsLeft(11.8, 12, 15, false)).toBe(0);
+    expect(adSecondsLeft(6, 12, 15, false)).toBe(9);
   });
 });

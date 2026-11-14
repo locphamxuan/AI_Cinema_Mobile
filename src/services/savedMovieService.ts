@@ -3,13 +3,14 @@ import { API_ROUTES } from '../constants/apiRoutes';
 import { adaptApiMovieToMovie } from '../lib/apiAdapter';
 import type { ApiResponse } from '../types/api';
 import type { Movie } from '../types/movie';
+import type { CatalogMovieDto } from '../types/catalog';
 
 const { SAVED_MOVIES } = API_ROUTES;
 
 /** "Danh sách của tôi": movies the member saved to watch later, kept on the BE. */
 export const savedMovieService = {
   async list(): Promise<ApiResponse<Movie[]>> {
-    const res = await apiClient.get<unknown[]>(SAVED_MOVIES.LIST);
+    const res = await apiClient.get<CatalogMovieDto[]>(SAVED_MOVIES.LIST);
     return { ...res, data: res.success && Array.isArray(res.data) ? res.data.map(adaptApiMovieToMovie) : [] };
   },
   isSaved: (movieId: string) => apiClient.get<{ saved: boolean }>(SAVED_MOVIES.ITEM(movieId)),

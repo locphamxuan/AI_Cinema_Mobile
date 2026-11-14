@@ -5,9 +5,11 @@ import { idempotencyKey } from '../lib/ids';
 import { uuidV4 } from '../lib/playback';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import type { ApiResponse } from '../types/api';
-import type { SessionState, StreamingSession } from '../types/playback';
+import type { SessionState, StreamingSession, WatchHistoryEntry } from '../types/playback';
 
 const { PLAYBACK } = API_ROUTES;
+/** The BE caps a page at 100 rows; 50 covers every film a member is in the middle of. */
+const HISTORY_LIMIT = 50;
 
 /** The device's guest identity for playback, kept so reopening the app reuses the live session. */
 export async function guestKey(): Promise<string> {
@@ -60,6 +62,11 @@ class PlaybackService {
 
   async adFinished(sessionId: string, breakId: string) {
     return apiClient.post(PLAYBACK.AD_FINISHED(sessionId, breakId), {}, await owner());
+  }
+
+  /** GET /playback/history - the member's saved progress, newest first (guests keep none). */
+  history(limit = HISTORY_LIMIT): Promise<ApiResponse<WatchHistoryEntry[]>> {
+    return apiClient.get<WatchHistoryEntry[]>(PLAYBACK.HISTORY, { params: { limit } });
   }
 }
 

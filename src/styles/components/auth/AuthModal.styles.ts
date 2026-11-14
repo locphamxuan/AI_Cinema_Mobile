@@ -1,9 +1,24 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { fonts, textStyle } from '../../../theme';
 
 export const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingHorizontal: 20, paddingTop: 20, maxHeight: '92%' },
+  backdrop: {
+    flex: 1,
+    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end',
+    alignItems: Platform.OS === 'web' ? 'center' : undefined,
+    padding: Platform.OS === 'web' ? 16 : 0,
+  },
+  sheet: {
+    width: Platform.OS === 'web' ? '100%' : undefined,
+    maxWidth: Platform.OS === 'web' ? 460 : undefined,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderBottomLeftRadius: Platform.OS === 'web' ? 22 : 0,
+    borderBottomRightRadius: Platform.OS === 'web' ? 22 : 0,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    maxHeight: '92%',
+  },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   title: { fontFamily: fonts.displayHeavy, fontSize: 30, lineHeight: 34 },
   form: { gap: 14, paddingBottom: 4 },
@@ -14,6 +29,10 @@ export const styles = StyleSheet.create({
   label: { ...textStyle.labelStrong },
   hint: { ...textStyle.caption },
   input: { ...textStyle.body, height: 48, borderRadius: 12, paddingHorizontal: 14 },
+  dobRow: { width: '100%', minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dobPart: { flex: 1, flexBasis: 0, minWidth: 0, textAlign: 'center', paddingHorizontal: 10 },
+  dobYear: { flex: 1.4, flexBasis: 0, minWidth: 0, textAlign: 'center', paddingHorizontal: 10 },
+  dobSlash: { fontSize: 18, fontFamily: fonts.medium },
   passwordWrap: { justifyContent: 'center' },
   passwordInput: { paddingRight: 48 },
   eye: { position: 'absolute', right: 14 },

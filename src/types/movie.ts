@@ -63,17 +63,6 @@ export interface Movie {
   badge?: string;
   /** Plays of all its episodes; only the ranking carries it. */
   viewCount?: number;
-}
-
-export interface WatchHistoryItem {
-  id: string;
-  movieId: string;
-  movieTitle: string;
-  episodeId: string;
-  episodeTitle: string;
-  episodeNumber: number;
-  thumbnailUrl: string;
-  progressPercent: number;
-  duration: string;
-  lastWatchedAt: string;
+  /** Why the AI suggests it (BR-68), e.g. "Hợp gu Hành động bạn hay xem hết"; only recommendations carry it. */
+  recommendReason?: string;
 }
