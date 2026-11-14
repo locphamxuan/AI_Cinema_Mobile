@@ -10,6 +10,8 @@ export const API_ROUTES = {
     GOOGLE: '/auth/google',
     PROFILE: '/auth/me',
     LOGOUT: '/auth/logout',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    RESET_PASSWORD: '/auth/reset-password',
   },
 
   // Movies & Catalog

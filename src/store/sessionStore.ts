@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import { adaptUserProfile } from '../lib/apiAdapter';
 import { MIN_PASSWORD } from '../lib/authForm';
+import { resetFailureMessage } from '../lib/passwordReset';
 import { authService } from '../services';
 import { apiClient } from '../services/apiClient';
 import type { BEUserDto } from '../types/api';
@@ -23,6 +24,8 @@ interface SessionState {
   /** One tap: a new Google email opens a member account; the BE refuses staff accounts. */
   loginWithGoogle: (idToken: string) => Promise<{ success: boolean; error?: string }>;
   register: (name: string, email: string, password: string, dateOfBirth: string) => Promise<AuthResult>;
+  /** Sets a new password with the e-mailed code and signs in with the session the backend returns. */
+  resetPassword: (email: string, otp: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   /** The persisted "signed in" flag can outlive the session: confirms it with GET /auth/me. */
   verifySession: () => Promise<void>;
@@ -96,6 +99,19 @@ export const useSessionStore = create<SessionState>()(
             return { success: true };
           }
           return { success: false, error: res.message || 'Chưa tạo được tài khoản. Thử lại sau ít phút.' };
+        } catch (e) {
+          return { success: false, error: errorMessage(e) };
+        }
+      },
+
+      resetPassword: async (email, otp, newPassword) => {
+        try {
+          const res = await authService.resetPassword({ email, otp, newPassword });
+          if (res.success && res.data?.user) {
+            await startSession(res.data.user);
+            return { success: true };
+          }
+          return { success: false, error: resetFailureMessage(res) };
         } catch (e) {
           return { success: false, error: errorMessage(e) };
         }

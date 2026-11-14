@@ -1,5 +1,8 @@
 export const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 72;
+/** Shown under every "new password" field (sign-up and password reset). */
+export const PASSWORD_HINT = `Ít nhất ${MIN_PASSWORD} ký tự, có cả chữ và số.`;
+const PASSWORD_RULE_ERROR = `Mật khẩu cần ${MIN_PASSWORD} đến ${MAX_PASSWORD} ký tự, có cả chữ và số.`;
 
 export interface AuthForm {
   name: string;
@@ -99,7 +102,21 @@ export function authFormError(isLogin: boolean, form: AuthForm): string | null {
   if (!isAtLeast18(form.dateOfBirth)) {
     return 'Bạn cần đủ 18 tuổi trở lên để đăng ký tài khoản xem phim trên AI Cinema.';
   }
-  if (!passwordOk(form.password)) return `Mật khẩu cần ${MIN_PASSWORD} đến ${MAX_PASSWORD} ký tự, có cả chữ và số.`;
+  if (!passwordOk(form.password)) return PASSWORD_RULE_ERROR;
+  if (form.password !== form.confirmPassword) return 'Hai mật khẩu chưa giống nhau.';
+  return null;
+}
+
+export interface ResetForm {
+  otp: string;
+  password: string;
+  confirmPassword: string;
+}
+
+/** Why the password-reset form cannot be sent yet, or null when it can. Same password rule as sign-up. */
+export function resetFormError(form: ResetForm): string | null {
+  if (!/^\d{6}$/.test(form.otp.trim())) return 'Nhập đủ mã 6 số trong email.';
+  if (!passwordOk(form.password)) return PASSWORD_RULE_ERROR;
   if (form.password !== form.confirmPassword) return 'Hai mật khẩu chưa giống nhau.';
   return null;
 }

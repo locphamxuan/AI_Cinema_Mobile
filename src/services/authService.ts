@@ -2,7 +2,7 @@ import { apiClient } from './apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import { adaptUserProfile } from '../lib/apiAdapter';
-import type { ApiResponse, AuthResponseDto, GoogleLoginRequestDto, LoginRequestDto, ProfileDto, RegisterRequestDto } from '../types/api';
+import type { ApiResponse, AuthResponseDto, GoogleLoginRequestDto, LoginRequestDto, ProfileDto, RegisterRequestDto, ResetPasswordRequestDto } from '../types/api';
 import type { UserProfile } from '../types/auth';
 
 // Auth calls answer 401 for bad credentials; that must not trigger a token refresh.
@@ -35,6 +35,27 @@ class AuthService {
   async googleLogin(dto: GoogleLoginRequestDto): Promise<ApiResponse<AuthResponseDto>> {
     const res = await apiClient.post<AuthResponseDto>(API_ROUTES.AUTH.GOOGLE, dto, AUTH_CALL);
     return this.acceptSession(res, 'Chưa đăng nhập được bằng Google. Thử lại sau ít phút.');
+  }
+
+  /**
+   * Asks the backend to e-mail a 6-digit reset code. It answers 200 whether or not the account
+   * exists (and sends at most one code a minute), so success says nothing about the account.
+   */
+  async forgotPassword(email: string): Promise<ApiResponse<null>> {
+    return apiClient.post<null>(API_ROUTES.AUTH.FORGOT_PASSWORD, { email: email.trim().toLowerCase() }, AUTH_CALL);
+  }
+
+  /** Sets a new password with the e-mailed code; the answer is a session, kept like a sign-in. */
+  async resetPassword(dto: ResetPasswordRequestDto): Promise<ApiResponse<AuthResponseDto>> {
+    const res = await apiClient.post<AuthResponseDto>(
+      API_ROUTES.AUTH.RESET_PASSWORD,
+      { email: dto.email.trim().toLowerCase(), otp: dto.otp.trim(), newPassword: dto.newPassword },
+      AUTH_CALL,
+    );
+    const fallback = 'Chưa đặt lại được mật khẩu. Thử lại sau ít phút.';
+    // Keep the real status (none for a network failure): 401 here means a wrong code, not a bad password.
+    if (!res.success) return { ...res, message: res.message || fallback };
+    return this.acceptSession(res, fallback);
   }
 
   /** Keeps a member session; any other role works on the web portal, so its session is ended. */

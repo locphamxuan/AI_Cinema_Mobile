@@ -7,9 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSessionStore, useUiStore } from '../../store';
 import { fonts, useTheme } from '../../theme';
 import { forgetRememberedEmail, readRememberedEmail, rememberEmail } from '../../lib/rememberedLogin';
-import { MIN_PASSWORD, authFormError, normalizeDateOfBirth } from '../../lib/authForm';
+import { PASSWORD_HINT, authFormError, normalizeDateOfBirth } from '../../lib/authForm';
 import { Button } from '../common/Button';
 import { AgeConfirmModal } from './AgeConfirmModal';
+import { ForgotPasswordView } from './ForgotPasswordView';
 import { GoogleSignInSection } from './GoogleSignInSection';
 import { styles } from '../../styles/components/auth/AuthModal.styles';
 
@@ -35,6 +36,7 @@ export const AuthModal: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [ageModalOpen, setAgeModalOpen] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   const monthRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const yearRef = useRef<React.ComponentRef<typeof TextInput>>(null);
@@ -52,6 +54,7 @@ export const AuthModal: React.FC = () => {
     if (isAuthModalOpen) {
       setError(null);
       setAgeModalOpen(false);
+      setForgotOpen(false);
     }
   }
 
@@ -76,6 +79,7 @@ export const AuthModal: React.FC = () => {
   const switchMode = () => {
     setError(null);
     setAgeModalOpen(false);
+    setForgotOpen(false);
     openAuthModal(isLogin ? 'register' : 'login');
   };
 
@@ -134,13 +138,16 @@ export const AuthModal: React.FC = () => {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.backdrop, { backgroundColor: colors.overlay }]}>
         <View style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>{isLogin ? 'Đăng nhập' : 'Tạo tài khoản'}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{forgotOpen ? 'Quên mật khẩu' : isLogin ? 'Đăng nhập' : 'Tạo tài khoản'}</Text>
             <TouchableOpacity onPress={closeAuthModal} hitSlop={10} accessibilityLabel="Đóng">
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form} showsVerticalScrollIndicator={false}>
+            {forgotOpen ? (
+              <ForgotPasswordView initialEmail={email} onBack={() => setForgotOpen(false)} />
+            ) : (<>
             {hasSavedEmail && isLogin && (
               <View style={[styles.saved, { backgroundColor: colors.card }]}>
                 <Text style={[styles.savedText, { color: colors.textSecondary }]}>Đã điền sẵn email lưu trên máy này.</Text>
@@ -238,7 +245,7 @@ export const AuthModal: React.FC = () => {
                   <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>,
-              isLogin ? undefined : `Ít nhất ${MIN_PASSWORD} ký tự, có cả chữ và số.`,
+              isLogin ? undefined : PASSWORD_HINT,
             )}
             {!isLogin &&
               field(
@@ -254,12 +261,7 @@ export const AuthModal: React.FC = () => {
                 <Text style={[styles.checkLabel, { color: colors.textSecondary }]}>Nhớ email trên máy này</Text>
               </TouchableOpacity>
               {isLogin && (
-                <TouchableOpacity
-                  hitSlop={8}
-                  onPress={() =>
-                    showDialog('Quên mật khẩu', 'Tính năng đặt lại mật khẩu sẽ có trong bản cập nhật sau.')
-                  }
-                >
+                <TouchableOpacity hitSlop={8} accessibilityRole="button" onPress={() => { setError(null); setForgotOpen(true); }}>
                   <Text style={[styles.link, { color: colors.textSecondary }]}>Quên mật khẩu?</Text>
                 </TouchableOpacity>
               )}
@@ -277,6 +279,7 @@ export const AuthModal: React.FC = () => {
                 <Text style={{ color: colors.ruby, fontFamily: fonts.semibold }}>{isLogin ? 'Tạo tài khoản' : 'Đăng nhập'}</Text>
               </Text>
             </TouchableOpacity>
+            </>)}
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
