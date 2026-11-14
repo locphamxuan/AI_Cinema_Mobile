@@ -42,4 +42,10 @@ export const styles = StyleSheet.create({
   button: { flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
   ghost: { backgroundColor: 'transparent', borderWidth: 1 },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  inlineInput: { flex: 1, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14 },
+  episodeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 14, borderWidth: 1 },
+  episodeThumb: { width: 96, aspectRatio: 16 / 9, borderRadius: 10 },
+  episodeInfo: { flex: 1, gap: 2 },
+  episodeTitle: { fontSize: 15, fontWeight: '700' },
+  link: { fontSize: 14, fontWeight: '600', textAlign: 'center' },
 });

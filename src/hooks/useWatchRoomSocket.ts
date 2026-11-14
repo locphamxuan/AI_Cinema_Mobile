@@ -80,7 +80,7 @@ const NOTICES: Record<string, string> = {
  * BR-69 live sync. The member stays in the room as long as the room lives: socket.io reconnects on its own and the
  * hook joins the room again after every reconnect, so a network blip never drops a viewer while the Host is there.
  */
-export function useWatchRoomSocket(roomId: string | undefined) {
+export function useWatchRoomSocket(roomId: string | undefined, { join = true }: { join?: boolean } = {}) {
   const socketRef = useRef<Socket | null>(null);
   const [live, setLive] = useState<WatchRoomLive>({
     connected: false,
@@ -107,7 +107,8 @@ export function useWatchRoomSocket(roomId: string | undefined) {
       const patch = (next: Partial<WatchRoomLive>) => setLive((prev) => ({ ...prev, ...next }));
       socket.on('connect', () => {
         patch({ connected: true });
-        socket?.emit(ROOM_EVENT.JOIN, { roomId });
+        // The lobby only sends invites: taking the Host seat there would read as a drop when the room opens.
+        if (join) socket?.emit(ROOM_EVENT.JOIN, { roomId });
       });
       socket.on('disconnect', () => patch({ connected: false }));
       socket.on(ROOM_EVENT.JOINED, ({ room }: { room: WatchRoom }) => {
@@ -172,7 +173,7 @@ export function useWatchRoomSocket(roomId: string | undefined) {
       socket?.disconnect();
       socketRef.current = null;
     };
-  }, [roomId]);
+  }, [roomId, join]);
 
   /** Host only: the BE refuses anyone else. */
   const sendPlayback = useCallback(
