@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PartyPlayer } from '../../src/components/watchParty/PartyPlayer';
 import { RoomChat } from '../../src/components/watchParty/RoomChat';
 import { useWatchRoomSocket } from '../../src/hooks/useWatchRoomSocket';
 import { showDialog } from '../../src/lib/dialog';
+import { FriendsPanel } from '../../src/components/watchParty/FriendsPanel';
 import { movieService } from '../../src/services';
 import { playbackService } from '../../src/services/playbackService';
 import { watchRoomService } from '../../src/services/watchRoomService';
@@ -14,7 +15,7 @@ import { useSessionStore } from '../../src/store';
 import { useTheme } from '../../src/theme';
 import type { SubtitleTrack } from '../../src/types/movie';
 import type { StreamingSession } from '../../src/types/playback';
-import type { Friendship, RoomPlaybackState, WatchRoom } from '../../src/types/watchRoom';
+import type { RoomPlaybackState, WatchRoom } from '../../src/types/watchRoom';
 import { styles } from '../../src/styles/screens/watchParty.styles';
 
 /** BR-69 — a watch room: the shared player, the room code, who leads, friends to invite and the room actions. */
@@ -27,7 +28,6 @@ export default function WatchPartyScreen() {
   const [room, setRoom] = useState<WatchRoom | null>(null);
   const [session, setSession] = useState<StreamingSession | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [friends, setFriends] = useState<Friendship[]>([]);
   const [subtitles, setSubtitles] = useState<SubtitleTrack[]>([]);
   const { live, sendPlayback, voteHost, leave, invite, sendChat, sendAd, sendQuality } = useWatchRoomSocket(roomId);
 
@@ -52,12 +52,6 @@ export default function WatchPartyScreen() {
       active = false;
     };
   }, [roomId]);
-
-  useEffect(() => {
-    void watchRoomService.friends().then((res) => {
-      if (res.success && Array.isArray(res.data)) setFriends(res.data.filter((f) => f.status === 'ACCEPTED'));
-    });
-  }, []);
 
   // Subtitles of the room's episode, so every member picks their own language.
   useEffect(() => {
@@ -200,37 +194,8 @@ export default function WatchPartyScreen() {
           </View>
         ) : null}
 
-        {!live.closed ? (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.cardLabel, { color: colors.textMuted }]}>Mời bạn bè</Text>
-            {friends.length === 0 ? (
-              <TouchableOpacity onPress={() => router.push('/friends' as Href)}>
-                <Text style={[styles.meta, { color: colors.ruby }]}>Chưa có bạn bè — thêm bạn bằng email ›</Text>
-              </TouchableOpacity>
-            ) : (
-              friends.map((f) => {
-                const name = f.friend?.fullName || 'Thành viên AI Cinema';
-                return (
-                  <View key={f.id} style={styles.friendRow}>
-                    <View style={[styles.avatar, { backgroundColor: colors.ruby }]}>
-                      <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
-                    </View>
-                    <Text style={[styles.friendName, { color: colors.text }]} numberOfLines={1}>
-                      {name}
-                    </Text>
-                    <TouchableOpacity
-                      style={[styles.smallBtn, { backgroundColor: colors.ruby }]}
-                      onPress={() => f.friend && invite(f.friend.id)}
-                      accessibilityLabel={`Mời ${name}`}
-                    >
-                      <Text style={styles.smallBtnText}>Mời</Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })
-            )}
-          </View>
-        ) : null}
+        {/* Invite friends, add new ones by email and answer requests without leaving the room. */}
+        {!live.closed ? <FriendsPanel onInvite={invite} /> : null}
 
         {live.voteOpen && !isHost ? (
           <TouchableOpacity style={[styles.button, { flex: 0, backgroundColor: colors.ruby }]} onPress={voteHost}>

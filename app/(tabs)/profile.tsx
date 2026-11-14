@@ -114,7 +114,7 @@ export default function ProfileScreen() {
           <MenuRow icon="bookmark-outline" label="Phim đã lưu" onPress={member(() => router.push('/saved'))} />
           <MenuRow icon="phone-portrait-outline" label="Thiết bị của tôi" onPress={member(() => router.push('/devices'))} />
           <MenuRow icon="people-outline" label="Bạn bè" onPress={member(() => router.push('/friends' as Href))} />
-          <MenuRow icon="tv-outline" label="Tham gia phòng xem nhóm" onPress={member(() => router.push('/watch-party/join' as Href))} />
+          <MenuRow icon="tv-outline" label="Xem cùng nhóm" onPress={member(() => router.push('/watch-party/create' as Href))} />
           <MenuRow icon="gift-outline" label="Quà hằng ngày" onPress={member(() => setCheckInModalOpen(true))} />
           <MenuRow icon="notifications-outline" label="Thông báo" count={unread} onPress={member(() => router.push('/notifications'))} />
           <MenuRow icon="chatbubble-ellipses-outline" label="Trợ lý AI & Hỗ trợ" onPress={() => setChatModalOpen(true)} />

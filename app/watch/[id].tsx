@@ -18,7 +18,6 @@ import { AudioModeTabs, languageName, trackFor, type AudioMode } from '../../src
 import { EpisodeList } from '../../src/components/movie/EpisodeList';
 import { RecommendationRail } from '../../src/components/movie/RecommendationRail';
 import { recommendationService } from '../../src/services/recommendationService';
-import { watchRoomService } from '../../src/services/watchRoomService';
 import { LikeButton, compactCount, useMovieEngagement } from '../../src/components/movie/LikeButton';
 import { SaveButton } from '../../src/components/movie/SaveButton';
 import { Button } from '../../src/components/common/Button';
@@ -95,13 +94,12 @@ export default function WatchScreen() {
     });
   }, [isAuthenticated, movie, currentActiveEpisode, lastEpisodeNumber]);
 
-  // BR-69: open a watch room on this episode; the BE checks the Host's own right to watch it first.
-  const startWatchParty = useCallback(async () => {
-    if (!currentActiveEpisode) return;
-    const res = await watchRoomService.create(currentActiveEpisode.id);
-    if (res.success && res.data) router.push(`/watch-party/${res.data.id}` as Href);
-    else showDialog('Chưa tạo được phòng', res.message || 'Bạn cần có quyền xem tập này trước khi mở phòng.');
-  }, [currentActiveEpisode, router]);
+  // BR-69: the lobby opens the room on this episode (the BE checks the Host's own right to watch it) and invites friends.
+  const startWatchParty = useCallback(() => {
+    if (!currentActiveEpisode || !movie) return;
+    const label = encodeURIComponent(`${movie.title} · Tập ${currentActiveEpisode.episodeNumber}`);
+    router.push(`/watch-party/create?episodeId=${currentActiveEpisode.id}&label=${label}` as Href);
+  }, [currentActiveEpisode, movie, router]);
 
   // MF-3: a granted episode plays through a streaming session (ads, stream limit, progress).
   const play = async (ep: Episode) => {
@@ -218,7 +216,7 @@ export default function WatchScreen() {
                   showDialog('Xem cùng nhóm', 'Mở phòng cho tập này hoặc vào phòng bạn bè đã tạo.', [
                     { text: 'Huỷ', style: 'cancel' },
                     { text: 'Nhập mã phòng', onPress: () => router.push('/watch-party/join' as Href) },
-                    { text: 'Tạo phòng', onPress: () => void startWatchParty() },
+                    { text: 'Tạo phòng', onPress: startWatchParty },
                   ])
                 }
                 accessibilityLabel="Xem cùng nhóm"

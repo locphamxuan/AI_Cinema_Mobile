@@ -17,26 +17,9 @@ export const GoogleSignInSection: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   if (!isGoogleSignInAvailable()) return null;
-  const send = async (token: string, extra?: { dateOfBirth?: string; password?: string }) => {
-    setLoading(true);
-    setError(null);
-    const res = await loginWithGoogle(token, extra);
-    setLoading(false);
-    if (res.success) return;
-    if (isGoogleStep(res.reason) && !extra) {
-      setIdToken(token);
-      setStep(res.reason);
-      return;
-    }
-    setError(res.error || 'Chưa đăng nhập được bằng Google. Thử lại sau ít phút.');
-  };
 
   const start = async () => {
     setError(null);
-    if (!isGoogleSignInAvailable()) {
-      setError('Đăng nhập Google yêu cầu bản development build hoặc Expo build (npx expo run:android).');
-      return;
-    }
     try {
       const token = await pickGoogleIdToken();
       if (!token) return;
