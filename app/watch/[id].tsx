@@ -10,7 +10,7 @@ import { useMovieWithEpisodes } from '../../src/hooks/useMovieWithEpisodes';
 import { LoadError } from '../../src/components/common/LoadError';
 import { engagementService } from '../../src/services/engagementService';
 import { playbackService } from '../../src/services/playbackService';
-import { Movie, Episode } from '../../src/types/movie';
+import { Episode } from '../../src/types/movie';
 import type { StreamingSession } from '../../src/types/playback';
 import { episodeLabel } from '../../src/lib/episodeLabel';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
@@ -18,7 +18,7 @@ import { EpisodePlayer } from '../../src/components/player/EpisodePlayer';
 import { AudioModeTabs, languageName, trackFor, type AudioMode } from '../../src/components/movie/AudioModeTabs';
 import { EpisodeList } from '../../src/components/movie/EpisodeList';
 import { RecommendationRail } from '../../src/components/movie/RecommendationRail';
-import { recommendationService } from '../../src/services/recommendationService';
+import { useAfterWatching } from '../../src/hooks/useAfterWatching';
 import { LikeButton, compactCount, useMovieEngagement } from '../../src/components/movie/LikeButton';
 import { SaveButton } from '../../src/components/movie/SaveButton';
 import { Button } from '../../src/components/common/Button';
@@ -55,17 +55,18 @@ export default function WatchScreen() {
   const tracks = currentActiveEpisode?.subtitles ?? [];
   const subtitleTrackId = trackFor(audioMode, tracks, chosenTrack);
 
-  // BR-68: once the last episode plays to its end, the AI suggests what to watch next (Member only).
+  // BR-68: once the member has seen the last episode through (85 % or its end), the AI suggests what to watch
+  // next from this account's own behaviour (Member only; a Guest has no history to read).
   const { isAuthenticated } = useSessionStore();
-  const [afterWatching, setAfterWatching] = useState<Movie[]>([]);
   const lastEpisodeNumber = episodes.reduce((max, e) => Math.max(max, e.episodeNumber), 0);
+  // Another episode on screen shows none of the picks of the one just finished.
+  const after = useAfterWatching(movie?.id, currentActiveEpisode?.id);
+  const loadAfter = after.load;
   const onFinished = useCallback(() => {
-    if (!isAuthenticated || !movie || !currentActiveEpisode) return;
+    if (!isAuthenticated || !currentActiveEpisode) return;
     if (currentActiveEpisode.episodeNumber < lastEpisodeNumber) return;
-    void recommendationService.afterWatching(movie.id).then((res) => {
-      if (res.success) setAfterWatching(res.data);
-    });
-  }, [isAuthenticated, movie, currentActiveEpisode, lastEpisodeNumber]);
+    loadAfter();
+  }, [isAuthenticated, currentActiveEpisode, lastEpisodeNumber, loadAfter]);
 
   // BR-69: the lobby opens the room on this episode (the BE checks the Host's own right to watch it) and invites friends.
   const startWatchParty = useCallback(() => {
@@ -155,9 +156,10 @@ export default function WatchScreen() {
         <RecommendationRail
           title="AI đề xuất cho bạn"
           caption={`Vì bạn vừa xem hết "${movie.title}"`}
-          movies={afterWatching}
+          movies={after.movies}
           onMoviePress={(m) => router.replace({ pathname: '/movie/[id]', params: { id: m.id } })}
         />
+        {after.error ? <LoadError message={after.error} onRetry={after.retry} /> : null}
         <View style={styles.head}>
           <TouchableOpacity style={styles.titleRow} onPress={() => router.back()} accessibilityLabel={`Quay lại ${movie.title}`}>
             <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
