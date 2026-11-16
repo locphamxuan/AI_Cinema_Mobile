@@ -112,6 +112,15 @@ export default function VipScreen() {
     await reload();
   };
 
+  /** Turning renewal off is confirmed with the 24h-window side spelled out (BR-05); turning it on is not. */
+  const askRenew = (on: boolean) => {
+    if (on || !open) return void toggleRenew(on);
+    showDialog('Tắt tự gia hạn?', `${cancelWindowText(open)} Gói vẫn dùng được đến hết kỳ đã trả.`, [
+      { text: 'Giữ gia hạn', style: 'cancel' },
+      { text: 'Tắt tự gia hạn', style: 'destructive', onPress: () => void toggleRenew(false) },
+    ]);
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScreenHeader title="Gói Tháng" />
@@ -145,9 +154,9 @@ export default function VipScreen() {
                 ) : (
                   <Switch
                     value={open.autoRenew}
-                    onValueChange={(on) => void toggleRenew(on)}
+                    onValueChange={askRenew}
                     trackColor={{ false: colors.borderLight, true: colors.ruby }}
-                    thumbColor="#FFFFFF"
+                    thumbColor={colors.white}
                     accessibilityLabel="Tự gia hạn"
                   />
                 )}
