@@ -30,7 +30,7 @@ export const TopUpModal: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { wallet, loadAccountData } = useAccountStore();
-  const { isTopUpModalOpen, setTopUpModalOpen } = useUiStore();
+  const { isTopUpModalOpen, setTopUpModalOpen, pendingPurchase } = useUiStore();
   const [options, setOptions] = useState<TopUpOptions | null>(null);
   const [amount, setAmount] = useState('');
   const [phase, setPhase] = useState<'form' | 'waiting' | 'paid'>('form');
@@ -55,7 +55,21 @@ export const TopUpModal: React.FC = () => {
     setErrorMsg(null);
     setAmount('');
     setTopUpModalOpen(false);
+    useUiStore.setState({ pendingPurchase: null });
   };
+
+  /** After a PAID top-up: back to the episode or plan the member was paying for. */
+  const resume = () => {
+    const intent = useUiStore.getState().pendingPurchase;
+    close();
+    useUiStore.setState({ resumePurchase: intent });
+  };
+  const resumeLabel =
+    pendingPurchase?.kind === 'episode'
+      ? `Quay lại mở ${pendingPurchase.label.charAt(0).toLowerCase()}${pendingPurchase.label.slice(1)}`
+      : pendingPurchase?.kind === 'plan'
+        ? `Quay lại đăng ký ${pendingPurchase.planName}`
+        : null;
 
   const amountVnd = Number(amount) || 0;
   const inRange = options !== null && amountVnd >= options.minVnd && amountVnd <= options.maxVnd;
@@ -117,7 +131,8 @@ export const TopUpModal: React.FC = () => {
               <Text style={[styles.hint, { color: colors.textSecondary }]}>
                 Ví hiện có {wallet.mainCoin} Coin chính và {wallet.bonusCoin} Coin thưởng.
               </Text>
-              <Button label="Xong" onPress={close} style={styles.fullWidth} />
+              {resumeLabel ? <Button label={resumeLabel} onPress={resume} style={styles.fullWidth} /> : null}
+              <Button label="Xong" variant={resumeLabel ? 'quiet' : 'primary'} onPress={close} style={styles.fullWidth} />
             </View>
           ) : (
             <>
