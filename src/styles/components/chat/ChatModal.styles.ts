@@ -107,13 +107,6 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 10,
     gap: 10,
   },
-  heroBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  heroBadgeText: { fontSize: 11, fontFamily: fonts.semibold },
   heroTitle: { fontFamily: fonts.displayHeavy, fontSize: 22, lineHeight: 28, textAlign: 'center' },
   heroSubtitle: { ...textStyle.label, textAlign: 'center', lineHeight: 19, maxWidth: 310 },
   cardGrid: {
@@ -144,6 +137,8 @@ export const styles = StyleSheet.create({
   senderRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 2 },
   senderName: { fontSize: 11, fontFamily: fonts.semibold },
   bubbleRow: { flexDirection: 'row' },
+  bubbleRowMine: { justifyContent: 'flex-end' },
+  loading: { marginTop: 32 },
   bubble: { maxWidth: '84%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
   bubbleAssistant: { borderTopLeftRadius: 6, borderWidth: 1 },
   bubbleUser: { borderBottomRightRadius: 6 },
