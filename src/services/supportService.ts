@@ -12,12 +12,6 @@ import type {
 
 const S = API_ROUTES.CHAT;
 
-/** Kept for the chat screen's signature; the real assistant reads the catalog itself through its tools. */
-export interface SupportCatalogContext {
-  movieCount?: number;
-  sampleTitles?: string[];
-}
-
 /** Suggested first questions, all inside the assistant's scope (BE docs/support-ai-member-scope.md). */
 export const DEFAULT_QUICK_REPLIES: SupportQuickReply[] = [
   { label: 'Số dư Coin', message: 'Tôi còn bao nhiêu Coin chính và Coin thưởng?' },
@@ -80,7 +74,6 @@ export const supportService = {
     id: string,
     content: string,
     clientMessageId?: string,
-    _context?: SupportCatalogContext,
   ): Promise<ApiResponse<SupportSendResult>> {
     const res = await apiClient.post<SupportSendResult & { memberMessage: BeMessage; aiMessage: BeMessage | null; systemMessage: BeMessage | null }>(
       S.MESSAGES(id),

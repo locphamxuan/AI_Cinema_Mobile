@@ -5,6 +5,9 @@ export const styles = StyleSheet.create({
   container: { flex: 1 },
   tint: { position: 'absolute', top: 0, left: 0, right: 0 },
   // Room for the floating tab bar.
+  recommendHead: { paddingHorizontal: 16, paddingBottom: 10, gap: 2 },
+  recommendTitle: { ...textStyle.subtitle },
+  recommendNote: { ...textStyle.caption },
   scrollContent: { paddingTop: 4, paddingBottom: 120 },
   moreRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginTop: 24 },
   moreBtn: { flex: 1, height: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },

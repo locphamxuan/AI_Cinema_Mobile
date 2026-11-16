@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PartyPlayer } from '../../src/components/watchParty/PartyPlayer';
 import { RoomChat } from '../../src/components/watchParty/RoomChat';
 import { useWatchRoomSocket } from '../../src/hooks/useWatchRoomSocket';
+import { useAfterWatching } from '../../src/hooks/useAfterWatching';
+import { RecommendationRail } from '../../src/components/movie/RecommendationRail';
+import { LoadError } from '../../src/components/common/LoadError';
 import { showDialog } from '../../src/lib/dialog';
+import { FriendsPanel } from '../../src/components/watchParty/FriendsPanel';
 import { movieService } from '../../src/services';
 import { playbackService } from '../../src/services/playbackService';
 import { watchRoomService } from '../../src/services/watchRoomService';
@@ -14,7 +18,7 @@ import { useSessionStore } from '../../src/store';
 import { useTheme } from '../../src/theme';
 import type { SubtitleTrack } from '../../src/types/movie';
 import type { StreamingSession } from '../../src/types/playback';
-import type { Friendship, RoomPlaybackState, WatchRoom } from '../../src/types/watchRoom';
+import type { RoomPlaybackState, WatchRoom } from '../../src/types/watchRoom';
 import { styles } from '../../src/styles/screens/watchParty.styles';
 
 /** BR-69 — a watch room: the shared player, the room code, who leads, friends to invite and the room actions. */
@@ -27,8 +31,11 @@ export default function WatchPartyScreen() {
   const [room, setRoom] = useState<WatchRoom | null>(null);
   const [session, setSession] = useState<StreamingSession | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [friends, setFriends] = useState<Friendship[]>([]);
   const [subtitles, setSubtitles] = useState<SubtitleTrack[]>([]);
+  // The room's episode is the last one of the movie: once it ends, each member gets their own AI picks.
+  const [isLastEpisode, setIsLastEpisode] = useState(false);
+  const after = useAfterWatching(session?.movieId, session?.episodeId);
+  const loadAfter = after.load;
   const { live, sendPlayback, voteHost, leave, invite, sendChat, sendAd, sendQuality } = useWatchRoomSocket(roomId);
 
   // The BE checks this member's own right to the episode, age and device limit before any stream opens.
@@ -53,17 +60,15 @@ export default function WatchPartyScreen() {
     };
   }, [roomId]);
 
-  useEffect(() => {
-    void watchRoomService.friends().then((res) => {
-      if (res.success && Array.isArray(res.data)) setFriends(res.data.filter((f) => f.status === 'ACCEPTED'));
-    });
-  }, []);
-
   // Subtitles of the room's episode, so every member picks their own language.
   useEffect(() => {
     if (!session) return;
     void movieService.getEpisodes(session.movieId).then((res) => {
-      if (res.success) setSubtitles(res.data.find((e) => e.id === session.episodeId)?.subtitles ?? []);
+      if (!res.success) return;
+      const episode = res.data.find((e) => e.id === session.episodeId);
+      setSubtitles(episode?.subtitles ?? []);
+      const last = res.data.reduce((max, e) => Math.max(max, e.episodeNumber), 0);
+      setIsLastEpisode(!!episode && episode.episodeNumber >= last);
     });
   }, [session]);
 
@@ -79,7 +84,8 @@ export default function WatchPartyScreen() {
   );
   const onEnded = useCallback(() => {
     if (isHost) sendPlayback('ENDED', 0);
-  }, [isHost, sendPlayback]);
+    if (isLastEpisode) loadAfter();
+  }, [isHost, sendPlayback, isLastEpisode, loadAfter]);
 
   const shareCode = () => {
     if (current) void Share.share({ message: `Vào xem phim cùng mình trên AI Cinema, mã phòng: ${current.roomCode}` });
@@ -101,15 +107,39 @@ export default function WatchPartyScreen() {
     ]);
   };
 
+  /** Opens this member's own session on the room's (new) episode; the BE re-checks their right to it. */
+  const followEpisode = useCallback(async (next: WatchRoom) => {
+    setRoom(next);
+    setSession(null);
+    const opened = await playbackService.openSession(next.episodeId);
+    if (opened.success && opened.data) setSession(opened.data);
+    else setError(opened.message || 'Bạn chưa có quyền xem tập tiếp theo của phòng.');
+  }, []);
+
   const nextEpisode = async () => {
     if (!roomId) return;
     const res = await watchRoomService.nextEpisode(roomId);
     if (!res.success || !res.data) return showDialog('Chưa chuyển được tập', res.message);
-    setRoom(res.data);
-    setSession(null);
-    const opened = await playbackService.openSession(res.data.episodeId);
-    if (opened.success && opened.data) setSession(opened.data);
+    await followEpisode(res.data);
   };
+
+  // The BE tells members nothing when the Host moves on: once playback resumes after the episode ended, a member
+  // reads the room again and follows the Host to the new episode.
+  const lastState = useRef<RoomPlaybackState | null>(null);
+  const syncState = live.lastSync?.state ?? null;
+  const roomEpisode = room?.episodeId ?? null;
+  // The Host's player reached the end of the last episode: the picks show for a member a few seconds behind too.
+  useEffect(() => {
+    if (syncState === 'ENDED' && isLastEpisode) loadAfter();
+  }, [syncState, isLastEpisode, loadAfter]);
+  useEffect(() => {
+    const before = lastState.current;
+    lastState.current = syncState;
+    if (before !== 'ENDED' || !syncState || syncState === 'ENDED' || isHost || !roomId) return;
+    void watchRoomService.get(roomId).then((res) => {
+      if (res.success && res.data && res.data.episodeId !== roomEpisode) void followEpisode(res.data);
+    });
+  }, [syncState, isHost, roomId, roomEpisode, followEpisode]);
 
   if (error) {
     return (
@@ -182,6 +212,14 @@ export default function WatchPartyScreen() {
           <Text style={[styles.notice, { color: colors.text, backgroundColor: colors.rubySoft }]}>{live.notice}</Text>
         ) : null}
 
+        <RecommendationRail
+          title="AI đề xuất cho bạn"
+          caption="Theo những phim bạn hay xem, sau khi cả phòng xem hết phim này"
+          movies={after.movies}
+          onMoviePress={(m) => router.push({ pathname: '/movie/[id]', params: { id: m.id } })}
+        />
+        {after.error ? <LoadError message={after.error} onRetry={after.retry} /> : null}
+
         <RoomChat messages={live.chat} me={me} hostId={hostId} disabled={live.closed} onSend={sendChat} />
 
         {current ? (
@@ -200,37 +238,8 @@ export default function WatchPartyScreen() {
           </View>
         ) : null}
 
-        {!live.closed ? (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.cardLabel, { color: colors.textMuted }]}>Mời bạn bè</Text>
-            {friends.length === 0 ? (
-              <TouchableOpacity onPress={() => router.push('/friends' as Href)}>
-                <Text style={[styles.meta, { color: colors.ruby }]}>Chưa có bạn bè — thêm bạn bằng email ›</Text>
-              </TouchableOpacity>
-            ) : (
-              friends.map((f) => {
-                const name = f.friend?.fullName || 'Thành viên AI Cinema';
-                return (
-                  <View key={f.id} style={styles.friendRow}>
-                    <View style={[styles.avatar, { backgroundColor: colors.ruby }]}>
-                      <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
-                    </View>
-                    <Text style={[styles.friendName, { color: colors.text }]} numberOfLines={1}>
-                      {name}
-                    </Text>
-                    <TouchableOpacity
-                      style={[styles.smallBtn, { backgroundColor: colors.ruby }]}
-                      onPress={() => f.friend && invite(f.friend.id)}
-                      accessibilityLabel={`Mời ${name}`}
-                    >
-                      <Text style={styles.smallBtnText}>Mời</Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })
-            )}
-          </View>
-        ) : null}
+        {/* Invite friends, add new ones by email and answer requests without leaving the room. */}
+        {!live.closed ? <FriendsPanel onInvite={invite} /> : null}
 
         {live.voteOpen && !isHost ? (
           <TouchableOpacity style={[styles.button, { flex: 0, backgroundColor: colors.ruby }]} onPress={voteHost}>

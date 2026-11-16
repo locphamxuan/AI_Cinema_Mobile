@@ -35,6 +35,9 @@ describe('watchRoomService (BR-69, Member only on the BE)', () => {
   it('reaches the /watch socket namespace on the API host without the /api prefix', () => {
     expect(watchSocketUrl('http://10.0.2.2:3001/api')).toBe('http://10.0.2.2:3001/watch');
     expect(watchSocketUrl('https://api.example.com/api/')).toBe('https://api.example.com/watch');
+    // The web build calls REST through the same-origin /api proxy, but its socket goes to the backend itself.
+    expect(watchSocketUrl('/api', 'http://192.168.1.5:3001/api')).toBe('http://192.168.1.5:3001/watch');
+    expect(watchSocketUrl('/api', undefined)).toBe('http://localhost:3001/watch');
   });
 
   it('adds a friend by email and answers a request', async () => {

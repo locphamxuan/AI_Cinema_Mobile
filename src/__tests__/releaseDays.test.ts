@@ -1,3 +1,4 @@
+import { formatCountdown, msUntilVnMidnight } from '../lib/date';
 import { dayKey, groupReleases, recentDays, releaseTime, type Release } from '../lib/releaseDays';
 import { adaptApiEpisodeToEpisode } from '../lib/apiAdapter';
 import type { Episode, Movie } from '../types/movie';
@@ -46,5 +47,20 @@ describe('release days', () => {
   it('reads publishedAt from the episode payload', () => {
     expect(adaptApiEpisodeToEpisode({ id: 'e', publishedAt: '2026-10-16T13:00:00.000Z' }).publishedAt).toBe('2026-10-16T13:00:00.000Z');
     expect(adaptApiEpisodeToEpisode({ id: 'e' }).publishedAt).toBeNull();
+  });
+});
+
+describe('next check-in countdown (00:00 Asia/Ho_Chi_Minh)', () => {
+  it('counts to midnight in Vietnam, not in the device time zone', () => {
+    // 2026-11-16 16:59:30 UTC = 23:59:30 in Vietnam.
+    expect(msUntilVnMidnight(Date.UTC(2026, 10, 16, 16, 59, 30))).toBe(30_000);
+    // 17:00 UTC is exactly 00:00 in Vietnam: a whole day to go.
+    expect(msUntilVnMidnight(Date.UTC(2026, 10, 16, 17, 0, 0))).toBe(24 * 3600 * 1000);
+  });
+
+  it('formats HH:MM:SS', () => {
+    expect(formatCountdown(30_000)).toBe('00:00:30');
+    expect(formatCountdown((5 * 3600 + 7 * 60 + 9) * 1000)).toBe('05:07:09');
+    expect(formatCountdown(-1)).toBe('00:00:00');
   });
 });

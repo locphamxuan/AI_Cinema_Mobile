@@ -10,6 +10,7 @@ export const styles = StyleSheet.create({
   barTouch: { flex: 1, height: 22, justifyContent: 'center' },
   track: { height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)', overflow: 'hidden' },
   fill: { height: '100%', backgroundColor: '#FF3D7F' },
-  iconBtn: { padding: 4, flexDirection: 'row', alignItems: 'center', gap: 2 },
+  // 44 x 44 touch area (iOS HIG / Material 48dp) around a 20 px icon.
+  iconBtn: { minWidth: 44, minHeight: 44, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 },
   rateTag: { color: '#FF3D7F', fontFamily: fonts.bold, fontSize: 11 },
 });

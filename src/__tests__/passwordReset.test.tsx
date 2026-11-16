@@ -10,6 +10,10 @@ import { storage, STORAGE_KEYS } from '../lib/storage';
 import { authService } from '../services';
 import { useSessionStore, useUiStore } from '../store';
 
+// The first render of the auth / player tree loads and transforms many modules; on a slow machine that alone can
+// pass 20 s, so these render suites get a generous per-test timeout.
+jest.setTimeout(90_000);
+
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('../components/auth/GoogleSignInSection', () => ({ GoogleSignInSection: () => null }));
 jest.mock('../lib/dialog', () => ({ showDialog: jest.fn() }));
@@ -134,7 +138,7 @@ describe('authService password reset calls', () => {
     jest.spyOn(global, 'fetch').mockRejectedValue(new Error('network offline'));
     const offline = await authService.resetPassword({ email: 'a@b.co', otp: '000000', newPassword: 'x' });
     expect(offline.statusCode).toBeUndefined();
-    expect(resetFailureMessage(offline)).toBe('network offline');
+    expect(resetFailureMessage(offline)).toBe('Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.');
   });
 });
 

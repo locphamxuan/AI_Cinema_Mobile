@@ -15,6 +15,7 @@ import { ThemeProvider, useTheme } from '../src/theme';
 import { lockPortrait } from '../src/lib/orientation';
 import { purgeLegacyCredentials } from '../src/lib/rememberedLogin';
 import { AuthModal } from '../src/components/auth/AuthModal';
+import { AppDialog } from '../src/components/common/AppDialog';
 import { CheckInModal } from '../src/components/wallet/CheckInModal';
 import { TopUpModal } from '../src/components/wallet/TopUpModal';
 import { RewardSpinModal } from '../src/components/wallet/RewardSpinModal';
@@ -52,6 +53,8 @@ function RootLayoutContent() {
         <Stack.Screen name="saved" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="devices" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="top-ups" options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="account" options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="friends" options={{ headerShown: false, animation: 'slide_from_right' }} />
       </Stack>
 
       <AuthModal />
@@ -60,6 +63,8 @@ function RootLayoutContent() {
       <RewardSpinModal />
       <ChatModal />
       <FloatingAiButton />
+      {/* Last, so a dialog opened from a sheet shows above it. */}
+      <AppDialog />
     </>
   );
 }

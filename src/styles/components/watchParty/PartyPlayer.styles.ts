@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { textStyle } from '../../../theme';
 
 export const styles = StyleSheet.create({
   memberBar: {
@@ -19,6 +20,6 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  followText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  followText: { color: '#fff', ...textStyle.captionStrong },
   memberActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
 });

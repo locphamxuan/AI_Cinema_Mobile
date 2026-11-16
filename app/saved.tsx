@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { PosterGrid } from '../src/components/home/PosterGrid';
 import { Button } from '../src/components/common/Button';
+import { LoadError } from '../src/components/common/LoadError';
 import { savedMovieService } from '../src/services/savedMovieService';
 import { useSessionStore, useUiStore } from '../src/store';
 import { useTheme } from '../src/theme';
@@ -20,9 +21,12 @@ export default function SavedMoviesScreen() {
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
 
+  const [error, setError] = React.useState<string | null>(null);
+
   const load = React.useCallback(async () => {
     const res = await savedMovieService.list();
     if (res.success) setMovies(res.data);
+    setError(res.success ? null : res.message || 'Chưa tải được phim đã lưu.');
     setLoading(false);
   }, []);
 
@@ -53,6 +57,8 @@ export default function SavedMoviesScreen() {
         </>
       ) : loading ? (
         <ActivityIndicator color={colors.ruby} style={styles.loading} />
+      ) : error && movies.length === 0 ? (
+        <LoadError message={error} onRetry={() => void refresh()} />
       ) : movies.length === 0 ? (
         <>
           <Text style={[styles.empty, { color: colors.textMuted }]}>

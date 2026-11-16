@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
+import { useCallback, useRef, useState, type ComponentRef } from 'react';
 import { ActivityIndicator, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { showDialog } from '../../src/lib/dialog';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -6,10 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAccountStore, useCatalogStore, useSessionStore } from '../../src/store';
 import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
-import { movieService } from '../../src/services';
+import { useMovieWithEpisodes } from '../../src/hooks/useMovieWithEpisodes';
+import { LoadError } from '../../src/components/common/LoadError';
 import { engagementService } from '../../src/services/engagementService';
 import { playbackService } from '../../src/services/playbackService';
-import { Movie, Episode } from '../../src/types/movie';
+import { Episode } from '../../src/types/movie';
 import type { StreamingSession } from '../../src/types/playback';
 import { episodeLabel } from '../../src/lib/episodeLabel';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
@@ -17,8 +18,7 @@ import { EpisodePlayer } from '../../src/components/player/EpisodePlayer';
 import { AudioModeTabs, languageName, trackFor, type AudioMode } from '../../src/components/movie/AudioModeTabs';
 import { EpisodeList } from '../../src/components/movie/EpisodeList';
 import { RecommendationRail } from '../../src/components/movie/RecommendationRail';
-import { recommendationService } from '../../src/services/recommendationService';
-import { watchRoomService } from '../../src/services/watchRoomService';
+import { useAfterWatching } from '../../src/hooks/useAfterWatching';
 import { LikeButton, compactCount, useMovieEngagement } from '../../src/components/movie/LikeButton';
 import { SaveButton } from '../../src/components/movie/SaveButton';
 import { Button } from '../../src/components/common/Button';
@@ -34,15 +34,13 @@ export default function WatchScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { isVIPMode } = useAccountStore();
-  const { currentMovie, setCurrentMovie, movies } = useCatalogStore();
+  const { currentMovie, movies } = useCatalogStore();
 
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
-
-  const [movie, setMovie] = useState<Movie | null>(foundMovie);
-  // The movie whose fetch has finished, found or not: only an unknown movie waits for it.
-  const [settledId, setSettledId] = useState<string | null>(null);
-  const loading = !foundMovie && settledId !== id;
   const [activeEpisode, setActiveEpisode] = useState<Episode | null>(foundMovie?.episodes?.[0] || null);
+  const { movie, loading, error: loadError, retry } = useMovieWithEpisodes(id, (loaded) =>
+    setActiveEpisode(loaded.episodes.find((ep) => ep.id === episodeId) || loaded.episodes[0] || null),
+  );
   const [audioMode, setAudioMode] = useState<AudioMode>(mode === 'voiceover' ? 'voiceover' : 'subtitle');
   const [chosenTrack, setChosenTrack] = useState<string | null>(null);
   const [session, setSession] = useState<StreamingSession | null>(null);
@@ -50,32 +48,6 @@ export default function WatchScreen() {
   const [engagement, setEngagement] = useMovieEngagement(id);
   const scrollViewRef = useRef<ComponentRef<typeof ScrollView>>(null);
 
-  // Movie list/detail responses carry no episodes, so they are always fetched separately.
-  useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    const { movies: listed, currentMovie: selected } = useCatalogStore.getState();
-    const known = listed.find((item) => item.id === id) || (selected?.id === id ? selected : null);
-
-    Promise.all([
-      known ? Promise.resolve(known) : movieService.getMovieDetail(id).then((res) => (res.success ? res.data : null)),
-      movieService.getEpisodes(id),
-    ]).then(([base, episodesRes]) => {
-      if (cancelled) return;
-      if (base) {
-        const episodes = episodesRes.data;
-        const loaded: Movie = { ...base, episodes, totalEpisodes: episodes.length || base.totalEpisodes };
-        setMovie(loaded);
-        setCurrentMovie(loaded);
-        setActiveEpisode(episodes.find((ep) => ep.id === episodeId) || episodes[0] || null);
-      }
-      setSettledId(id);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [id, setCurrentMovie, episodeId]);
 
   // Released episodes only; a movie with none says so instead of showing placeholders.
   const episodes: Episode[] = movie?.episodes ?? [];
@@ -83,25 +55,25 @@ export default function WatchScreen() {
   const tracks = currentActiveEpisode?.subtitles ?? [];
   const subtitleTrackId = trackFor(audioMode, tracks, chosenTrack);
 
-  // BR-68: once the last episode plays to its end, the AI suggests what to watch next (Member only).
+  // BR-68: once the member has seen the last episode through (85 % or its end), the AI suggests what to watch
+  // next from this account's own behaviour (Member only; a Guest has no history to read).
   const { isAuthenticated } = useSessionStore();
-  const [afterWatching, setAfterWatching] = useState<Movie[]>([]);
   const lastEpisodeNumber = episodes.reduce((max, e) => Math.max(max, e.episodeNumber), 0);
+  // Another episode on screen shows none of the picks of the one just finished.
+  const after = useAfterWatching(movie?.id, currentActiveEpisode?.id);
+  const loadAfter = after.load;
   const onFinished = useCallback(() => {
-    if (!isAuthenticated || !movie || !currentActiveEpisode) return;
+    if (!isAuthenticated || !currentActiveEpisode) return;
     if (currentActiveEpisode.episodeNumber < lastEpisodeNumber) return;
-    void recommendationService.afterWatching(movie.id).then((res) => {
-      if (res.success) setAfterWatching(res.data);
-    });
-  }, [isAuthenticated, movie, currentActiveEpisode, lastEpisodeNumber]);
+    loadAfter();
+  }, [isAuthenticated, currentActiveEpisode, lastEpisodeNumber, loadAfter]);
 
-  // BR-69: open a watch room on this episode; the BE checks the Host's own right to watch it first.
-  const startWatchParty = useCallback(async () => {
-    if (!currentActiveEpisode) return;
-    const res = await watchRoomService.create(currentActiveEpisode.id);
-    if (res.success && res.data) router.push(`/watch-party/${res.data.id}` as Href);
-    else showDialog('Chưa tạo được phòng', res.message || 'Bạn cần có quyền xem tập này trước khi mở phòng.');
-  }, [currentActiveEpisode, router]);
+  // BR-69: the lobby opens the room on this episode (the BE checks the Host's own right to watch it) and invites friends.
+  const startWatchParty = useCallback(() => {
+    if (!currentActiveEpisode || !movie) return;
+    const label = encodeURIComponent(`${movie.title} · Tập ${currentActiveEpisode.episodeNumber}`);
+    router.push(`/watch-party/create?episodeId=${currentActiveEpisode.id}&label=${label}` as Href);
+  }, [currentActiveEpisode, movie, router]);
 
   // MF-3: a granted episode plays through a streaming session (ads, stream limit, progress).
   const play = async (ep: Episode) => {
@@ -146,6 +118,8 @@ export default function WatchScreen() {
       <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
         {loading ? (
           <ActivityIndicator size="large" color={colors.ruby} />
+        ) : loadError ? (
+          <LoadError message={loadError} onRetry={retry} />
         ) : (
           <>
             <Text style={[styles.missingTitle, { color: colors.text }]}>Không tìm thấy phim này</Text>
@@ -182,9 +156,10 @@ export default function WatchScreen() {
         <RecommendationRail
           title="AI đề xuất cho bạn"
           caption={`Vì bạn vừa xem hết "${movie.title}"`}
-          movies={afterWatching}
+          movies={after.movies}
           onMoviePress={(m) => router.replace({ pathname: '/movie/[id]', params: { id: m.id } })}
         />
+        {after.error ? <LoadError message={after.error} onRetry={after.retry} /> : null}
         <View style={styles.head}>
           <TouchableOpacity style={styles.titleRow} onPress={() => router.back()} accessibilityLabel={`Quay lại ${movie.title}`}>
             <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
@@ -218,7 +193,7 @@ export default function WatchScreen() {
                   showDialog('Xem cùng nhóm', 'Mở phòng cho tập này hoặc vào phòng bạn bè đã tạo.', [
                     { text: 'Huỷ', style: 'cancel' },
                     { text: 'Nhập mã phòng', onPress: () => router.push('/watch-party/join' as Href) },
-                    { text: 'Tạo phòng', onPress: () => void startWatchParty() },
+                    { text: 'Tạo phòng', onPress: startWatchParty },
                   ])
                 }
                 accessibilityLabel="Xem cùng nhóm"
@@ -239,13 +214,17 @@ export default function WatchScreen() {
           language={movie.language}
         />
 
-        <EpisodeList
-          episodes={episodes}
-          currentId={ep?.id}
-          isVIPMode={isVIPMode}
-          posterUrl={movie.posterUrl}
-          onSelect={handleSelectEpisode}
-        />
+        {loadError ? (
+          <LoadError message={loadError} onRetry={retry} />
+        ) : (
+          <EpisodeList
+            episodes={episodes}
+            currentId={ep?.id}
+            isVIPMode={isVIPMode}
+            posterUrl={movie.posterUrl}
+            onSelect={handleSelectEpisode}
+          />
+        )}
 
         {ep?.synopsis ? (
           <View style={styles.about}>

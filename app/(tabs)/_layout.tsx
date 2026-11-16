@@ -1,6 +1,7 @@
 import React from 'react';
-import { Platform, Text, View, type ColorValue } from 'react-native';
+import { Text, View, type ColorValue } from 'react-native';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { fonts, useTheme } from '../../src/theme';
 
@@ -28,6 +29,7 @@ function tabIcon(name: IconName, active: IconName, activeBg: string) {
 
 export default function TabLayout() {
   const { isDark, colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -52,8 +54,14 @@ export default function TabLayout() {
           position: 'absolute',
           left: 16,
           right: 16,
-          bottom: Platform.OS === 'ios' ? 24 : 14,
+          // Above the home indicator / gesture bar on every device, not a fixed guess.
+          bottom: insets.bottom + 8,
           elevation: 6,
+          // iOS has no elevation: the same lift drawn as a shadow.
+          shadowColor: '#000000',
+          shadowOpacity: isDark ? 0.35 : 0.12,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 4 },
         },
         tabBarItemStyle: {
           borderRadius: 28,

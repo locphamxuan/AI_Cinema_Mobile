@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, Modal, Pressable, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,11 +31,13 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
   const { colors } = useTheme();
   const { setWalletBalance } = useAccountStore();
   const { markEpisodeUnlocked, currentMovie } = useCatalogStore();
-  const { setTopUpModalOpen } = useUiStore();
+  const { setTopUpModalOpen, setPendingPurchase } = useUiStore();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
-  // One key per opened episode: a double tap or a retry is charged once.
-  const [key, setKey] = useState({ episodeId: '', value: '' });
+  // A ref, not state: a second tap in the same frame sees the first one at once, and both share one key, so the
+  // purchase is sent and charged once (BR-01). A retry after a failure reuses the key too.
+  const inFlight = useRef(false);
+  const key = useRef({ episodeId: '', value: '' });
 
   if (!locked) return null;
   const { episode, decision } = locked;
@@ -53,11 +55,13 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
   };
 
   const handleUnlock = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    if (key.current.episodeId !== episode.id) key.current = { episodeId: episode.id, value: idempotencyKey('ep-') };
     setErrorMsg(null);
     setPaying(true);
-    const value = key.episodeId === episode.id ? key.value : idempotencyKey('ep-');
-    setKey({ episodeId: episode.id, value });
-    const res = await episodeAccessService.purchaseEpisode(episode.id, value);
+    const res = await episodeAccessService.purchaseEpisode(episode.id, key.current.value);
+    inFlight.current = false;
     setPaying(false);
     if (!res.success || !res.data) {
       setErrorMsg(res.message || 'Chưa mở được tập này. Bấm lại để thử, Coin sẽ không bị trừ hai lần.');
@@ -114,6 +118,7 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
           <Button
             label="Nạp Coin"
             onPress={() => {
+              if (locked.gateId) setPendingPurchase({ kind: 'episode', gateId: locked.gateId, episode, label: name });
               close();
               setTopUpModalOpen(true);
             }}

@@ -3,6 +3,7 @@ import React from 'react';
 import { ActivityIndicator, FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenHeader } from '../src/components/common/ScreenHeader';
+import { LoadError } from '../src/components/common/LoadError';
 import { notificationService, type AppNotification } from '../src/services/notificationService';
 import { MEMBER_NOTIFICATION_TABS, notificationIcon } from '../src/lib/notificationTabs';
 import { dayKey } from '../src/lib/releaseDays';
@@ -31,12 +32,15 @@ export default function NotificationsScreen() {
   const [page, setPage] = React.useState(1);
   const [totalPages, setTotalPages] = React.useState(1);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   const fetchPage = React.useCallback(
     (next: number) =>
       notificationService.list(tab.types, next, PAGE_SIZE).then((res) => {
         const rows = res.success ? res.data?.data ?? [] : [];
-        setItems((prev) => (next === 1 ? rows : [...prev, ...rows]));
+        setError(res.success ? null : res.message || 'Chưa tải được thông báo.');
+        // A failed later page keeps what is already on screen.
+        if (res.success || next === 1) setItems((prev) => (next === 1 ? rows : [...prev, ...rows]));
         setTotalPages(res.success ? res.data?.meta?.totalPages ?? 1 : 1);
         setPage(next);
         setLoading(false);
@@ -116,7 +120,19 @@ export default function NotificationsScreen() {
           ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: colors.border }]} />}
           onEndReached={() => !loading && page < totalPages && loadMore()}
           onEndReachedThreshold={0.3}
-          ListEmptyComponent={loading ? undefined : <Text style={[styles.empty, { color: colors.textMuted }]}>Mục này chưa có thông báo.</Text>}
+          ListEmptyComponent={
+            loading ? undefined : error ? (
+              <LoadError
+                message={error}
+                onRetry={() => {
+                  setLoading(true);
+                  void fetchPage(1);
+                }}
+              />
+            ) : (
+              <Text style={[styles.empty, { color: colors.textMuted }]}>Mục này chưa có thông báo.</Text>
+            )
+          }
           ListFooterComponent={loading ? <ActivityIndicator color={colors.ruby} style={styles.loading} /> : undefined}
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.item} onPress={() => void open(item)} accessibilityState={{ selected: !item.readAt }}>

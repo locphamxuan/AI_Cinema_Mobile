@@ -32,10 +32,11 @@ export default function ProfileScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, { paddingTop: Math.max(insets.top, 10) + 20 }]}>
         <TouchableOpacity
-          activeOpacity={isAuthenticated ? 1 : 0.8}
-          onPress={isAuthenticated ? undefined : () => openAuthModal('login')}
+          activeOpacity={0.8}
+          onPress={isAuthenticated ? () => router.push('/account' as Href) : () => openAuthModal('login')}
           style={styles.identity}
-          accessibilityRole={isAuthenticated ? undefined : 'button'}
+          accessibilityRole="button"
+          accessibilityLabel={isAuthenticated ? 'Tài khoản của tôi' : 'Đăng nhập'}
         >
           {user?.avatarUrl ? (
             <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
@@ -53,7 +54,7 @@ export default function ProfileScreen() {
               <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
                 {isAuthenticated ? user?.name || 'Thành viên' : 'Đăng nhập'}
               </Text>
-              {!isAuthenticated && <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />}
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </View>
             <Text style={[styles.sub, { color: colors.textMuted }]} numberOfLines={1}>
               {isAuthenticated ? user?.email : 'Để dùng ví Coin và gói Tháng'}
@@ -114,7 +115,7 @@ export default function ProfileScreen() {
           <MenuRow icon="bookmark-outline" label="Phim đã lưu" onPress={member(() => router.push('/saved'))} />
           <MenuRow icon="phone-portrait-outline" label="Thiết bị của tôi" onPress={member(() => router.push('/devices'))} />
           <MenuRow icon="people-outline" label="Bạn bè" onPress={member(() => router.push('/friends' as Href))} />
-          <MenuRow icon="tv-outline" label="Tham gia phòng xem nhóm" onPress={member(() => router.push('/watch-party/join' as Href))} />
+          <MenuRow icon="tv-outline" label="Xem cùng nhóm" onPress={member(() => router.push('/watch-party/create' as Href))} />
           <MenuRow icon="gift-outline" label="Quà hằng ngày" onPress={member(() => setCheckInModalOpen(true))} />
           <MenuRow icon="notifications-outline" label="Thông báo" count={unread} onPress={member(() => router.push('/notifications'))} />
           <MenuRow icon="chatbubble-ellipses-outline" label="Trợ lý AI & Hỗ trợ" onPress={() => setChatModalOpen(true)} />

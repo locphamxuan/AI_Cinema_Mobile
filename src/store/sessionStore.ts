@@ -7,7 +7,8 @@ import { MIN_PASSWORD } from '../lib/authForm';
 import { resetFailureMessage } from '../lib/passwordReset';
 import { authService } from '../services';
 import { apiClient } from '../services/apiClient';
-import type { BEUserDto } from '../types/api';
+import { changePasswordFailureMessage, profileFailureMessage } from '../lib/accountForm';
+import type { BEUserDto, UpdateProfileRequestDto } from '../types/api';
 import type { UserProfile } from '../types/auth';
 import { useAccountStore } from './accountStore';
 import { useUiStore } from './uiStore';
@@ -26,6 +27,10 @@ interface SessionState {
   register: (name: string, email: string, password: string, dateOfBirth: string) => Promise<AuthResult>;
   /** Sets a new password with the e-mailed code and signs in with the session the backend returns. */
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  /** PATCH /auth/me, then keeps the answer as the signed-in profile. */
+  updateProfile: (dto: UpdateProfileRequestDto) => Promise<{ success: boolean; error?: string }>;
+  /** Changes the password; other devices are signed out, this one keeps the new session. */
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   /** The persisted "signed in" flag can outlive the session: confirms it with GET /auth/me. */
   verifySession: () => Promise<void>;
@@ -112,6 +117,26 @@ export const useSessionStore = create<SessionState>()(
             return { success: true };
           }
           return { success: false, error: resetFailureMessage(res) };
+        } catch (e) {
+          return { success: false, error: errorMessage(e) };
+        }
+      },
+
+      updateProfile: async (dto) => {
+        try {
+          const res = await authService.updateProfile(dto);
+          if (!res.success) return { success: false, error: profileFailureMessage(res) };
+          set((s) => ({ user: s.user ? { ...s.user, ...res.data, role: s.user.role, isVIP: s.user.isVIP } : res.data }));
+          return { success: true };
+        } catch (e) {
+          return { success: false, error: errorMessage(e) };
+        }
+      },
+
+      changePassword: async (currentPassword, newPassword) => {
+        try {
+          const res = await authService.changePassword({ currentPassword, newPassword });
+          return res.success ? { success: true } : { success: false, error: changePasswordFailureMessage(res) };
         } catch (e) {
           return { success: false, error: errorMessage(e) };
         }

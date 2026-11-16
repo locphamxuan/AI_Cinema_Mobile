@@ -4,6 +4,7 @@ import { View, Text, ScrollView } from 'react-native';
 import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { MenuCard, MenuRow } from '../src/components/common/MenuRow';
 import { Button } from '../src/components/common/Button';
+import { LoadError } from '../src/components/common/LoadError';
 import { StatementList } from '../src/components/wallet/StatementList';
 import { useTheme } from '../src/theme';
 import { useSessionStore, useAccountStore, useUiStore } from '../src/store';
@@ -14,7 +15,7 @@ export default function WalletScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { isAuthenticated } = useSessionStore();
-  const { wallet, loadAccountData } = useAccountStore();
+  const { wallet, walletError, loadAccountData } = useAccountStore();
   const { setTopUpModalOpen, setCheckInModalOpen } = useUiStore();
 
   // Balances always come from the BE.
@@ -35,25 +36,31 @@ export default function WalletScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScreenHeader title="Ví Coin" />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={[styles.balance, { backgroundColor: colors.card }]}>
-          <View style={styles.cols}>
-            <View style={styles.col}>
-              <Text style={[styles.amount, { color: colors.coin }]}>{wallet.mainCoin}</Text>
-              <Text style={[styles.colLabel, { color: colors.textSecondary }]}>Coin chính</Text>
-              <Text style={[styles.colNote, { color: colors.textMuted }]}>Coin bạn nạp bằng tiền</Text>
-            </View>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <View style={styles.col}>
-              <Text style={[styles.amount, { color: colors.text }]}>{wallet.bonusCoin}</Text>
-              <Text style={[styles.colLabel, { color: colors.textSecondary }]}>Coin thưởng</Text>
-              <Text style={[styles.colNote, { color: colors.textMuted }]}>Từ điểm danh, vòng quay; có hạn dùng</Text>
-            </View>
+        {walletError ? (
+          <View style={[styles.balance, { backgroundColor: colors.card }]}>
+            <LoadError message={walletError} onRetry={() => void loadAccountData()} />
           </View>
-          <Text style={[styles.rule, { color: colors.textMuted }]}>
-            Khi mở tập hoặc trả gói, Coin chính được trừ trước, Coin thưởng bù phần còn thiếu.
-          </Text>
-          <Button label="Nạp Coin" onPress={() => setTopUpModalOpen(true)} />
-        </View>
+        ) : (
+          <View style={[styles.balance, { backgroundColor: colors.card }]}>
+            <View style={styles.cols}>
+              <View style={styles.col}>
+                <Text style={[styles.amount, { color: colors.coin }]}>{wallet.mainCoin}</Text>
+                <Text style={[styles.colLabel, { color: colors.textSecondary }]}>Coin chính</Text>
+                <Text style={[styles.colNote, { color: colors.textMuted }]}>Coin bạn nạp bằng tiền</Text>
+              </View>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <View style={styles.col}>
+                <Text style={[styles.amount, { color: colors.text }]}>{wallet.bonusCoin}</Text>
+                <Text style={[styles.colLabel, { color: colors.textSecondary }]}>Coin thưởng</Text>
+                <Text style={[styles.colNote, { color: colors.textMuted }]}>Từ điểm danh, vòng quay; có hạn dùng</Text>
+              </View>
+            </View>
+            <Text style={[styles.rule, { color: colors.textMuted }]}>
+              Khi mở tập hoặc trả gói, Coin chính được trừ trước, Coin thưởng bù phần còn thiếu.
+            </Text>
+            <Button label="Nạp Coin" onPress={() => setTopUpModalOpen(true)} />
+          </View>
+        )}
 
         <MenuCard>
           <MenuRow icon="receipt-outline" label="Lịch sử nạp Coin" onPress={() => router.push('/top-ups')} />

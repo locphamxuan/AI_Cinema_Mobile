@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
 import { usePlaybackSession } from '../../hooks/usePlaybackSession';
@@ -17,6 +17,8 @@ import { PlayerControls } from '../player/PlayerControls';
 import { PlayerSettingsSheet } from '../player/PlayerSettingsSheet';
 import { AdBreakOverlay } from '../player/PlaybackOverlays';
 import { RoomAdOverlay } from './RoomAdOverlay';
+import { AiLabelOverlay } from '../player/AiLabelOverlay';
+import { FullscreenStage } from '../player/FullscreenStage';
 import { styles } from '../../styles/components/player/EpisodePlayer.styles';
 import { styles as party } from '../../styles/components/watchParty/PartyPlayer.styles';
 
@@ -144,59 +146,57 @@ export function PartyPlayer(props: PartyPlayerProps) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.fill} ref={host}>
-        <VideoView style={styles.fill} player={player} nativeControls={false} contentFit="contain" />
-        <Pressable
-          style={styles.fill}
-          onPress={touched(() => setControls((v) => !v))}
-          accessibilityLabel={controls ? 'Ẩn điều khiển' : 'Hiện điều khiển'}
-        />
-        {line ? (
-          <View style={[styles.subtitleBox, controls && styles.subtitleRaised]} pointerEvents="none">
-            <Text style={styles.subtitle}>{line}</Text>
-          </View>
-        ) : null}
-        <View style={styles.aiBadge} pointerEvents="none" testID="ai-label-overlay">
-          <MaterialCommunityIcons name="robot-outline" size={12} color="#FF3D7F" />
-          <Text style={styles.aiBadgeText} numberOfLines={1}>
-            {session.aiLabel?.text || 'Phim được tạo bằng trí tuệ nhân tạo (AI)'}
-          </Text>
-        </View>
-        {controls && isHost && !playback.activeAd ? (
-          <PlayerControls
-            currentTime={currentTime}
-            duration={duration}
-            playing={playing}
-            fullscreen={fullscreen}
-            rate={1}
-            onTogglePlay={touched(togglePlay)}
-            onSeekBy={touched((s: number) => seekTo(currentTime + s))}
-            onSeekTo={touched(seekTo)}
-            onSettings={() => setSettings(true)}
-            onToggleFullscreen={() => touched(toggleFullscreen)()}
+      <FullscreenStage fullscreen={fullscreen} onExit={toggleFullscreen}>
+        <View style={styles.fill} ref={host}>
+          <VideoView style={styles.fill} player={player} nativeControls={false} contentFit="contain" />
+          <Pressable
+            style={styles.fill}
+            onPress={touched(() => setControls((v) => !v))}
+            accessibilityLabel={controls ? 'Ẩn điều khiển' : 'Hiện điều khiển'}
           />
-        ) : null}
-        {controls && !isHost && !memberAd ? (
-          <View style={party.memberBar}>
-            <View style={party.followPill}>
-              <Ionicons name="people" size={13} color="#fff" />
-              <Text style={party.followText}>Đang xem theo chủ phòng</Text>
+          {line ? (
+            <View style={[styles.subtitleBox, controls && styles.subtitleRaised]} pointerEvents="none">
+              <Text style={styles.subtitle}>{line}</Text>
             </View>
-            <View style={party.memberActions}>
-              <TouchableOpacity onPress={() => setSettings(true)} accessibilityLabel="Phụ đề và chất lượng" hitSlop={8}>
-                <Ionicons name="settings-outline" size={20} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={toggleFullscreen} accessibilityLabel="Toàn màn hình" hitSlop={8}>
-                <Ionicons name={fullscreen ? 'contract' : 'expand'} size={20} color="#fff" />
-              </TouchableOpacity>
+          ) : null}
+          {controls && isHost && !playback.activeAd ? (
+            <PlayerControls
+              currentTime={currentTime}
+              duration={duration}
+              playing={playing}
+              fullscreen={fullscreen}
+              rate={1}
+              onTogglePlay={touched(togglePlay)}
+              onSeekBy={touched((s: number) => seekTo(currentTime + s))}
+              onSeekTo={touched(seekTo)}
+              onSettings={() => setSettings(true)}
+              onToggleFullscreen={() => touched(toggleFullscreen)()}
+            />
+          ) : null}
+          {controls && !isHost && !memberAd ? (
+            <View style={party.memberBar}>
+              <View style={party.followPill}>
+                <Ionicons name="people" size={13} color="#fff" />
+                <Text style={party.followText}>Đang xem theo chủ phòng</Text>
+              </View>
+              <View style={party.memberActions}>
+                <TouchableOpacity onPress={() => setSettings(true)} accessibilityLabel="Phụ đề và chất lượng" hitSlop={8}>
+                  <Ionicons name="settings-outline" size={20} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={toggleFullscreen} accessibilityLabel="Toàn màn hình" hitSlop={8}>
+                  <Ionicons name={fullscreen ? 'contract' : 'expand'} size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        ) : null}
-        {playback.activeAd ? (
-          <AdBreakOverlay key={playback.activeAd.breakId} cue={playback.activeAd} onDone={playback.finishAd} />
-        ) : null}
-        {memberAd ? <RoomAdOverlay key={roomAd.startedAt ?? 0} ad={roomAd} /> : null}
-      </View>
+          ) : null}
+          {playback.activeAd ? (
+            <AdBreakOverlay key={playback.activeAd.breakId} cue={playback.activeAd} onDone={playback.finishAd} />
+          ) : null}
+          {memberAd ? <RoomAdOverlay key={roomAd.startedAt ?? 0} ad={roomAd} /> : null}
+          {/* Last child: above the video, the controls and both ad overlays (BR-10). */}
+          <AiLabelOverlay text={session.aiLabel?.text} />
+        </View>
+      </FullscreenStage>
       <PlayerSettingsSheet
         visible={settings}
         onClose={() => setSettings(false)}
