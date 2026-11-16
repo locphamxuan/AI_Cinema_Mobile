@@ -5,7 +5,14 @@
 
 export type AccessSourceName = 'NONE' | 'FREE_STARTER' | 'FREE' | 'PLAN' | 'EPISODE_PURCHASE' | 'ADMIN_GRANT';
 export type AccessMethod = 'REGISTER_OR_LOGIN' | 'MONTHLY_PLAN' | 'UNLOCK_EPISODE' | 'OBTAIN_COIN';
-export type NextAction = 'REGISTER_OR_LOGIN' | 'OBTAIN_COIN' | 'UNLOCK_EPISODE' | 'MONTHLY_PLAN' | 'HANDOFF_TO_PLAYBACK';
+export type NextAction =
+  | 'REGISTER_OR_LOGIN'
+  | 'OBTAIN_COIN'
+  | 'UNLOCK_EPISODE'
+  | 'MONTHLY_PLAN'
+  | 'HANDOFF_TO_PLAYBACK'
+  /** Under maintenance or without a streamable version yet: nobody can watch it, `notice` says why. */
+  | 'NOT_PLAYABLE';
 
 /** GET /episodes/:episodeId/access */
 export interface AccessDecision {
@@ -18,9 +25,12 @@ export interface AccessDecision {
   /** @deprecated Bypasses Main Flow 3 (ads, stream limit, progress); the player opens a playback session. */
   streamUrl?: string;
   accessMethods: AccessMethod[];
+  availability?: 'AVAILABLE' | 'UNDER_REVISION' | 'MEDIA_NOT_READY';
+  notice?: string | null;
   required: {
     coinPrice: number;
-    isFreeStarter?: boolean;
+    isFreeForGuest?: boolean;
+    isFreeForMember?: boolean;
     monthlyPlanCoinPrice?: number | null;
     mainBalance?: number;
     bonusBalance?: number;

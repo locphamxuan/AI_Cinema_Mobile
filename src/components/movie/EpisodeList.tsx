@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { episodeLabel } from '../../lib/episodeLabel';
 import type { Episode } from '../../types/movie';
 import { useTheme } from '../../theme';
+import { useAccountStore, useSessionStore } from '../../store';
 import { styles } from '../../styles/components/movie/EpisodeList.styles';
 
 interface EpisodeListProps {
@@ -16,10 +17,10 @@ interface EpisodeListProps {
 }
 
 /** What a row says under the episode title: its length, then free / price / maintenance. */
-function episodeMeta(ep: Episode, locked: boolean): string {
+function episodeMeta(ep: Episode, locked: boolean, free: boolean): string {
   const parts = [ep.duration];
   if (ep.availability === 'UNDER_REVISION') parts.push('đang sửa');
-  else if (ep.isFree) parts.push('miễn phí');
+  else if (free) parts.push('miễn phí');
   else if (locked) parts.push(`${ep.price} Coin`);
   return parts.filter(Boolean).join(', ');
 }
@@ -27,6 +28,8 @@ function episodeMeta(ep: Episode, locked: boolean): string {
 /** Episodes as rows, each with its thumbnail, length and price. */
 export function EpisodeList({ episodes, currentId, isVIPMode, posterUrl, onSelect }: EpisodeListProps) {
   const { colors } = useTheme();
+  const isMember = useSessionStore((s) => s.isAuthenticated);
+  const owned = useAccountStore((s) => s.ownedEpisodeIds);
 
   return (
     <View style={styles.section}>
@@ -39,7 +42,8 @@ export function EpisodeList({ episodes, currentId, isVIPMode, posterUrl, onSelec
           const isCurrent = ep.id === currentId;
           const underRevision = ep.availability === 'UNDER_REVISION';
           // A hint only: the BE decides when the episode is opened.
-          const locked = !isVIPMode && !ep.isFree && !ep.isUnlocked;
+          const free = isMember ? ep.isFreeForMember : ep.isFree;
+          const locked = !isVIPMode && !free && !ep.isUnlocked && !owned.includes(ep.id);
           const name = episodeLabel(ep, episodes);
           const label = `${name}${locked ? `, ${ep.price} Coin` : ''}${underRevision ? ', đang sửa' : ''}`;
           const picture = ep.thumbnailUrl || posterUrl;
@@ -63,7 +67,7 @@ export function EpisodeList({ episodes, currentId, isVIPMode, posterUrl, onSelec
                 <Text style={[styles.rowTitle, { color: isCurrent ? colors.ruby : colors.text }]} numberOfLines={1}>
                   {whole ? (named ? `${name}: ${ep.title}` : name) : named ? `${ep.episodeNumber}. ${ep.title}` : name}
                 </Text>
-                <Text style={[styles.rowMeta, { color: colors.textMuted }]}>{episodeMeta(ep, locked)}</Text>
+                <Text style={[styles.rowMeta, { color: colors.textMuted }]}>{episodeMeta(ep, locked, free)}</Text>
               </View>
               {locked && <Ionicons name="lock-closed" size={15} color={colors.coin} />}
               {underRevision && <Ionicons name="construct-outline" size={15} color={colors.textMuted} />}

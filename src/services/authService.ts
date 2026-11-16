@@ -2,7 +2,17 @@ import { apiClient } from './apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import { adaptUserProfile } from '../lib/apiAdapter';
-import type { ApiResponse, AuthResponseDto, GoogleLoginRequestDto, LoginRequestDto, ProfileDto, RegisterRequestDto, ResetPasswordRequestDto } from '../types/api';
+import type {
+  ApiResponse,
+  AuthResponseDto,
+  ChangePasswordRequestDto,
+  GoogleLoginRequestDto,
+  LoginRequestDto,
+  ProfileDto,
+  RegisterRequestDto,
+  ResetPasswordRequestDto,
+  UpdateProfileRequestDto,
+} from '../types/api';
 import type { UserProfile } from '../types/auth';
 
 // Auth calls answer 401 for bad credentials; that must not trigger a token refresh.
@@ -119,6 +129,25 @@ class AuthService {
   async getProfile(): Promise<ApiResponse<UserProfile>> {
     const res = await apiClient.get<ProfileDto>(API_ROUTES.AUTH.PROFILE);
     return { ...res, data: res.success ? adaptUserProfile(res.data) : (null as unknown as UserProfile) };
+  }
+
+  /** PATCH /auth/me: the member edits their name, phone number and birthday (BR-54 keeps the 18+ rule). */
+  async updateProfile(dto: UpdateProfileRequestDto): Promise<ApiResponse<UserProfile>> {
+    const res = await apiClient.patch<ProfileDto>(API_ROUTES.AUTH.PROFILE, dto);
+    return { ...res, data: res.success ? adaptUserProfile(res.data) : (null as unknown as UserProfile) };
+  }
+
+  /**
+   * POST /auth/me/password: every other session is signed out and the answer is a fresh session for this
+   * device, kept like a sign-in so the member stays signed in here.
+   */
+  async changePassword(dto: ChangePasswordRequestDto): Promise<ApiResponse<AuthResponseDto>> {
+    // An expiring access token is refreshed first; a 401 afterwards means a wrong current password, never retried.
+    const res = await apiClient.post<AuthResponseDto>(API_ROUTES.AUTH.CHANGE_PASSWORD, dto, { noRetryOn401: true });
+    if (!res.success) return res;
+    const token = res.data?.accessToken || res.data?.token;
+    if (token) await apiClient.saveSession({ accessToken: token, refreshToken: res.data.refreshToken });
+    return res;
   }
 
   /** Revokes the refresh token on the backend, then forgets the local session either way. */

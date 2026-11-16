@@ -1,7 +1,17 @@
 import { create } from 'zustand';
 import { useAccountStore } from './accountStore';
+import type { Episode } from '../types/movie';
 
 export type AuthModalMode = 'login' | 'register';
+
+/**
+ * What the member was paying for when the wallet ran short (BR-01): after the top-up is PAID the sheet offers to go
+ * back to it. `gateId` names the screen's episode gate that asked, so only that screen reopens the episode; the BE
+ * still decides access when it does.
+ */
+export type PurchaseIntent =
+  | { kind: 'episode'; gateId: string; episode: Episode; label: string }
+  | { kind: 'plan'; planId: string; planName: string };
 
 interface UiState {
   isAuthModalOpen: boolean;
@@ -20,10 +30,18 @@ interface UiState {
   setTopUpModalOpen: (open: boolean) => void;
   isChatModalOpen: boolean;
   setChatModalOpen: (open: boolean) => void;
+
+  /** Set when a purchase sends the member to top up; cleared when they go back to it or give up. */
+  pendingPurchase: PurchaseIntent | null;
+  setPendingPurchase: (intent: PurchaseIntent | null) => void;
+  /** The intent the member chose to resume after a PAID top-up, waiting for its screen to take it. */
+  resumePurchase: PurchaseIntent | null;
+  /** Hands the waiting intent to the screen that matches it, once. */
+  takeResumePurchase: (match: (intent: PurchaseIntent) => boolean) => PurchaseIntent | null;
 }
 
 /** Which app-wide sheet is open. Nothing here is persisted or tied to the account. */
-export const useUiStore = create<UiState>()((set) => ({
+export const useUiStore = create<UiState>()((set, get) => ({
   isAuthModalOpen: false,
   authModalMode: 'login',
   initialAuthEmail: '',
@@ -41,4 +59,14 @@ export const useUiStore = create<UiState>()((set) => ({
   setTopUpModalOpen: (open) => set({ isTopUpModalOpen: open }),
   isChatModalOpen: false,
   setChatModalOpen: (open) => set({ isChatModalOpen: open }),
+
+  pendingPurchase: null,
+  setPendingPurchase: (intent) => set({ pendingPurchase: intent }),
+  resumePurchase: null,
+  takeResumePurchase: (match) => {
+    const intent = get().resumePurchase;
+    if (!intent || !match(intent)) return null;
+    set({ resumePurchase: null });
+    return intent;
+  },
 }));

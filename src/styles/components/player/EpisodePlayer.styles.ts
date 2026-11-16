@@ -5,6 +5,7 @@ export const styles = StyleSheet.create({
   container: { width: '100%', aspectRatio: 16 / 9, maxHeight: 360, backgroundColor: '#000000' },
   fill: { width: '100%', height: '100%', position: 'absolute' },
   fullscreen: { flex: 1, backgroundColor: '#000000' },
+  fullscreenStage: { flex: 1 },
   posterShade: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.35)',

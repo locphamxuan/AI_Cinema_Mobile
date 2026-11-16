@@ -1,5 +1,8 @@
 module.exports = {
   preset: 'jest-expo',
+  // Rendering suites are slow on a loaded machine; the 5 s default timed some out when every core ran a suite.
+  testTimeout: 20000,
+  maxWorkers: '50%',
   // AsyncStorage has no native module under Jest; every suite gets the package's in-memory mock.
   moduleNameMapper: {
     '^@react-native-async-storage/async-storage$': '@react-native-async-storage/async-storage/jest/async-storage-mock',

@@ -45,6 +45,8 @@ export interface CatalogEpisodeDto extends LegacyEpisodeFields {
   availability?: 'AVAILABLE' | 'UNDER_REVISION';
   notice?: string | null;
   isFreeStarter?: boolean;
+  isFreeForGuest?: boolean;
+  isFreeForMember?: boolean;
   coinPrice?: number;
   durationSeconds?: number | null;
   qualities?: string[];

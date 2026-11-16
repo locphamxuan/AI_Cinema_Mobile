@@ -9,6 +9,7 @@ export const API_ROUTES = {
     REGISTER: '/auth/register',
     GOOGLE: '/auth/google',
     PROFILE: '/auth/me',
+    CHANGE_PASSWORD: '/auth/me/password',
     LOGOUT: '/auth/logout',
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
@@ -84,6 +85,8 @@ export const API_ROUTES = {
   // MF-2 - episode access decision and single-episode purchase
   ACCESS: {
     DECISION: (episodeId: string) => `/episodes/${episodeId}/access`,
+    /** Episodes the member bought (or was granted), newest first. */
+    OWNED: '/accesses',
     PURCHASE: (episodeId: string) => `/episodes/${episodeId}/purchase`,
   },
 

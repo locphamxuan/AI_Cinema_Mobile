@@ -1,6 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, Text, TouchableOpacity, View, Platform } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { ActivityIndicator, Image, Pressable, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
 import { usePlaybackSession } from '../../hooks/usePlaybackSession';
@@ -13,7 +13,8 @@ import type { SubtitleTrack } from '../../types/movie';
 import type { StreamingSession } from '../../types/playback';
 import { PlayerControls } from './PlayerControls';
 import { PlayerSettingsSheet } from './PlayerSettingsSheet';
-import { DEFAULT_AI_LABEL } from './AIComplianceModal';
+import { AiLabelOverlay } from './AiLabelOverlay';
+import { FullscreenStage } from './FullscreenStage';
 import { AdBreakOverlay, ResumePrompt } from './PlaybackOverlays';
 import { styles } from '../../styles/components/player/EpisodePlayer.styles';
 const HIDE_CONTROLS_MS = 3000;
@@ -36,24 +37,15 @@ interface EpisodePlayerProps {
   audioLabel?: string;
   /** Called once the stream starts, e.g. to count a play. */
   onStarted?: () => void;
-  /** Called when the episode plays to its end (e.g. to show the AI suggestions after the last one). */
+  /** Called once when the episode is seen through (85 % or its end), e.g. to show the AI suggestions after the last one. */
   onFinished?: () => void;
-}
-
-/** The AI label sits over the poster, the playing video and fullscreen; it is never hidden. */
-function AiLabelOverlay({ text }: { text: string | null }) {
-  return (
-    <View style={styles.aiBadge} pointerEvents="none" testID="ai-label-overlay">
-      <MaterialCommunityIcons name="robot-outline" size={12} color="#FF3D7F" />
-      <Text style={styles.aiBadgeText} numberOfLines={1}>
-        {text || DEFAULT_AI_LABEL}
-      </Text>
-    </View>
-  );
 }
 
 type StreamPlayerProps = Required<Omit<EpisodePlayerProps, 'posterUrl' | 'checking' | 'onRequestPlay' | 'onStarted' | 'onFinished' | 'session'>> &
   Pick<EpisodePlayerProps, 'onStarted' | 'onFinished' | 'session'>;
+
+/** Share of an episode at which it counts as seen through, as on the BE (`recommendation-taste.ts`). */
+export const FINISHED_RATIO = 0.85;
 
 function StreamPlayer(props: StreamPlayerProps) {
   const { streamUrl, session, aiLabel, subtitles, subtitleTrackId, onSubtitleChange, audioLabel, onStarted, onFinished } = props;
@@ -74,10 +66,23 @@ function StreamPlayer(props: StreamPlayerProps) {
   const started = React.useRef(false);
   const host = React.useRef<React.ComponentRef<typeof View>>(null);
 
+  // Seen through at 85 % (the BE's FINISHED_RATIO, credits included) or at the very end, once per stream.
+  const finished = React.useRef(false);
   React.useEffect(() => {
-    const end = player.addListener('playToEnd', () => onFinished?.());
+    finished.current = false;
+  }, [streamUrl]);
+  const finish = React.useCallback(() => {
+    if (finished.current) return;
+    finished.current = true;
+    onFinished?.();
+  }, [onFinished]);
+  React.useEffect(() => {
+    const end = player.addListener('playToEnd', finish);
     return () => end.remove();
-  }, [player, onFinished]);
+  }, [player, finish]);
+  React.useEffect(() => {
+    if (duration > 0 && currentTime / duration >= FINISHED_RATIO) finish();
+  }, [currentTime, duration, finish]);
   React.useEffect(() => attachWebStream(host.current, streamUrl), [streamUrl]);
   React.useEffect(() => watchWebFullscreen(host.current, setFullscreen), []);
   React.useEffect(() => {
@@ -163,13 +168,9 @@ function StreamPlayer(props: StreamPlayerProps) {
 
   return (
     <>
-      {fullscreen && Platform.OS !== 'web' ? (
-        <Modal visible animationType="fade" supportedOrientations={['landscape', 'portrait']} onRequestClose={toggleFullscreen}>
-          <View style={styles.fullscreen}>{stage}</View>
-        </Modal>
-      ) : (
-        stage
-      )}
+      <FullscreenStage fullscreen={fullscreen} onExit={toggleFullscreen}>
+        {stage}
+      </FullscreenStage>
       <PlayerSettingsSheet
         visible={settings}
         onClose={() => setSettings(false)}

@@ -29,4 +29,8 @@ export const watchRoomService = {
   /** A member usually knows a friend's email, not their id. */
   addFriendByEmail: (email: string) => apiClient.post<Friendship>(F.LIST, { receiverEmail: email.trim() }),
   respond: (friendshipId: string, accept: boolean) => apiClient.post<Friendship>(F.RESPOND(friendshipId), { accept }),
+  /** Blocks a member: they cannot invite you or see your rooms (BR-69). */
+  block: (friendId: string) => apiClient.post<Friendship>(F.BLOCK(friendId), {}),
+  /** Lifts a block you set; the friendship is gone and either side may send a new request. */
+  unblock: (friendId: string) => apiClient.delete<boolean>(F.BLOCK(friendId)),
 };

@@ -32,13 +32,6 @@ export interface Friendship {
   incoming?: boolean;
 }
 
-/** ROOM_INVITED payload: a friend asks this member into their room for 10 minutes. */
-export interface RoomInvite {
-  roomId: string;
-  invitedBy: string;
-  expiresAt: number;
-}
-
 /** ROOM_CHAT_MESSAGE: one line of the room chat. */
 export interface RoomChatMessage {
   id: string;

@@ -1,110 +1,125 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { showDialog } from '../src/lib/dialog';
-import { watchRoomService } from '../src/services/watchRoomService';
+import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { ScreenHeader } from '../src/components/common/ScreenHeader';
+import { FormField } from '../src/components/common/FormField';
+import { Button } from '../src/components/common/Button';
+import { useFriends } from '../src/hooks/useFriends';
+import { friendName } from '../src/lib/friends';
+import { useSessionStore, useUiStore } from '../src/store';
 import { useTheme } from '../src/theme';
 import type { Friendship } from '../src/types/watchRoom';
-import { styles } from '../src/styles/screens/watchParty.styles';
+import { styles } from '../src/styles/screens/friends.styles';
 
-/** BR-69 — friends to invite into a watch room: add one by email, answer requests, see the list. */
+/** BR-69 — friends to invite into a watch room: add one by email, answer requests, block and unblock. */
 export default function FriendsScreen() {
-  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const [rows, setRows] = useState<Friendship[]>([]);
-  const [email, setEmail] = useState('');
-  const [busy, setBusy] = useState(false);
+  const { isAuthenticated } = useSessionStore();
+  const { openAuthModal } = useUiStore();
+  const f = useFriends();
+  const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
-    const res = await watchRoomService.friends();
-    if (res.success && Array.isArray(res.data)) setRows(res.data);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    void watchRoomService.friends().then((res) => {
-      if (active && res.success && Array.isArray(res.data)) setRows(res.data);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const add = async () => {
-    setBusy(true);
-    const res = await watchRoomService.addFriendByEmail(email);
-    setBusy(false);
-    if (res.success) {
-      setEmail('');
-      showDialog('Đã gửi lời mời kết bạn', 'Khi bạn ấy chấp nhận, bạn có thể mời vào phòng xem nhóm.');
-      void load();
-    } else {
-      showDialog('Chưa gửi được', res.message || 'Không tìm thấy thành viên với email này.');
-    }
+  const refresh = async () => {
+    setRefreshing(true);
+    await f.reload();
+    setRefreshing(false);
   };
 
-  const respond = async (row: Friendship, accept: boolean) => {
-    const res = await watchRoomService.respond(row.id, accept);
-    if (!res.success) showDialog('Chưa trả lời được', res.message);
-    void load();
-  };
+  const row = (item: Friendship, actions: ReactNode, note?: string) => (
+    <View key={item.id} style={[styles.row, { backgroundColor: colors.card }]}>
+      <View style={[styles.avatar, { backgroundColor: colors.rubySoft }]}>
+        <Text style={[styles.avatarText, { color: colors.ruby }]}>{friendName(item).charAt(0).toUpperCase()}</Text>
+      </View>
+      <View style={styles.info}>
+        <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+          {friendName(item)}
+        </Text>
+        {note ? <Text style={[styles.note, { color: colors.textMuted }]}>{note}</Text> : null}
+      </View>
+      {actions}
+    </View>
+  );
 
-  const incoming = rows.filter((r) => r.status === 'PENDING' && r.incoming);
-  const outgoing = rows.filter((r) => r.status === 'PENDING' && !r.incoming);
-  const friends = rows.filter((r) => r.status === 'ACCEPTED');
-  const name = (r: Friendship) => r.friend?.fullName || 'Thành viên AI Cinema';
+  const action = (label: string, onPress: () => void, strong?: boolean) => (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.action, { backgroundColor: strong ? colors.ruby : colors.cardAlt }]}
+      accessibilityRole="button"
+    >
+      <Text style={[styles.actionText, { color: strong ? colors.white : colors.text }]}>{label}</Text>
+    </TouchableOpacity>
+  );
 
+  if (!isAuthenticated) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScreenHeader title="Bạn bè" />
+        <View style={styles.body}>
+          <Text style={[styles.empty, { color: colors.textMuted }]}>Đăng nhập để kết bạn và mời nhau xem cùng.</Text>
+          <Button label="Đăng nhập" onPress={() => openAuthModal('login')} />
+        </View>
+      </View>
+    );
+  }
+
+  const { friends, incoming, outgoing, blocked } = f.groups;
   return (
     <ScrollView
       style={{ backgroundColor: colors.background }}
-      contentContainerStyle={[styles.body, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.ruby} />}
     >
-      <Text style={[styles.title, { color: colors.text }]}>Bạn bè</Text>
-      <Text style={[styles.meta, { color: colors.textSecondary }]}>Thêm bạn bằng email để mời vào phòng xem nhóm.</Text>
-      <TextInput
-        value={email}
-        onChangeText={setEmail}
-        placeholder="email@cua-ban.com"
-        placeholderTextColor={colors.textMuted}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        style={[styles.input, { color: colors.text, borderColor: colors.ruby, fontSize: 16, letterSpacing: 0, fontWeight: '400', textAlign: 'left' }]}
-        accessibilityLabel="Email người bạn"
-      />
-      <TouchableOpacity
-        style={[styles.button, { flex: 0, backgroundColor: colors.ruby, opacity: busy || !email.includes('@') ? 0.6 : 1 }]}
-        disabled={busy || !email.includes('@')}
-        onPress={() => void add()}
-      >
-        <Text style={styles.buttonText}>Gửi lời mời kết bạn</Text>
-      </TouchableOpacity>
-
-      {incoming.length ? <Text style={[styles.title, { color: colors.text, fontSize: 16 }]}>Lời mời kết bạn</Text> : null}
-      {incoming.map((r) => (
-        <View key={r.id} style={styles.row}>
-          <Text style={[styles.meta, { color: colors.text, flex: 1 }]}>{name(r)}</Text>
-          <TouchableOpacity onPress={() => void respond(r, true)} accessibilityLabel={`Chấp nhận ${name(r)}`}>
-            <Text style={{ color: colors.ruby, fontWeight: '700', marginRight: 16 }}>Chấp nhận</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => void respond(r, false)} accessibilityLabel={`Từ chối ${name(r)}`}>
-            <Text style={{ color: colors.textMuted }}>Từ chối</Text>
-          </TouchableOpacity>
+      <ScreenHeader title="Bạn bè" />
+      <View style={styles.body}>
+        <View style={[styles.addCard, { backgroundColor: colors.card }]}>
+          <FormField
+            label="Thêm bạn bằng email"
+            value={f.email}
+            onChangeText={f.setEmail}
+            placeholder="ten@gmail.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            onSubmitEditing={() => void f.add()}
+            hint="Khi bạn ấy đồng ý, hai bạn mời nhau vào phòng xem nhóm được."
+            error={f.emailMessage}
+          />
+          <Button label="Gửi lời mời kết bạn" onPress={() => void f.add()} loading={f.sending} />
         </View>
-      ))}
 
-      <Text style={[styles.title, { color: colors.text, fontSize: 16 }]}>Bạn bè ({friends.length})</Text>
-      {friends.length === 0 ? (
-        <Text style={[styles.meta, { color: colors.textMuted }]}>Chưa có bạn bè nào.</Text>
-      ) : (
-        friends.map((r) => (
-          <Text key={r.id} style={[styles.meta, { color: colors.text }]}>
-            • {name(r)}
-          </Text>
-        ))
-      )}
-      {outgoing.length ? (
-        <Text style={[styles.meta, { color: colors.textMuted }]}>Đang chờ chấp nhận: {outgoing.map(name).join(', ')}</Text>
-      ) : null}
+        {f.loading ? <ActivityIndicator color={colors.ruby} style={styles.loading} /> : null}
+        {f.failed ? (
+          <View style={styles.failed}>
+            <Text style={[styles.empty, { color: colors.textMuted }]}>Chưa tải được danh sách bạn bè.</Text>
+            <Button label="Thử lại" variant="secondary" onPress={() => void f.reload()} />
+          </View>
+        ) : null}
+
+        {incoming.length ? <Text style={[styles.section, { color: colors.text }]}>Lời mời kết bạn</Text> : null}
+        {incoming.map((item) =>
+          row(
+            item,
+            <View style={styles.actions}>
+              {action('Từ chối', () => f.decline(item))}
+              {action('Đồng ý', () => void f.accept(item), true)}
+            </View>,
+          ),
+        )}
+
+        {!f.loading && !f.failed ? (
+          <Text style={[styles.section, { color: colors.text }]}>Bạn bè ({friends.length})</Text>
+        ) : null}
+        {!f.loading && !f.failed && friends.length === 0 ? (
+          <Text style={[styles.none, { color: colors.textMuted }]}>Chưa có bạn bè nào. Gửi lời mời bằng email ở trên.</Text>
+        ) : null}
+        {friends.map((item) => row(item, action('Chặn', () => f.block(item))))}
+
+        {outgoing.length ? <Text style={[styles.section, { color: colors.text }]}>Đang chờ đồng ý</Text> : null}
+        {outgoing.map((item) => row(item, null, 'Đã gửi lời mời'))}
+
+        {blocked.length ? <Text style={[styles.section, { color: colors.text }]}>Đã chặn</Text> : null}
+        {blocked.map((item) => row(item, action('Bỏ chặn', () => void f.unblock(item))))}
+      </View>
     </ScrollView>
   );
 }

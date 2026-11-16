@@ -17,6 +17,8 @@ export const signedOutAccount = () => ({
   wallet: emptyWallet,
   subscription: null as MySubscription | null,
   dailyReward: null as DailyRewardStatus | null,
+  ownedEpisodeIds: [] as string[],
+  walletError: null as string | null,
 });
 
 interface AccountState {
@@ -27,7 +29,11 @@ interface AccountState {
   subscription: MySubscription | null;
   /** The monthly plan is running. A display hint only: every episode is still opened through the BE. */
   isVIPMode: boolean;
-  /** Reads the wallet and the plan from the BE. */
+  /** Why the last wallet read failed; the screen shows it instead of a misleading 0 Coin. */
+  walletError: string | null;
+  /** GET /accesses: episodes already bought, a lock-icon hint only (the BE still decides on open). */
+  ownedEpisodeIds: string[];
+  /** Reads the wallet, the plan and the owned episodes from the BE. */
   loadAccountData: () => Promise<void>;
 
   // Daily check-in (BR-05) and the reward spins it can grant (BR-09)
@@ -48,13 +54,21 @@ export const useAccountStore = create<AccountState>()(
       setWalletBalance: (main, bonus) => set((s) => ({ wallet: { ...s.wallet, mainCoin: main, bonusCoin: bonus } })),
 
       loadAccountData: async () => {
-        const [walletRes, planRes] = await Promise.all([walletService.getWalletInfo(), episodeAccessService.getMySubscription()]);
-        const wallet = walletRes.success ? { wallet: walletRes.data } : {};
+        const [walletRes, planRes, ownedRes] = await Promise.all([
+          walletService.getWalletInfo(),
+          episodeAccessService.getMySubscription(),
+          episodeAccessService.listOwnedEpisodeIds(),
+        ]);
+        const fromBe = {
+          ...(walletRes.success ? { wallet: walletRes.data } : {}),
+          walletError: walletRes.success ? null : walletRes.message || 'Chưa đọc được số dư ví.',
+          ...(ownedRes.success ? { ownedEpisodeIds: ownedRes.data } : {}),
+        };
         if (!planRes.success) {
-          set(wallet);
+          set(fromBe);
           return;
         }
-        set({ ...wallet, subscription: planRes.data, isVIPMode: planIsRunning(planRes.data) });
+        set({ ...fromBe, subscription: planRes.data, isVIPMode: planIsRunning(planRes.data) });
       },
 
       loadDailyReward: async () => {

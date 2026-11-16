@@ -2,7 +2,7 @@
 import { View } from 'react-native';
 import { showDialog } from '../src/lib/dialog';
 import Constants from 'expo-constants';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { MenuCard, MenuRow } from '../src/components/common/MenuRow';
 import { useTheme } from '../src/theme';
@@ -36,6 +36,7 @@ export default function SettingsScreen() {
         </MenuCard>
         {isAuthenticated && (
           <MenuCard>
+            <MenuRow icon="person-circle-outline" label="Tài khoản" onPress={() => router.push('/account' as Href)} />
             <MenuRow icon="log-out-outline" label="Đăng xuất" danger onPress={signOut} last />
           </MenuCard>
         )}

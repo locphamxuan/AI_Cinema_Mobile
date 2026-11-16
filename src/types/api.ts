@@ -30,6 +30,18 @@ export interface ResetPasswordRequestDto {
   newPassword: string;
 }
 
+/** PATCH /auth/me; `phoneNumber: null` clears it. */
+export interface UpdateProfileRequestDto {
+  fullName?: string;
+  phoneNumber?: string | null;
+  dateOfBirth?: string;
+}
+
+export interface ChangePasswordRequestDto {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface RegisterRequestDto {
   name?: string;
   fullName?: string;
@@ -45,6 +57,8 @@ export interface BEUserDto {
   fullName: string;
   name?: string;
   avatarUrl?: string;
+  dateOfBirth?: string | null;
+  phoneNumber?: string | null;
   role: string;
   isActive?: boolean;
   isVip?: boolean;

@@ -32,10 +32,11 @@ export default function ProfileScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, { paddingTop: Math.max(insets.top, 10) + 20 }]}>
         <TouchableOpacity
-          activeOpacity={isAuthenticated ? 1 : 0.8}
-          onPress={isAuthenticated ? undefined : () => openAuthModal('login')}
+          activeOpacity={0.8}
+          onPress={isAuthenticated ? () => router.push('/account' as Href) : () => openAuthModal('login')}
           style={styles.identity}
-          accessibilityRole={isAuthenticated ? undefined : 'button'}
+          accessibilityRole="button"
+          accessibilityLabel={isAuthenticated ? 'Tài khoản của tôi' : 'Đăng nhập'}
         >
           {user?.avatarUrl ? (
             <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
@@ -53,7 +54,7 @@ export default function ProfileScreen() {
               <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
                 {isAuthenticated ? user?.name || 'Thành viên' : 'Đăng nhập'}
               </Text>
-              {!isAuthenticated && <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />}
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </View>
             <Text style={[styles.sub, { color: colors.textMuted }]} numberOfLines={1}>
               {isAuthenticated ? user?.email : 'Để dùng ví Coin và gói Tháng'}

@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { showDialog } from '../../lib/dialog';
-import { watchRoomService } from '../../services/watchRoomService';
+import { useFriends } from '../../hooks/useFriends';
+import { friendName } from '../../lib/friends';
 import { useTheme } from '../../theme';
 import type { Friendship } from '../../types/watchRoom';
 import { styles } from '../../styles/screens/watchParty.styles';
@@ -11,50 +11,14 @@ interface FriendsPanelProps {
   onInvite?: (friendId: string) => void;
 }
 
-const nameOf = (row: Friendship) => row.friend?.fullName || 'Thành viên AI Cinema';
-const looksLikeEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-
 /**
  * BR-69 — friends next to the watch room: invite the ones already accepted, add a new friend by email and
  * answer the requests received, without leaving the room or its lobby.
  */
 export const FriendsPanel: React.FC<FriendsPanelProps> = ({ onInvite }) => {
   const { colors } = useTheme();
-  const [rows, setRows] = useState<Friendship[] | null>(null);
-  const [email, setEmail] = useState('');
-  const [busy, setBusy] = useState(false);
+  const { loading, failed, groups, email, setEmail, emailMessage, sending, add, accept, decline, reload } = useFriends();
   const [invited, setInvited] = useState<Set<string>>(new Set());
-
-  const load = useCallback(async () => {
-    const res = await watchRoomService.friends();
-    setRows(res.success && Array.isArray(res.data) ? res.data : []);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    void watchRoomService.friends().then((res) => {
-      if (active) setRows(res.success && Array.isArray(res.data) ? res.data : []);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const add = async () => {
-    setBusy(true);
-    const res = await watchRoomService.addFriendByEmail(email);
-    setBusy(false);
-    if (!res.success) return showDialog('Chưa gửi được', res.message || 'Không tìm thấy thành viên với email này.');
-    setEmail('');
-    showDialog('Đã gửi lời mời kết bạn', 'Khi bạn ấy chấp nhận, bạn có thể mời vào phòng.');
-    void load();
-  };
-
-  const respond = async (row: Friendship, accept: boolean) => {
-    const res = await watchRoomService.respond(row.id, accept);
-    if (!res.success) showDialog('Chưa trả lời được', res.message);
-    void load();
-  };
 
   const invite = (row: Friendship) => {
     if (!row.friend || !onInvite) return;
@@ -62,39 +26,39 @@ export const FriendsPanel: React.FC<FriendsPanelProps> = ({ onInvite }) => {
     setInvited((current) => new Set(current).add(row.friend!.id));
   };
 
-  const friends = (rows ?? []).filter((r) => r.status === 'ACCEPTED');
-  const incoming = (rows ?? []).filter((r) => r.status === 'PENDING' && r.incoming);
-  const outgoing = (rows ?? []).filter((r) => r.status === 'PENDING' && !r.incoming);
-  const canAdd = looksLikeEmail(email) && !busy;
-
   const avatar = (row: Friendship) => (
     <View style={[styles.avatar, { backgroundColor: colors.ruby }]}>
-      <Text style={styles.avatarText}>{nameOf(row).charAt(0).toUpperCase()}</Text>
+      <Text style={styles.avatarText}>{friendName(row).charAt(0).toUpperCase()}</Text>
     </View>
   );
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <Text style={[styles.cardLabel, { color: colors.textMuted }]}>{onInvite ? 'Mời bạn bè' : 'Bạn bè'}</Text>
-      {rows === null ? <ActivityIndicator color={colors.ruby} /> : null}
-      {rows !== null && friends.length === 0 ? (
+      {loading ? <ActivityIndicator color={colors.ruby} /> : null}
+      {failed ? (
+        <TouchableOpacity onPress={() => void reload()} accessibilityRole="button">
+          <Text style={[styles.meta, { color: colors.danger }]}>Chưa tải được danh sách bạn bè. Chạm để thử lại.</Text>
+        </TouchableOpacity>
+      ) : null}
+      {!loading && !failed && groups.friends.length === 0 ? (
         <Text style={[styles.meta, { color: colors.textSecondary }]}>
           Chưa có bạn bè. Thêm bạn bằng email bên dưới, khi bạn ấy đồng ý là mời vào phòng được.
         </Text>
       ) : null}
-      {friends.map((row) => {
+      {groups.friends.map((row) => {
         const done = row.friend ? invited.has(row.friend.id) : false;
         return (
           <View key={row.id} style={styles.friendRow}>
             {avatar(row)}
             <Text style={[styles.friendName, { color: colors.text }]} numberOfLines={1}>
-              {nameOf(row)}
+              {friendName(row)}
             </Text>
             {onInvite ? (
               <TouchableOpacity
                 style={[styles.smallBtn, { backgroundColor: done ? colors.cardAlt : colors.ruby }]}
                 onPress={() => invite(row)}
-                accessibilityLabel={`Mời ${nameOf(row)}`}
+                accessibilityLabel={`Mời ${friendName(row)}`}
               >
                 <Text style={[styles.smallBtnText, done && { color: colors.text }]}>{done ? 'Đã mời' : 'Mời'}</Text>
               </TouchableOpacity>
@@ -103,32 +67,32 @@ export const FriendsPanel: React.FC<FriendsPanelProps> = ({ onInvite }) => {
         );
       })}
 
-      {incoming.length ? <Text style={[styles.cardLabel, { color: colors.textMuted }]}>Lời mời kết bạn</Text> : null}
-      {incoming.map((row) => (
+      {groups.incoming.length ? <Text style={[styles.cardLabel, { color: colors.textMuted }]}>Lời mời kết bạn</Text> : null}
+      {groups.incoming.map((row) => (
         <View key={row.id} style={styles.friendRow}>
           {avatar(row)}
           <Text style={[styles.friendName, { color: colors.text }]} numberOfLines={1}>
-            {nameOf(row)}
+            {friendName(row)}
           </Text>
           <TouchableOpacity
             style={[styles.smallBtn, { backgroundColor: colors.cardAlt }]}
-            onPress={() => void respond(row, false)}
-            accessibilityLabel={`Từ chối ${nameOf(row)}`}
+            onPress={() => decline(row)}
+            accessibilityLabel={`Từ chối ${friendName(row)}`}
           >
             <Text style={[styles.smallBtnText, { color: colors.text }]}>Từ chối</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.smallBtn, { backgroundColor: colors.ruby }]}
-            onPress={() => void respond(row, true)}
-            accessibilityLabel={`Đồng ý ${nameOf(row)}`}
+            onPress={() => void accept(row)}
+            accessibilityLabel={`Đồng ý ${friendName(row)}`}
           >
             <Text style={styles.smallBtnText}>Đồng ý</Text>
           </TouchableOpacity>
         </View>
       ))}
-      {outgoing.length ? (
+      {groups.outgoing.length ? (
         <Text style={[styles.meta, { color: colors.textMuted }]}>
-          Đang chờ {outgoing.map(nameOf).join(', ')} đồng ý kết bạn.
+          Đang chờ {groups.outgoing.map(friendName).join(', ')} đồng ý kết bạn.
         </Text>
       ) : null}
 
@@ -142,18 +106,23 @@ export const FriendsPanel: React.FC<FriendsPanelProps> = ({ onInvite }) => {
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
-          style={[styles.inlineInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]}
+          onSubmitEditing={() => void add()}
+          style={[
+            styles.inlineInput,
+            { color: colors.text, borderColor: emailMessage ? colors.danger : colors.border, backgroundColor: colors.surface },
+          ]}
           accessibilityLabel="Email của bạn bè"
         />
         <TouchableOpacity
-          style={[styles.smallBtn, { backgroundColor: colors.ruby, opacity: canAdd ? 1 : 0.5 }]}
-          disabled={!canAdd}
+          style={[styles.smallBtn, { backgroundColor: colors.ruby, opacity: sending ? 0.6 : 1 }]}
+          disabled={sending}
           onPress={() => void add()}
           accessibilityLabel="Gửi lời mời kết bạn"
         >
-          <Text style={styles.smallBtnText}>{busy ? 'Đang gửi…' : 'Kết bạn'}</Text>
+          <Text style={styles.smallBtnText}>{sending ? 'Đang gửi…' : 'Kết bạn'}</Text>
         </TouchableOpacity>
       </View>
+      {emailMessage ? <Text style={[styles.meta, { color: colors.danger }]}>{emailMessage}</Text> : null}
     </View>
   );
 };

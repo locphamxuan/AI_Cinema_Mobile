@@ -4,11 +4,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSessionStore, useAccountStore, useCatalogStore } from '../../src/store';
+import { useSessionStore, useAccountStore } from '../../src/store';
 import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
+import { useMovieWithEpisodes } from '../../src/hooks/useMovieWithEpisodes';
+import { LoadError } from '../../src/components/common/LoadError';
 import { useWatchHistory } from '../../src/hooks/useWatchHistory';
 import { resumeEpisode } from '../../src/lib/watchHistory';
-import { movieService } from '../../src/services';
 import { Movie, Episode } from '../../src/types/movie';
 import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
@@ -32,46 +33,15 @@ export default function MovieDetailScreen() {
   const { colors } = useTheme();
   const { isAuthenticated } = useSessionStore();
   const { isVIPMode } = useAccountStore();
-  const { currentMovie, setCurrentMovie, movies } = useCatalogStore();
   const history = useWatchHistory(isAuthenticated);
 
-  const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
-
-  const [movie, setMovie] = useState<Movie | null>(foundMovie);
-  // The movie whose fetch has finished, found or not: only an unknown movie waits for it.
-  const [settledId, setSettledId] = useState<string | null>(null);
-  const loading = !foundMovie && settledId !== id;
+  const { movie, loading, error: loadError, retry } = useMovieWithEpisodes(id);
   const [audioMode, setAudioMode] = useState<AudioMode>('subtitle');
   const [chosenTrack, setChosenTrack] = useState<string | null>(null);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [aiInfoOpen, setAiInfoOpen] = useState(false);
   const [engagement] = useMovieEngagement(id);
 
-  // Movie list/detail responses carry no episodes, so they are always fetched separately.
-  useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    const { movies: listed, currentMovie: selected } = useCatalogStore.getState();
-    const known = listed.find((item) => item.id === id) || (selected?.id === id ? selected : null);
-
-    Promise.all([
-      known ? Promise.resolve(known) : movieService.getMovieDetail(id).then((res) => (res.success ? res.data : null)),
-      movieService.getEpisodes(id),
-    ]).then(([base, episodesRes]) => {
-      if (cancelled) return;
-      if (base) {
-        const episodes = episodesRes.data;
-        const loaded: Movie = { ...base, episodes, totalEpisodes: episodes.length || base.totalEpisodes };
-        setMovie(loaded);
-        setCurrentMovie(loaded);
-      }
-      setSettledId(id);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [id, setCurrentMovie]);
 
   // Released episodes only; a movie with none says so instead of showing placeholders.
   const episodes: Episode[] = movie?.episodes ?? [];
@@ -98,6 +68,8 @@ export default function MovieDetailScreen() {
       <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
         {loading ? (
           <ActivityIndicator size="large" color={colors.ruby} />
+        ) : loadError ? (
+          <LoadError message={loadError} onRetry={retry} />
         ) : (
           <>
             <Text style={[styles.missingTitle, { color: colors.text }]}>Không tìm thấy phim này</Text>
@@ -175,7 +147,11 @@ export default function MovieDetailScreen() {
           language={movie.language}
         />
 
-        <EpisodeList episodes={episodes} isVIPMode={isVIPMode} posterUrl={movie.posterUrl} onSelect={handleSelectEpisode} />
+        {loadError ? (
+          <LoadError message={loadError} onRetry={retry} />
+        ) : (
+          <EpisodeList episodes={episodes} isVIPMode={isVIPMode} posterUrl={movie.posterUrl} onSelect={handleSelectEpisode} />
+        )}
         <RecommendationRail
           title="Phim tương tự"
           caption="AI chọn theo thể loại và quốc gia của phim này"
