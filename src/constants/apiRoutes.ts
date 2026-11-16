@@ -9,6 +9,7 @@ export const API_ROUTES = {
     REGISTER: '/auth/register',
     GOOGLE: '/auth/google',
     PROFILE: '/auth/me',
+    CHANGE_PASSWORD: '/auth/me/password',
     LOGOUT: '/auth/logout',
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',

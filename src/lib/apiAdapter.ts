@@ -24,6 +24,8 @@ export function adaptUserProfile(api: ProfileDto | null | undefined): UserProfil
     name: api.name || api.fullName || (api.email ? api.email.split('@')[0] : ''),
     email: api.email || '',
     avatarUrl: api.avatarUrl || '',
+    dateOfBirth: api.dateOfBirth ? String(api.dateOfBirth).slice(0, 10) : null,
+    phoneNumber: api.phoneNumber ?? null,
     role: isVIP ? 'vip' : 'user',
     isVIP,
     vipExpiresAt: api.vipExpiresAt || api.subscription?.endDate,
