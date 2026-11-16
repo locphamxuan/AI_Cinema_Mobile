@@ -1,6 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, Text, TouchableOpacity, View, Platform } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { ActivityIndicator, Image, Pressable, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
 import { usePlaybackSession } from '../../hooks/usePlaybackSession';
@@ -13,7 +13,8 @@ import type { SubtitleTrack } from '../../types/movie';
 import type { StreamingSession } from '../../types/playback';
 import { PlayerControls } from './PlayerControls';
 import { PlayerSettingsSheet } from './PlayerSettingsSheet';
-import { DEFAULT_AI_LABEL } from './AIComplianceModal';
+import { AiLabelOverlay } from './AiLabelOverlay';
+import { FullscreenStage } from './FullscreenStage';
 import { AdBreakOverlay, ResumePrompt } from './PlaybackOverlays';
 import { styles } from '../../styles/components/player/EpisodePlayer.styles';
 const HIDE_CONTROLS_MS = 3000;
@@ -38,18 +39,6 @@ interface EpisodePlayerProps {
   onStarted?: () => void;
   /** Called when the episode plays to its end (e.g. to show the AI suggestions after the last one). */
   onFinished?: () => void;
-}
-
-/** The AI label sits over the poster, the playing video and fullscreen; it is never hidden. */
-function AiLabelOverlay({ text }: { text: string | null }) {
-  return (
-    <View style={styles.aiBadge} pointerEvents="none" testID="ai-label-overlay">
-      <MaterialCommunityIcons name="robot-outline" size={12} color="#FF3D7F" />
-      <Text style={styles.aiBadgeText} numberOfLines={1}>
-        {text || DEFAULT_AI_LABEL}
-      </Text>
-    </View>
-  );
 }
 
 type StreamPlayerProps = Required<Omit<EpisodePlayerProps, 'posterUrl' | 'checking' | 'onRequestPlay' | 'onStarted' | 'onFinished' | 'session'>> &
@@ -163,13 +152,9 @@ function StreamPlayer(props: StreamPlayerProps) {
 
   return (
     <>
-      {fullscreen && Platform.OS !== 'web' ? (
-        <Modal visible animationType="fade" supportedOrientations={['landscape', 'portrait']} onRequestClose={toggleFullscreen}>
-          <View style={styles.fullscreen}>{stage}</View>
-        </Modal>
-      ) : (
-        stage
-      )}
+      <FullscreenStage fullscreen={fullscreen} onExit={toggleFullscreen}>
+        {stage}
+      </FullscreenStage>
       <PlayerSettingsSheet
         visible={settings}
         onClose={() => setSettings(false)}

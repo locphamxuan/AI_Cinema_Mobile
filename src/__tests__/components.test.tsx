@@ -4,6 +4,9 @@ import { SaveButton } from '../components/movie/SaveButton';
 import { StatementList } from '../components/wallet/StatementList';
 import { EpisodePlayer } from '../components/player/EpisodePlayer';
 import { DEFAULT_AI_LABEL } from '../components/player/AIComplianceModal';
+import { PartyPlayer } from '../components/watchParty/PartyPlayer';
+import { playbackService } from '../services/playbackService';
+import type { StreamingSession } from '../types/playback';
 import { savedMovieService } from '../services/savedMovieService';
 import { walletService } from '../services/walletService';
 import { useSessionStore } from '../store';
@@ -35,6 +38,7 @@ jest.mock('expo-video', () => ({
   useVideoPlayer: () => mockPlayer,
   VideoView: () => null,
 }));
+jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -143,6 +147,48 @@ describe('AI label on the player (BR-10)', () => {
   it('stays on the playing video with the label of the episode', () => {
     const root = render(<EpisodePlayer {...props} streamUrl="https://cdn/master.m3u8" aiLabel="Phim tạo bằng AI" />);
     expect(textOf(overlayText(root))).toEqual(['Phim tạo bằng AI']);
+    act(() => root.unmount());
+  });
+});
+
+describe('AI label in a watch room (BR-10)', () => {
+  const session: StreamingSession = {
+    sessionId: 's1',
+    episodeId: 'e1',
+    movieId: 'm1',
+    accessType: 'FREE' as StreamingSession['accessType'],
+    status: 'ACTIVE',
+    stream: { masterUrl: 'https://cdn/master.m3u8', qualities: [], durationSeconds: 600 },
+    aiLabel: null,
+    adSchedule: [],
+  };
+
+  it('stays the top layer while a member waits through the Host ad', () => {
+    jest.spyOn(playbackService, 'heartbeat').mockResolvedValue({ success: true, data: null as never });
+    const root = render(
+      <PartyPlayer
+        session={session}
+        isHost={false}
+        sync={null}
+        subtitles={[]}
+        audioLabel="tiếng gốc"
+        onHostAction={() => undefined}
+        onEnded={() => undefined}
+        roomAd={{ active: true, title: 'Quảng cáo', mediaUrl: 'https://cdn/ad.mp4', durationSeconds: 15, startedAt: 1 }}
+        onAdChange={() => undefined}
+        quality="auto"
+        onQualityChange={() => undefined}
+      />,
+    );
+    const label = root.root.findAll((n) => n.props.testID === 'ai-label-overlay', { deep: true })[0];
+    expect(label.findAll((n) => String(n.type) === 'Text').flatMap((n) => n.children)).toEqual([DEFAULT_AI_LABEL]);
+    // The stage's last child is the label, drawn after (above) the ad overlay.
+    // label = the badge View, its parent = <AiLabelOverlay>, whose parent is the stage holding the ad overlay too.
+    const overlay = label.parent!;
+    const stage = overlay.parent!;
+    const layers = stage.children.filter((c) => typeof c !== 'string') as (typeof overlay)[];
+    expect(layers.some((c) => (c.type as { name?: string }).name === 'RoomAdOverlay')).toBe(true);
+    expect(layers[layers.length - 1]).toBe(overlay);
     act(() => root.unmount());
   });
 });
