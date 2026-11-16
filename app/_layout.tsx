@@ -54,6 +54,7 @@ function RootLayoutContent() {
         <Stack.Screen name="devices" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="top-ups" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="account" options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="friends" options={{ headerShown: false, animation: 'slide_from_right' }} />
       </Stack>
 
       <AuthModal />
