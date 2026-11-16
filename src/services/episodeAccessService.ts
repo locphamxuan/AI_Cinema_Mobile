@@ -21,11 +21,24 @@ class EpisodeAccessService {
     return apiClient.get<AccessDecision>(API_ROUTES.ACCESS.DECISION(episodeId));
   }
 
-  /** GET /accesses - ids of the episodes this member already owns, so the list can drop their lock icon. */
-  async listOwnedEpisodeIds(): Promise<ApiResponse<string[]>> {
-    const res = await apiClient.get<{ episode?: { id?: string } }[]>(API_ROUTES.ACCESS.OWNED, { params: { limit: 100 } });
-    const ids = res.success && Array.isArray(res.data) ? res.data.map((row) => row.episode?.id).filter((id): id is string => Boolean(id)) : [];
-    return { ...res, data: ids };
+  /**
+   * GET /accesses - ids of every episode this member owns, page by page (the BE caps a page at 100), so the list
+   * can drop their lock icon. A display hint only: opening an episode still asks GET /episodes/:id/access.
+   */
+  async listOwnedEpisodeIds(maxPages = 20): Promise<ApiResponse<string[]>> {
+    const ids: string[] = [];
+    for (let page = 1; page <= maxPages; page += 1) {
+      const res = await apiClient.get<{ data?: { episode?: { id?: string } }[]; meta?: { totalPages?: number } }>(
+        API_ROUTES.ACCESS.OWNED,
+        { params: { limit: 100, page }, keepEnvelope: true },
+      );
+      if (!res.success) return { ...res, data: ids };
+      const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+      ids.push(...rows.map((row) => row.episode?.id).filter((id): id is string => Boolean(id)));
+      const totalPages = res.data?.meta?.totalPages ?? 1;
+      if (page >= totalPages || rows.length === 0) break;
+    }
+    return { success: true, data: ids, statusCode: 200 };
   }
 
   /** POST /episodes/:id/purchase - unlocks one episode, main Coins first, then bonus Coins. */

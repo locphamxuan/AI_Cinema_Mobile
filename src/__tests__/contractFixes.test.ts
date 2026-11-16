@@ -53,15 +53,19 @@ describe('BE field names', () => {
     expect(older.isFree && older.isFreeForMember).toBe(true);
   });
 
-  it('lists the episodes the member owns from GET /accesses', async () => {
-    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
-      ok: true,
-      status: 200,
-      text: async () => JSON.stringify({ data: [{ episode: { id: 'e1' } }, { episode: null }, { episode: { id: 'e2' } }], meta: {} }),
-    } as Response);
+  it('lists every episode the member owns from GET /accesses, page by page', async () => {
+    const pages: Record<string, unknown> = {
+      '1': { data: [{ episode: { id: 'e1' } }, { episode: null }], meta: { currentPage: 1, totalPages: 2, totalItems: 3 } },
+      '2': { data: [{ episode: { id: 'e2' } }], meta: { currentPage: 2, totalPages: 2, totalItems: 3 } },
+    };
+    const fetchMock = jest.spyOn(global, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'http://x');
+      return { ok: true, status: 200, text: async () => JSON.stringify(pages[url.searchParams.get('page') ?? '1']) } as Response;
+    });
     const res = await episodeAccessService.listOwnedEpisodeIds();
     expect(res.data).toEqual(['e1', 'e2']);
-    expect(String(fetchMock.mock.calls[0][0])).toContain('/accesses?limit=100');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0][0])).toContain('limit=100');
   });
 });
 
