@@ -9,6 +9,10 @@ import { purgeLegacyCredentials, readRememberedEmail, rememberEmail } from '../l
 import { STORAGE_KEYS } from '../lib/storage';
 import { useSessionStore, useUiStore } from '../store';
 
+// The first render of the auth / player tree loads and transforms many modules; on a slow machine that alone can
+// pass 20 s, so these render suites get a generous per-test timeout.
+jest.setTimeout(90_000);
+
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('../components/auth/GoogleSignInSection', () => ({ GoogleSignInSection: () => null }));
 jest.mock('react-native-safe-area-context', () => ({

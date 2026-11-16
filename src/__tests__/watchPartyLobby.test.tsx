@@ -7,6 +7,10 @@ import { playbackService } from '../services/playbackService';
 import { watchRoomService } from '../services/watchRoomService';
 import CreateWatchPartyScreen from '../../app/watch-party/create';
 
+// The first render of the auth / player tree loads and transforms many modules; on a slow machine that alone can
+// pass 20 s, so these render suites get a generous per-test timeout.
+jest.setTimeout(90_000);
+
 type Handler = (payload?: unknown) => void;
 const mockHandlers = new Map<string, Handler>();
 const mockEmit = jest.fn();

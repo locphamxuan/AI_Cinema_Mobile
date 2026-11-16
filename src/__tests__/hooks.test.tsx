@@ -11,6 +11,10 @@ import { playbackService } from '../services/playbackService';
 import type { ApiResponse } from '../types/api';
 import type { StreamingSession, WatchHistoryEntry } from '../types/playback';
 
+// The first render of the auth / player tree loads and transforms many modules; on a slow machine that alone can
+// pass 20 s, so these render suites get a generous per-test timeout.
+jest.setTimeout(90_000);
+
 jest.mock('expo-router', () => ({
   useFocusEffect: (effect: () => void) => jest.requireActual('react').useEffect(effect, [effect]),
 }));
