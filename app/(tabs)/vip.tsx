@@ -8,9 +8,16 @@ import { Button } from '../../src/components/common/Button';
 import { useTheme } from '../../src/theme';
 import { useSessionStore, useAccountStore, useUiStore, planIsRunning } from '../../src/store';
 import { episodeAccessService } from '../../src/services';
+import { splitPrice } from '../../src/components/player/UnlockEpisodeModal';
 import type { MembershipPlan, MySubscription } from '../../src/types/episodeAccess';
 import { styles } from '../../src/styles/screens/tabs/vip.styles';
 
+const pad = (n: number) => String(n).padStart(2, '0');
+const formatDate = (iso: string | null) => {
+  if (!iso) return 'chưa rõ';
+  const d = new Date(iso);
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
+};
 const formatDateTime = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }) : 'chưa rõ';
 
@@ -23,14 +30,14 @@ export function cancelWindowText(plan: MySubscription, now = Date.now()): string
   if (!plan.cancelDeadline) return 'Gói tự gia hạn khi hết kỳ.';
   return new Date(plan.cancelDeadline).getTime() > now
     ? `Bạn còn tắt được tự gia hạn đến ${formatDateTime(plan.cancelDeadline)}.`
-    : 'Đã quá hạn tắt tự gia hạn cho kỳ này, nên lần gia hạn tới vẫn diễn ra.';
+    : `Đã qua mốc hủy của kỳ này: lần gia hạn tới (${formatDate(plan.currentPeriodEnd)}) vẫn trừ Coin; gói sẽ dừng ở kỳ sau.`;
 }
 
 export default function VipScreen() {
   const { colors } = useTheme();
   const { isAuthenticated } = useSessionStore();
   const { setWalletBalance, loadAccountData, subscription, wallet } = useAccountStore();
-  const { openAuthModal, setTopUpModalOpen } = useUiStore();
+  const { openAuthModal, setTopUpModalOpen, setPendingPurchase } = useUiStore();
   const [plans, setPlans] = useState<MembershipPlan[] | null>(null);
   const [plansLoadFailed, setPlansLoadFailed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -72,9 +79,16 @@ export default function VipScreen() {
       openAuthModal('login');
       return;
     }
+    const price = plan.priceCoins ?? 0;
+    const split = splitPrice(price, wallet.mainCoin);
+    const short = price - wallet.mainCoin - wallet.bonusCoin;
+    const charge =
+      short > 0
+        ? `Ví còn thiếu ${short} Coin (đang có ${wallet.mainCoin} chính, ${wallet.bonusCoin} thưởng).`
+        : `Trừ ${split.main} Coin chính và ${split.bonus} Coin thưởng (Coin chính trước, Coin thưởng bù phần thiếu).`;
     showDialog(
       `Đăng ký ${plan.name}`,
-      `Trừ ${plan.priceCoins} Coin cho ${plan.durationDays} ngày: Coin chính trước, Coin thưởng bù phần còn thiếu. Gói tự gia hạn mỗi kỳ và bạn tắt được trước ngày gia hạn.`,
+      `${price} Coin cho ${plan.durationDays} ngày. ${charge} Gói tự gia hạn mỗi kỳ, bạn tắt được trước mốc hủy.`,
       [
         { text: 'Để sau', style: 'cancel' },
         {
@@ -84,10 +98,20 @@ export default function VipScreen() {
             const res = await episodeAccessService.joinPlan(plan.id);
             setBusy(null);
             if (!res.success || !res.data) {
-              const short = res.statusCode === 422;
+              const notEnough = res.statusCode === 422;
               showDialog('Chưa đăng ký được', res.message || 'Kiểm tra kết nối rồi thử lại.', [
                 { text: 'Đóng', style: 'cancel' },
-                ...(short ? [{ text: 'Nạp Coin', onPress: () => setTopUpModalOpen(true) }] : []),
+                ...(notEnough
+                  ? [
+                      {
+                        text: 'Nạp Coin',
+                        onPress: () => {
+                          setPendingPurchase({ kind: 'plan', planId: plan.id, planName: plan.name });
+                          setTopUpModalOpen(true);
+                        },
+                      },
+                    ]
+                  : []),
               ]);
               return;
             }
@@ -99,6 +123,16 @@ export default function VipScreen() {
       ],
     );
   };
+
+  // After a PAID top-up the member chose "back to the plan": ask to confirm the same plan again.
+  const resumePurchase = useUiStore((st) => st.resumePurchase);
+  useEffect(() => {
+    if (!resumePurchase || !plans) return;
+    const intent = useUiStore.getState().takeResumePurchase((i) => i.kind === 'plan');
+    const plan = intent?.kind === 'plan' ? plans.find((p) => p.id === intent.planId) : undefined;
+    if (plan) join(plan);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumePurchase, plans]);
 
   const toggleRenew = async (on: boolean) => {
     if (!open) return;

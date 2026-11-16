@@ -63,7 +63,9 @@ describe('MF-2 rules on the client', () => {
     const before = plan('ACTIVE', '2026-10-31T00:00:00.000Z', { cancelDeadline: '2026-10-30T00:00:00.000Z' });
     const after = plan('ACTIVE', '2026-10-31T00:00:00.000Z', { cancelDeadline: '2026-10-09T00:00:00.000Z' });
     expect(cancelWindowText(before, now)).toContain('còn tắt được');
-    expect(cancelWindowText(after, now)).toContain('Đã quá hạn');
+    expect(cancelWindowText(after, now)).toContain('Đã qua mốc hủy');
+    expect(cancelWindowText(after, now)).toContain('vẫn trừ Coin; gói sẽ dừng ở kỳ sau');
+    expect(cancelWindowText(after, now)).toContain('31/10');
     expect(cancelWindowText({ ...before, autoRenew: false }, now)).toContain('Đã tắt tự gia hạn');
   });
 
