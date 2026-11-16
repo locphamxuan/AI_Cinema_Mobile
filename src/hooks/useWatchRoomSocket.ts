@@ -7,6 +7,8 @@ import type { RoomAdState, RoomChatMessage, RoomPlaybackState, RoomScreen, RoomS
 
 export { ROOM_EVENT };
 
+export const SESSION_EXPIRED_NOTICE = 'Phiên đăng nhập đã hết hạn. Đăng nhập lại rồi mở phòng lần nữa.';
+
 /**
  * The `/watch` namespace on the backend. On the web the REST calls go through the same-origin `/api` proxy
  * of the dev server, which does not forward WebSockets, so the socket talks to the backend directly
@@ -62,12 +64,18 @@ export function useWatchRoomSocket(roomId: string | undefined, { join = true }: 
     let socket: Socket | null = null;
     let cancelled = false;
     let reauth = false;
+    /** The token of the last handshake: a rejected one is never sent twice. */
+    let sentToken = '';
     void Promise.resolve().then(() => {
       if (cancelled) return;
       // A callback, so every (re)connect sends the current token, refreshed first when it has expired.
       socket = io(watchSocketUrl(), {
         transports: ['websocket'],
-        auth: (send) => void apiClient.getFreshAccessToken().then((token) => send({ token })),
+        auth: (send) =>
+          void apiClient.getFreshAccessToken().then((token) => {
+            sentToken = token;
+            send({ token });
+          }),
         reconnection: true,
       });
       socketRef.current = socket;
@@ -80,10 +88,19 @@ export function useWatchRoomSocket(roomId: string | undefined, { join = true }: 
       socket.on('disconnect', (why) => {
         patch({ connected: false });
         // The BE drops an expired token itself, and socket.io does not reconnect after a server-side disconnect.
-        if (why === 'io server disconnect' && reauth) {
-          reauth = false;
+        if (why !== 'io server disconnect' || !reauth) return;
+        reauth = false;
+        // Reconnect only with a different token: a revoked refresh token, a locked account or a skewed clock would
+        // otherwise loop forever on the same rejected handshake.
+        const rejected = sentToken;
+        void apiClient.getFreshAccessToken().then((token) => {
+          if (cancelled) return;
+          if (!token || token === rejected) {
+            patch({ closed: true, notice: SESSION_EXPIRED_NOTICE });
+            return;
+          }
           socket?.connect();
-        }
+        });
       });
       socket.on(ROOM_EVENT.JOINED, ({ room }: { room: WatchRoom }) => {
         patch({ room, hostUserId: room.hostUserId, participantCount: room.participantCount ?? 1 });
