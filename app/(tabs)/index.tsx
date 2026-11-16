@@ -150,13 +150,13 @@ export default function HomeScreen() {
         {tab === 'recommend' && (
           <>
             {movies.length > 0 && (
-              <View style={{ paddingHorizontal: 16, paddingBottom: 10 }}>
-                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>
+              <View style={styles.recommendHead}>
+                <Text style={[styles.recommendTitle, { color: colors.text }]}>
                   {isAuthenticated ? 'Đề xuất dành riêng cho bạn' : 'Đề xuất nổi bật hôm nay'}
                 </Text>
                 {preferredGenres.length > 0 && (
-                  <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>
-                    Dựa trên gu phim {preferredGenres.join(', ')} bạn đã xem & lưu
+                  <Text style={[styles.recommendNote, { color: colors.textMuted }]}>
+                    Dựa trên các thể loại {preferredGenres.join(', ')} bạn đã xem và lưu
                   </Text>
                 )}
               </View>
