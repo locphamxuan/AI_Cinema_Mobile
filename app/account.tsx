@@ -4,8 +4,15 @@ import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { FormField } from '../src/components/common/FormField';
 import { Button } from '../src/components/common/Button';
 import { showDialog } from '../src/lib/dialog';
-import { formatDobDisplay, PASSWORD_HINT } from '../src/lib/authForm';
-import { maskDateInput, passwordChangeErrors, profileChanges, profileFormErrors } from '../src/lib/accountForm';
+import { PASSWORD_HINT } from '../src/lib/authForm';
+import {
+  maskDateInput,
+  passwordChangeErrors,
+  profileChanges,
+  profileFormErrors,
+  profileFormFrom,
+  type ProfileForm,
+} from '../src/lib/accountForm';
 import { useSessionStore, useUiStore } from '../src/store';
 import { useTheme } from '../src/theme';
 import { styles } from '../src/styles/screens/account.styles';
@@ -19,30 +26,39 @@ export default function AccountScreen() {
   const { openAuthModal } = useUiStore();
   const saved = { name: user?.name ?? '', phoneNumber: user?.phoneNumber ?? null, dateOfBirth: user?.dateOfBirth ?? null };
 
-  const [form, setForm] = useState({
-    name: saved.name,
-    phone: saved.phoneNumber ?? '',
-    dateOfBirth: saved.dateOfBirth ? formatDobDisplay(saved.dateOfBirth) : '',
-  });
+  const [form, setFormState] = useState(() => profileFormFrom(user));
+  const [touched, setTouched] = useState(false);
+  const setForm = (update: (f: ProfileForm) => ProfileForm) => {
+    setTouched(true);
+    setFormState(update);
+  };
+  // The profile can arrive after the screen opened (GET /auth/me on start-up): fill the form until the member types.
+  const seed = `${user?.id}|${saved.name}|${saved.phoneNumber}|${saved.dateOfBirth}`;
+  const [seededFrom, setSeededFrom] = useState(seed);
+  if (seed !== seededFrom) {
+    setSeededFrom(seed);
+    if (!touched) setFormState(profileFormFrom(user));
+  }
   const [profileTried, setProfileTried] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [passwords, setPasswords] = useState(EMPTY_PASSWORDS);
   const [passwordTried, setPasswordTried] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
-  const profileErrors = profileTried ? profileFormErrors(form) : {};
+  const profileErrors = profileTried ? profileFormErrors(form, undefined, saved.dateOfBirth) : {};
   const changes = profileChanges(form, saved);
   const changed = Object.keys(changes).length > 0;
   const passwordErrors = passwordTried ? passwordChangeErrors(passwords) : {};
 
   const saveProfile = async () => {
     setProfileTried(true);
-    if (Object.keys(profileFormErrors(form)).length) return;
+    if (Object.keys(profileFormErrors(form, undefined, saved.dateOfBirth)).length) return;
     setSavingProfile(true);
     const res = await updateProfile(changes);
     setSavingProfile(false);
     if (!res.success) return showDialog('Chưa lưu được thông tin', res.error);
     setProfileTried(false);
+    setTouched(false);
     showDialog('Đã lưu thông tin', 'Hồ sơ của bạn đã được cập nhật.');
   };
 
@@ -116,7 +132,7 @@ export default function AccountScreen() {
               placeholder="DD/MM/YYYY"
               keyboardType="number-pad"
               maxLength={10}
-              hint="Tài khoản xem phim cần đủ 18 tuổi."
+              hint={saved.dateOfBirth ? 'Tài khoản xem phim cần đủ 18 tuổi.' : 'Chưa có ngày sinh. Có thể để trống, nếu nhập thì cần đủ 18 tuổi.'}
               error={profileErrors.dateOfBirth}
             />
             <Button

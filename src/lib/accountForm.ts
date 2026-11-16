@@ -1,5 +1,5 @@
 import type { ApiResponse } from '../types/api';
-import { PASSWORD_RULE_ERROR, isAtLeast18, normalizeDateOfBirth, passwordOk } from './authForm';
+import { PASSWORD_RULE_ERROR, formatDobDisplay, isAtLeast18, normalizeDateOfBirth, passwordOk } from './authForm';
 import { SAME_PASSWORD_MESSAGE, TOO_MANY_MESSAGE } from './passwordReset';
 
 /** Same shape as the BE rule: an optional +, then 8 to 15 digits with spaces or dots between them. */
@@ -14,8 +14,21 @@ export interface ProfileForm {
 
 export type ProfileErrors = Partial<Record<keyof ProfileForm, string>>;
 
-/** Field by field, why the profile cannot be saved yet; an empty object means it can. */
-export function profileFormErrors(form: ProfileForm, now: Date = new Date()): ProfileErrors {
+/** The form filled from the signed-in profile (birthday shown as DD/MM/YYYY). */
+export function profileFormFrom(user: { name?: string; phoneNumber?: string | null; dateOfBirth?: string | null } | null): ProfileForm {
+  return {
+    name: user?.name ?? '',
+    phone: user?.phoneNumber ?? '',
+    dateOfBirth: user?.dateOfBirth ? formatDobDisplay(user.dateOfBirth) : '',
+  };
+}
+
+/**
+ * Field by field, why the profile cannot be saved yet; an empty object means it can. The BE keeps the birthday
+ * optional on PATCH /auth/me, so an account that never had one (older sessions, Google) may leave it empty; one
+ * already stored cannot be cleared.
+ */
+export function profileFormErrors(form: ProfileForm, now: Date = new Date(), savedDateOfBirth?: string | null): ProfileErrors {
   const errors: ProfileErrors = {};
   const name = form.name.trim();
   if (name.length < 2) errors.name = 'Họ tên cần ít nhất 2 ký tự.';
@@ -27,7 +40,9 @@ export function profileFormErrors(form: ProfileForm, now: Date = new Date()): Pr
   }
 
   const dob = form.dateOfBirth.trim();
-  if (!dob) errors.dateOfBirth = 'Nhập ngày sinh dạng DD/MM/YYYY.';
+  if (!dob) {
+    if (savedDateOfBirth) errors.dateOfBirth = 'Nhập ngày sinh dạng DD/MM/YYYY.';
+  }
   else if (!normalizeDateOfBirth(dob)) errors.dateOfBirth = 'Ngày sinh chưa hợp lệ, nhập dạng DD/MM/YYYY.';
   else if (!isAtLeast18(dob, now)) errors.dateOfBirth = 'Tài khoản xem phim cần đủ 18 tuổi trở lên.';
   return errors;
