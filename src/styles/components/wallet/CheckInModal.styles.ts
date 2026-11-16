@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 import { fonts, textStyle } from '../../../theme';
 
 export const styles = StyleSheet.create({
+  countdown: { ...textStyle.labelStrong, textAlign: 'center' },
   backdrop: { flex: 1 },
   sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 10, gap: 14 },
   handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2 },

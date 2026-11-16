@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAccountStore, useUiStore } from '../../store';
 import { useTheme } from '../../theme';
 import { Button } from '../common/Button';
+import { NextCheckIn } from './NextCheckIn';
 import type { CheckInResult, DailyRewardStatus } from '../../types/episodeAccess';
 import { styles } from '../../styles/components/wallet/CheckInModal.styles';
 
@@ -173,6 +174,8 @@ export const CheckInModal: React.FC = () => {
           loading={busy}
           disabled={statusLoading || !dailyReward || doneToday || todayReward <= 0}
         />
+
+        {doneToday && dailyReward ? <NextCheckIn /> : null}
 
         {spins > 0 && <Button label={`Quay thưởng (còn ${spins} lượt)`} icon="gift-outline" variant="secondary" onPress={openWheel} />}
 
