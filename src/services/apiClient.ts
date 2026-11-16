@@ -1,5 +1,6 @@
 import { API_CONFIG } from '../constants/config';
 import { storage, STORAGE_KEYS } from '../lib/storage';
+import { tokenExpiresSoon } from '../lib/jwt';
 import type { ApiResponse } from '../types/api';
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
@@ -23,6 +24,9 @@ const joinMessage = (value: unknown): string | undefined => {
   return typeof value === 'string' && value ? value : undefined;
 };
 
+export const NETWORK_MESSAGE = 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.';
+export const TIMEOUT_MESSAGE = 'Máy chủ phản hồi quá lâu. Kiểm tra mạng rồi thử lại.';
+
 /** Refusals the viewer can act on, keyed by the BE `details.reason` (Main Flow 3). */
 const REASON_MESSAGES: Record<string, string> = {
   GOOGLE_STAFF_ACCOUNT: 'Đăng nhập Google chỉ dành cho thành viên. Tài khoản quản trị / nhân sự hãy đăng nhập bằng mật khẩu.',
@@ -36,6 +40,13 @@ const REASON_MESSAGES: Record<string, string> = {
   EPISODE_UNDER_REVISION: 'Tập phim đang được chỉnh sửa, vui lòng quay lại sau.',
   PLAYBACK_ACCESS_REQUIRED: 'Bạn chưa có quyền xem tập này. Hãy mở khóa tập hoặc đăng ký gói.',
   PLAYBACK_ACCESS_REVOKED: 'Quyền xem tập này đã hết hiệu lực.',
+  // BR-69 watch-room gate
+  DEVICE_LIMIT_EXCEEDED: 'Tài khoản đang phát trên đủ số thiết bị của gói. Dừng xem ở một thiết bị rồi vào phòng lại.',
+  ENTITLEMENT_REQUIRED: 'Bạn chưa có quyền xem tập này. Mở khóa tập hoặc đăng ký gói Tháng để vào phòng.',
+  AGE_RESTRICTED: 'Tập này dành cho người từ 18 tuổi trở lên.',
+  ROOM_FULL: 'Phòng đã đủ 8 người.',
+  GUEST_KEY_REQUIRED: 'Phiên xem đã hết hạn. Mở lại tập phim để xem tiếp.',
+  GUEST_KEY_INVALID: 'Phiên xem đã hết hạn. Mở lại tập phim để xem tiếp.',
 };
 
 /** The BE error envelope; `details` is a list of validation messages or a `{ reason }` object. */
@@ -124,17 +135,30 @@ class ApiClient {
     return this.refreshInFlight;
   }
 
+  /** The stored access token, refreshed first when it has expired (the watch-room socket handshake). */
+  public async getFreshAccessToken(): Promise<string> {
+    const token = await storage.getString(STORAGE_KEYS.AUTH_TOKEN, '');
+    if (token && tokenExpiresSoon(token) && (await this.refreshSession())) {
+      return storage.getString(STORAGE_KEYS.AUTH_TOKEN, '');
+    }
+    return token;
+  }
+
   public getBaseUrl(): string {
     return this.baseUrl;
   }
 
-  private async getAuthHeaders(): Promise<Record<string, string>> {
+  private async getAuthHeaders(skipAuthRefresh = false): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
       ...API_CONFIG.DEFAULT_HEADERS,
     };
 
     try {
-      const token = await storage.getString(STORAGE_KEYS.AUTH_TOKEN, '');
+      let token = await storage.getString(STORAGE_KEYS.AUTH_TOKEN, '');
+      // Public routes (access, playback, engagement) read an expired token as a Guest rather than answering 401.
+      if (token && !skipAuthRefresh && tokenExpiresSoon(token) && (await this.refreshSession())) {
+        token = await storage.getString(STORAGE_KEYS.AUTH_TOKEN, '');
+      }
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
@@ -179,7 +203,7 @@ class ApiClient {
       ...restOptions
     } = options;
     const url = this.buildUrl(endpoint, params);
-    const authHeaders = await this.getAuthHeaders();
+    const authHeaders = await this.getAuthHeaders(skipAuthRefresh);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -241,7 +265,8 @@ class ApiClient {
       return {
         success: false,
         data: null as unknown as T,
-        message: isTimeout ? 'Yêu cầu kết nối quá thời gian quy định (Timeout)' : (failure?.message || 'Lỗi kết nối mạng máy chủ'),
+        // The browser / native text ("Network request failed") means nothing to a viewer.
+        message: isTimeout ? TIMEOUT_MESSAGE : NETWORK_MESSAGE,
       };
     }
   }

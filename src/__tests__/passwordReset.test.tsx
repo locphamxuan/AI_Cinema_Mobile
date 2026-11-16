@@ -134,7 +134,7 @@ describe('authService password reset calls', () => {
     jest.spyOn(global, 'fetch').mockRejectedValue(new Error('network offline'));
     const offline = await authService.resetPassword({ email: 'a@b.co', otp: '000000', newPassword: 'x' });
     expect(offline.statusCode).toBeUndefined();
-    expect(resetFailureMessage(offline)).toBe('network offline');
+    expect(resetFailureMessage(offline)).toBe('Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.');
   });
 });
 

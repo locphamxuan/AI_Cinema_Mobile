@@ -102,7 +102,7 @@ describe('sign-in on the store', () => {
 
     const res = await useSessionStore.getState().login('viewer@example.com', 'password123');
 
-    expect(res).toEqual({ success: false, error: 'Network request failed' });
+    expect(res).toEqual({ success: false, error: 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.' });
     expect(appState().isAuthenticated).toBe(false);
   });
 });
