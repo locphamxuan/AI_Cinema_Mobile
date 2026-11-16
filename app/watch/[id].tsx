@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
+import { useCallback, useRef, useState, type ComponentRef } from 'react';
 import { ActivityIndicator, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { showDialog } from '../../src/lib/dialog';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -6,7 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAccountStore, useCatalogStore, useSessionStore } from '../../src/store';
 import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
-import { movieService } from '../../src/services';
+import { useMovieWithEpisodes } from '../../src/hooks/useMovieWithEpisodes';
+import { LoadError } from '../../src/components/common/LoadError';
 import { engagementService } from '../../src/services/engagementService';
 import { playbackService } from '../../src/services/playbackService';
 import { Movie, Episode } from '../../src/types/movie';
@@ -33,15 +34,13 @@ export default function WatchScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { isVIPMode } = useAccountStore();
-  const { currentMovie, setCurrentMovie, movies } = useCatalogStore();
+  const { currentMovie, movies } = useCatalogStore();
 
   const foundMovie = movies.find((item) => item.id === id) || (currentMovie?.id === id ? currentMovie : null);
-
-  const [movie, setMovie] = useState<Movie | null>(foundMovie);
-  // The movie whose fetch has finished, found or not: only an unknown movie waits for it.
-  const [settledId, setSettledId] = useState<string | null>(null);
-  const loading = !foundMovie && settledId !== id;
   const [activeEpisode, setActiveEpisode] = useState<Episode | null>(foundMovie?.episodes?.[0] || null);
+  const { movie, loading, error: loadError, retry } = useMovieWithEpisodes(id, (loaded) =>
+    setActiveEpisode(loaded.episodes.find((ep) => ep.id === episodeId) || loaded.episodes[0] || null),
+  );
   const [audioMode, setAudioMode] = useState<AudioMode>(mode === 'voiceover' ? 'voiceover' : 'subtitle');
   const [chosenTrack, setChosenTrack] = useState<string | null>(null);
   const [session, setSession] = useState<StreamingSession | null>(null);
@@ -49,32 +48,6 @@ export default function WatchScreen() {
   const [engagement, setEngagement] = useMovieEngagement(id);
   const scrollViewRef = useRef<ComponentRef<typeof ScrollView>>(null);
 
-  // Movie list/detail responses carry no episodes, so they are always fetched separately.
-  useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    const { movies: listed, currentMovie: selected } = useCatalogStore.getState();
-    const known = listed.find((item) => item.id === id) || (selected?.id === id ? selected : null);
-
-    Promise.all([
-      known ? Promise.resolve(known) : movieService.getMovieDetail(id).then((res) => (res.success ? res.data : null)),
-      movieService.getEpisodes(id),
-    ]).then(([base, episodesRes]) => {
-      if (cancelled) return;
-      if (base) {
-        const episodes = episodesRes.data;
-        const loaded: Movie = { ...base, episodes, totalEpisodes: episodes.length || base.totalEpisodes };
-        setMovie(loaded);
-        setCurrentMovie(loaded);
-        setActiveEpisode(episodes.find((ep) => ep.id === episodeId) || episodes[0] || null);
-      }
-      setSettledId(id);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [id, setCurrentMovie, episodeId]);
 
   // Released episodes only; a movie with none says so instead of showing placeholders.
   const episodes: Episode[] = movie?.episodes ?? [];
@@ -144,6 +117,8 @@ export default function WatchScreen() {
       <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
         {loading ? (
           <ActivityIndicator size="large" color={colors.ruby} />
+        ) : loadError ? (
+          <LoadError message={loadError} onRetry={retry} />
         ) : (
           <>
             <Text style={[styles.missingTitle, { color: colors.text }]}>Không tìm thấy phim này</Text>
@@ -237,13 +212,17 @@ export default function WatchScreen() {
           language={movie.language}
         />
 
-        <EpisodeList
-          episodes={episodes}
-          currentId={ep?.id}
-          isVIPMode={isVIPMode}
-          posterUrl={movie.posterUrl}
-          onSelect={handleSelectEpisode}
-        />
+        {loadError ? (
+          <LoadError message={loadError} onRetry={retry} />
+        ) : (
+          <EpisodeList
+            episodes={episodes}
+            currentId={ep?.id}
+            isVIPMode={isVIPMode}
+            posterUrl={movie.posterUrl}
+            onSelect={handleSelectEpisode}
+          />
+        )}
 
         {ep?.synopsis ? (
           <View style={styles.about}>

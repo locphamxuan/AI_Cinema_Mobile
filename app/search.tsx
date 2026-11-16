@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PosterGrid } from '../src/components/home/PosterGrid';
+import { LoadError } from '../src/components/common/LoadError';
 import { useTheme } from '../src/theme';
 import { useCatalogStore } from '../src/store';
 import { movieService } from '../src/services/movieService';
@@ -23,7 +24,9 @@ export default function SearchScreen() {
 
   const [query, setQuery] = useState('');
   // The last answer and the term it answers: the old one stays up while a new term loads.
-  const [found, setFound] = useState<{ term: string; movies: Movie[] } | null>(null);
+  const [found, setFound] = useState<{ term: string; movies: Movie[]; error?: string } | null>(null);
+  // Bumped by "Thử lại" to send the same term again.
+  const [attempt, setAttempt] = useState(0);
   const [recent, setRecent] = useState<string[]>([]);
   const [page, setPage] = useState(0);
 
@@ -42,14 +45,16 @@ export default function SearchScreen() {
     let active = true;
     const timer = setTimeout(() => {
       void movieService.listMovies({ search: term, limit: 30 }).then((res) => {
-        if (active) setFound({ term, movies: res.success && Array.isArray(res.data) ? res.data : [] });
+        if (!active) return;
+        if (res.success && Array.isArray(res.data)) setFound({ term, movies: res.data });
+        else setFound({ term, movies: [], error: res.message || 'Chưa tìm được. Kiểm tra mạng rồi thử lại.' });
       });
     }, DEBOUNCE_MS);
     return () => {
       active = false;
       clearTimeout(timer);
     };
-  }, [term]);
+  }, [term, attempt]);
 
   const changeQuery = (value: string) => {
     setQuery(value);
@@ -108,6 +113,8 @@ export default function SearchScreen() {
         {term ? (
           searching && results === null ? (
             <Text style={[styles.note, { color: colors.textMuted }]}>Đang tìm…</Text>
+          ) : found?.term === term && found.error ? (
+            <LoadError message={found.error} onRetry={() => setAttempt((n) => n + 1)} />
           ) : results && results.length > 0 ? (
             <PosterGrid movies={results} onMoviePress={openMovie} />
           ) : (

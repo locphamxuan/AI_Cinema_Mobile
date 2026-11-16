@@ -18,6 +18,7 @@ export const signedOutAccount = () => ({
   subscription: null as MySubscription | null,
   dailyReward: null as DailyRewardStatus | null,
   ownedEpisodeIds: [] as string[],
+  walletError: null as string | null,
 });
 
 interface AccountState {
@@ -28,6 +29,8 @@ interface AccountState {
   subscription: MySubscription | null;
   /** The monthly plan is running. A display hint only: every episode is still opened through the BE. */
   isVIPMode: boolean;
+  /** Why the last wallet read failed; the screen shows it instead of a misleading 0 Coin. */
+  walletError: string | null;
   /** GET /accesses: episodes already bought, a lock-icon hint only (the BE still decides on open). */
   ownedEpisodeIds: string[];
   /** Reads the wallet, the plan and the owned episodes from the BE. */
@@ -58,6 +61,7 @@ export const useAccountStore = create<AccountState>()(
         ]);
         const fromBe = {
           ...(walletRes.success ? { wallet: walletRes.data } : {}),
+          walletError: walletRes.success ? null : walletRes.message || 'Chưa đọc được số dư ví.',
           ...(ownedRes.success ? { ownedEpisodeIds: ownedRes.data } : {}),
         };
         if (!planRes.success) {
