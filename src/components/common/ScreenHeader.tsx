@@ -22,6 +22,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, right }) => {
       <TouchableOpacity
         onPress={() => router.back()}
         style={[styles.back, { backgroundColor: colors.cardAlt }]}
+        hitSlop={4}
         accessibilityLabel="Quay lại"
       >
         <Ionicons name="chevron-back" size={22} color={colors.text} />
