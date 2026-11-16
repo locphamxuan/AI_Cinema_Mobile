@@ -142,8 +142,8 @@ class AuthService {
    * device, kept like a sign-in so the member stays signed in here.
    */
   async changePassword(dto: ChangePasswordRequestDto): Promise<ApiResponse<AuthResponseDto>> {
-    // No AUTH_CALL: an expired access token must still refresh; a wrong current password answers 401 again.
-    const res = await apiClient.post<AuthResponseDto>(API_ROUTES.AUTH.CHANGE_PASSWORD, dto);
+    // An expiring access token is refreshed first; a 401 afterwards means a wrong current password, never retried.
+    const res = await apiClient.post<AuthResponseDto>(API_ROUTES.AUTH.CHANGE_PASSWORD, dto, { noRetryOn401: true });
     if (!res.success) return res;
     const token = res.data?.accessToken || res.data?.token;
     if (token) await apiClient.saveSession({ accessToken: token, refreshToken: res.data.refreshToken });

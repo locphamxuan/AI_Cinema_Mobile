@@ -10,6 +10,11 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   timeoutMs?: number;
   /** Set on the retry after a token refresh (and on auth calls) so a 401 is not retried again. */
   skipAuthRefresh?: boolean;
+  /**
+   * Refresh an expiring token before the call, but never refresh-and-retry after a 401: for a call whose 401 means
+   * "wrong password", a retry would only spend a second try of the BE rate limit.
+   */
+  noRetryOn401?: boolean;
   /** Keep a paginated `{ data, meta }` body whole instead of unwrapping it to the rows. */
   keepEnvelope?: boolean;
 }
@@ -199,6 +204,7 @@ class ApiClient {
       timeoutMs = API_CONFIG.TIMEOUT_MS,
       headers: customHeaders,
       skipAuthRefresh = false,
+      noRetryOn401 = false,
       keepEnvelope = false,
       ...restOptions
     } = options;
@@ -225,7 +231,7 @@ class ApiClient {
       const response = await fetch(url, requestInit);
       clearTimeout(timeoutId);
 
-      if (response.status === 401 && !skipAuthRefresh && (await this.refreshSession())) {
+      if (response.status === 401 && !skipAuthRefresh && !noRetryOn401 && (await this.refreshSession())) {
         return this.request<T>(endpoint, { ...options, skipAuthRefresh: true });
       }
 

@@ -97,6 +97,34 @@ describe('change password', () => {
     await apiClient.clearSession();
   });
 
+  it('sends a wrong current password once, without a refresh-and-retry that would spend the rate limit twice', async () => {
+    await apiClient.saveSession({ accessToken: 'access', refreshToken: 'refresh-1' });
+    const fetchMock = routeFetch({
+      'POST /auth/me/password': { status: 401, body: { message: 'The current password is incorrect' } },
+      'POST /auth/refresh': { body: { accessToken: 'a2', refreshToken: 'r2' } },
+    });
+    const res = await authService.changePassword({ currentPassword: 'bad', newPassword: 'new12345' });
+    expect(res.statusCode).toBe(401);
+    const calls = fetchMock.mock.calls.map(([url]) => new URL(String(url), 'http://x').pathname.replace(/^\/api/, ''));
+    expect(calls).toEqual(['/auth/me/password']);
+    expect(await storage.getString(STORAGE_KEYS.REFRESH_TOKEN, '')).toBe('refresh-1');
+    await apiClient.clearSession();
+  });
+
+  it('still refreshes an expired access token before changing the password', async () => {
+    const b64 = (v: object) => Buffer.from(JSON.stringify(v)).toString('base64').replace(/=+$/, '');
+    await apiClient.saveSession({ accessToken: `${b64({ alg: 'HS256' })}.${b64({ exp: 1 })}.s`, refreshToken: 'refresh-1' });
+    const fetchMock = routeFetch({
+      'POST /auth/refresh': { body: { accessToken: 'a2', refreshToken: 'r2' } },
+      'POST /auth/me/password': { body: { accessToken: 'a3', refreshToken: 'r3', user: { id: 'u1' } } },
+    });
+    await authService.changePassword({ currentPassword: 'old12345', newPassword: 'new12345' });
+    const calls = fetchMock.mock.calls.map(([url, init]) => `${new URL(String(url), 'http://x').pathname.replace(/^\/api/, '')} ${(init?.headers as Record<string, string>).Authorization ?? ''}`);
+    expect(calls[0]).toMatch(/^\/auth\/refresh /);
+    expect(calls[1]).toBe('/auth/me/password Bearer a2');
+    await apiClient.clearSession();
+  });
+
   it('reports a wrong current password from the store', async () => {
     routeFetch({ 'POST /auth/me/password': { status: 401, body: { message: 'The current password is incorrect' } } });
     const res = await useSessionStore.getState().changePassword('bad', 'new12345');
