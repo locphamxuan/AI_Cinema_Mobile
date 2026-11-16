@@ -46,11 +46,12 @@ export const ChatModal: React.FC = () => {
   const drag = useWebDrag(440, 630);
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
 
-  const sendText = async (text: string) => {
-    setDraft('');
+  // The draft is cleared only when the BE took the message, so nothing typed is lost while the chat is busy.
+  const sendText = async (text: string, fromDraft = true) => {
     const sent = await chat.send(text);
-    if (!sent) setDraft(text.trim());
-    else setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+    if (!sent) return;
+    if (fromDraft) setDraft((current) => (current.trim() === text.trim() ? '' : current));
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
   };
 
   const handleStartNewConversation = chat.startNew;
@@ -211,7 +212,7 @@ export const ChatModal: React.FC = () => {
             ) : (
               <>
                 {showHero && (
-                  <ChatHero colors={colors} isDark={isDark} disabled={sending} onAsk={(message) => void sendText(message)} />
+                  <ChatHero colors={colors} isDark={isDark} disabled={sending} onAsk={(message) => void sendText(message, false)} />
                 )}
 
                 <ChatMessages messages={messages} colors={colors} isDark={isDark} typing={sending} />
@@ -242,7 +243,7 @@ export const ChatModal: React.FC = () => {
                   onPress={() => {
                     if (chip.message === QUICK_ACTION.REQUEST_STAFF) void handleRequestStaff();
                     else if (chip.message === QUICK_ACTION.CONFIRM_RESOLVED) void chat.confirmResolved();
-                    else void sendText(chip.message);
+                    else void sendText(chip.message, false);
                   }}
                   disabled={sending}
                   style={[

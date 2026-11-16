@@ -80,6 +80,20 @@ describe('useSupportChat', () => {
     expect(sent).toBe(false);
     expect(chat.current.error).toBe('Hội thoại đã đóng');
   });
+
+  it('reports a message as not sent while the case is still loading, so the draft is kept', async () => {
+    jest.spyOn(supportService, 'startOrGetOpen').mockImplementation(() => new Promise(() => undefined));
+    const send = jest.spyOn(supportService, 'sendMessage');
+    const chat = renderHook(() => useSupportChat(true, true));
+    await flush();
+    expect(chat.current.loading).toBe(true);
+    let sent = true;
+    await act(async () => {
+      sent = await chat.current.send('Xin chào');
+    });
+    expect(sent).toBe(false);
+    expect(send).not.toHaveBeenCalled();
+  });
 });
 
 describe('useFriends', () => {

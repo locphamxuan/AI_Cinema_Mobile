@@ -69,10 +69,10 @@ export function useSupportChat(open: boolean, isAuthenticated: boolean) {
     void openCase(() => supportService.startFresh(currentId), 'Chưa mở được hội thoại mới. Thử lại sau giây lát.');
   };
 
-  /** Sends one message; on failure the text goes back to the caller so the member does not retype it. */
+  /** Sends one message; true only once the BE took it, so the caller keeps the draft otherwise. */
   const send = async (text: string): Promise<boolean> => {
     const clean = text.trim();
-    if (!clean || sending || loading) return true;
+    if (!clean || sending || loading) return false;
     if (!conversation) {
       setError('Hội thoại chưa sẵn sàng. Bấm "Hội thoại mới" rồi gửi lại.');
       return false;
