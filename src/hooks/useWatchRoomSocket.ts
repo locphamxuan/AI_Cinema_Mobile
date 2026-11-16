@@ -1,51 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { API_CONFIG } from '../constants/config';
-import { storage, STORAGE_KEYS } from '../lib/storage';
+import { apiClient } from '../services/apiClient';
+import { CHAT_KEEP, CHAT_REJECTED_NOTICE, NOTICES, ROOM_EVENT, roomErrorCode, roomErrorNotice } from '../lib/roomEvents';
 import type { RoomAdState, RoomChatMessage, RoomPlaybackState, RoomScreen, RoomSync, WatchRoom } from '../types/watchRoom';
 
-/** Event names of the BE WatchRoomGateway (room-events.ts). */
-export const ROOM_EVENT = {
-  JOIN: 'ROOM_JOIN',
-  PLAYBACK: 'ROOM_PLAYBACK',
-  LEAVE: 'ROOM_LEAVE',
-  VOTE_HOST: 'ROOM_VOTE_HOST',
-  INVITE: 'ROOM_INVITE',
-  INVITE_SENT: 'ROOM_INVITE_SENT',
-  INVITE_FAILED: 'ROOM_INVITE_FAILED',
-  JOINED: 'ROOM_JOINED',
-  PARTICIPANT_JOINED: 'ROOM_PARTICIPANT_JOINED',
-  PARTICIPANT_LEFT: 'ROOM_PARTICIPANT_LEFT',
-  SYNC_PLAYBACK: 'SYNC_PLAYBACK',
-  HEARTBEAT_SYNC: 'HEARTBEAT_SYNC',
-  HOST_DISCONNECTED: 'ROOM_HOST_DISCONNECTED',
-  HOST_RECONNECTED: 'ROOM_HOST_RECONNECTED',
-  HOST_CHANGED: 'ROOM_HOST_CHANGED',
-  VOTE_OPEN: 'ROOM_VOTE_OPEN',
-  EPISODE_ENDED: 'ROOM_EPISODE_ENDED',
-  EPISODE_CHANGED: 'ROOM_EPISODE_CHANGED',
-  TERMINATED: 'ROOM_TERMINATED',
-  SESSION_REPLACED: 'ROOM_SESSION_REPLACED',
-  // Shared screen (13/11/2026): chat, the Host's ad and quality, the catch-up snapshot.
-  CHAT: 'ROOM_CHAT',
-  AD_BREAK: 'ROOM_AD_BREAK',
-  QUALITY: 'ROOM_QUALITY',
-  SCREEN_STATE: 'ROOM_SCREEN_STATE',
-  CHAT_MESSAGE: 'ROOM_CHAT_MESSAGE',
-  CHAT_REJECTED: 'ROOM_CHAT_REJECTED',
-  AD_STATE: 'ROOM_AD_STATE',
-  QUALITY_CHANGED: 'ROOM_QUALITY_CHANGED',
-  SCREEN: 'ROOM_SCREEN',
-  ERROR: 'ROOM_ERROR',
-} as const;
+export { ROOM_EVENT };
 
-const CHAT_KEEP = 50;
-const CHAT_REJECTED_NOTICE: Record<string, string> = {
-  RATE_LIMITED: 'Bạn gửi nhanh quá, đợi vài giây nhé.',
-  TOO_LONG: 'Tin nhắn dài quá (tối đa 300 ký tự).',
-};
-
-/** The socket lives on the API host without the /api prefix, namespace /watch. */
 /**
  * The `/watch` namespace on the backend. On the web the REST calls go through the same-origin `/api` proxy
  * of the dev server, which does not forward WebSockets, so the socket talks to the backend directly
@@ -75,14 +36,6 @@ export interface WatchRoomLive {
   quality: string;
 }
 
-const NOTICES: Record<string, string> = {
-  [ROOM_EVENT.HOST_DISCONNECTED]: 'Chủ phòng tạm mất kết nối, phòng vẫn giữ trong 45 giây.',
-  [ROOM_EVENT.HOST_RECONNECTED]: 'Chủ phòng đã quay lại.',
-  [ROOM_EVENT.HOST_CHANGED]: 'Phòng đã có chủ phòng mới.',
-  [ROOM_EVENT.VOTE_OPEN]: 'Chủ phòng tạm dừng quá lâu: bạn có thể bỏ phiếu chọn chủ phòng mới.',
-  [ROOM_EVENT.EPISODE_ENDED]: 'Tập phim đã hết, chờ chủ phòng chuyển tập tiếp theo.',
-  [ROOM_EVENT.EPISODE_CHANGED]: 'Chủ phòng đã chuyển sang tập tiếp theo.',
-};
 
 /**
  * BR-69 live sync. The member stays in the room as long as the room lives: socket.io reconnects on its own and the
@@ -108,9 +61,15 @@ export function useWatchRoomSocket(roomId: string | undefined, { join = true }: 
     if (!roomId) return;
     let socket: Socket | null = null;
     let cancelled = false;
-    void storage.getString(STORAGE_KEYS.AUTH_TOKEN, '').then((token) => {
+    let reauth = false;
+    void Promise.resolve().then(() => {
       if (cancelled) return;
-      socket = io(watchSocketUrl(), { transports: ['websocket'], auth: { token }, reconnection: true });
+      // A callback, so every (re)connect sends the current token, refreshed first when it has expired.
+      socket = io(watchSocketUrl(), {
+        transports: ['websocket'],
+        auth: (send) => void apiClient.getFreshAccessToken().then((token) => send({ token })),
+        reconnection: true,
+      });
       socketRef.current = socket;
       const patch = (next: Partial<WatchRoomLive>) => setLive((prev) => ({ ...prev, ...next }));
       socket.on('connect', () => {
@@ -118,7 +77,14 @@ export function useWatchRoomSocket(roomId: string | undefined, { join = true }: 
         // The lobby only sends invites: taking the Host seat there would read as a drop when the room opens.
         if (join) socket?.emit(ROOM_EVENT.JOIN, { roomId });
       });
-      socket.on('disconnect', () => patch({ connected: false }));
+      socket.on('disconnect', (why) => {
+        patch({ connected: false });
+        // The BE drops an expired token itself, and socket.io does not reconnect after a server-side disconnect.
+        if (why === 'io server disconnect' && reauth) {
+          reauth = false;
+          socket?.connect();
+        }
+      });
       socket.on(ROOM_EVENT.JOINED, ({ room }: { room: WatchRoom }) => {
         patch({ room, hostUserId: room.hostUserId, participantCount: room.participantCount ?? 1 });
         socket?.emit(ROOM_EVENT.SCREEN_STATE, { roomId });
@@ -171,8 +137,13 @@ export function useWatchRoomSocket(roomId: string | undefined, { join = true }: 
               : 'Chưa mời được: chỉ mời được bạn bè đã chấp nhận kết bạn.',
         }),
       );
-      socket.on(ROOM_EVENT.ERROR, (error: { reason?: string; message?: string }) =>
-        patch({ notice: error?.message ?? 'Không thể đồng bộ phòng xem nhóm.' }),
+      socket.on(ROOM_EVENT.ERROR, (error: { reason?: string; details?: unknown }) => {
+        if (roomErrorCode(error) === 'UNAUTHENTICATED') reauth = true;
+        patch({ notice: roomErrorNotice(error) });
+      });
+      socket.on(ROOM_EVENT.HOST_INACTIVE, () => patch({ notice: NOTICES[ROOM_EVENT.HOST_INACTIVE] }));
+      socket.on(ROOM_EVENT.LAST_ONE_LEFT, () =>
+        patch({ notice: 'Các bạn khác đã rời phòng. Bạn có thể xem tiếp ở đây hoặc rời phòng để xem một mình.' }),
       );
     });
     return () => {

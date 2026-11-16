@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -95,15 +95,35 @@ export default function WatchPartyScreen() {
     ]);
   };
 
+  /** Opens this member's own session on the room's (new) episode; the BE re-checks their right to it. */
+  const followEpisode = useCallback(async (next: WatchRoom) => {
+    setRoom(next);
+    setSession(null);
+    const opened = await playbackService.openSession(next.episodeId);
+    if (opened.success && opened.data) setSession(opened.data);
+    else setError(opened.message || 'Bạn chưa có quyền xem tập tiếp theo của phòng.');
+  }, []);
+
   const nextEpisode = async () => {
     if (!roomId) return;
     const res = await watchRoomService.nextEpisode(roomId);
     if (!res.success || !res.data) return showDialog('Chưa chuyển được tập', res.message);
-    setRoom(res.data);
-    setSession(null);
-    const opened = await playbackService.openSession(res.data.episodeId);
-    if (opened.success && opened.data) setSession(opened.data);
+    await followEpisode(res.data);
   };
+
+  // The BE tells members nothing when the Host moves on: once playback resumes after the episode ended, a member
+  // reads the room again and follows the Host to the new episode.
+  const lastState = useRef<RoomPlaybackState | null>(null);
+  const syncState = live.lastSync?.state ?? null;
+  const roomEpisode = room?.episodeId ?? null;
+  useEffect(() => {
+    const before = lastState.current;
+    lastState.current = syncState;
+    if (before !== 'ENDED' || !syncState || syncState === 'ENDED' || isHost || !roomId) return;
+    void watchRoomService.get(roomId).then((res) => {
+      if (res.success && res.data && res.data.episodeId !== roomEpisode) void followEpisode(res.data);
+    });
+  }, [syncState, isHost, roomId, roomEpisode, followEpisode]);
 
   if (error) {
     return (
