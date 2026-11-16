@@ -29,14 +29,17 @@ export interface Episode {
   thumbnailUrl: string;
   /** Coin price of the episode (BE `coinPrice`). */
   price: number;
-  /** Free-starter episode (BE `isFreeStarter`, BR-03). */
+  /** Free without an account (BE `isFreeForGuest`, BR-03); free for a Guest is free for a Member too. */
   isFree: boolean;
+  /** Free once signed in (BE `isFreeForMember`). */
+  isFreeForMember: boolean;
   /** UNDER_REVISION = taken down for fixing; shows `notice` and cannot be played (BR-56). */
   availability: EpisodeAvailability;
   notice: string | null;
   /** AI content label text that must be shown with the episode (BR-10). */
   aiLabel: string | null;
   subtitles: SubtitleTrack[];
+  /** Opened in this session (bought, plan, free); bought episodes from earlier come from `ownedEpisodeIds`. */
   isUnlocked: boolean;
   synopsis: string;
   /** When the episode went out (ISO), from its latest publication; null if the BE does not say. */

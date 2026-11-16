@@ -10,7 +10,7 @@ import type { CatalogEpisodeDto, CatalogMovieDto } from '../types/catalog';
 type MovieListBody = CatalogMovieDto[] | { items?: CatalogMovieDto[]; data?: CatalogMovieDto[] };
 
 class MovieService {
-  async listMovies(params?: { search?: string; genre?: string; limit?: number }): Promise<ApiResponse<Movie[]>> {
+  async listMovies(params?: { search?: string; limit?: number }): Promise<ApiResponse<Movie[]>> {
     const searchVal = params?.search;
     const limit = params?.limit || 100;
 

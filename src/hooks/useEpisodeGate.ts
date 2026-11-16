@@ -1,5 +1,4 @@
 import { useCallback, useState } from 'react';
-import {} from 'react-native';
 import { showDialog } from '../lib/dialog';
 import { episodeAccessService } from '../services/episodeAccessService';
 import { useCatalogStore, useUiStore } from '../store';
@@ -38,6 +37,10 @@ export function useEpisodeGate(onGranted: (episode: Episode) => void) {
       if (res.data.accessGranted) {
         markEpisodeUnlocked(episode.id);
         onGranted(episode);
+        return;
+      }
+      if (res.data.nextAction === 'NOT_PLAYABLE') {
+        showDialog('Tập chưa xem được', res.data.notice || 'Tập phim chưa sẵn sàng để phát. Vui lòng quay lại sau.');
         return;
       }
       if (res.data.nextAction === 'REGISTER_OR_LOGIN') {

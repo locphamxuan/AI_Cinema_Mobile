@@ -21,6 +21,13 @@ class EpisodeAccessService {
     return apiClient.get<AccessDecision>(API_ROUTES.ACCESS.DECISION(episodeId));
   }
 
+  /** GET /accesses - ids of the episodes this member already owns, so the list can drop their lock icon. */
+  async listOwnedEpisodeIds(): Promise<ApiResponse<string[]>> {
+    const res = await apiClient.get<{ episode?: { id?: string } }[]>(API_ROUTES.ACCESS.OWNED, { params: { limit: 100 } });
+    const ids = res.success && Array.isArray(res.data) ? res.data.map((row) => row.episode?.id).filter((id): id is string => Boolean(id)) : [];
+    return { ...res, data: ids };
+  }
+
   /** POST /episodes/:id/purchase - unlocks one episode, main Coins first, then bonus Coins. */
   purchaseEpisode(episodeId: string, key = idempotencyKey('ep-')): Promise<ApiResponse<PurchaseResult>> {
     return apiClient.post<PurchaseResult>(API_ROUTES.ACCESS.PURCHASE(episodeId), {}, once(key));

@@ -197,7 +197,7 @@ describe('start-up', () => {
 
     await loadInitialData();
 
-    expect(calledPaths(fetchMock).sort()).toEqual(['GET /auth/me', 'GET /movies', 'GET /subscriptions/me', 'GET /wallet']);
+    expect(calledPaths(fetchMock).sort()).toEqual(['GET /accesses', 'GET /auth/me', 'GET /movies', 'GET /subscriptions/me', 'GET /wallet']);
     expect(useSessionStore.getState().user?.name).toBe('Mới');
     expect(useAccountStore.getState().wallet).toEqual({ mainCoin: 8, bonusCoin: 2 });
   });
