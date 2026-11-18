@@ -19,6 +19,9 @@ const flush = () => act(async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
 });
 
+/** Every hook rendered by a test, unmounted after it so no timer outlives the test environment. */
+const mounted: ReturnType<typeof create>[] = [];
+
 function renderHook<R>(useHook: () => R) {
   const box: { current?: R } = {};
   function Probe() {
@@ -29,7 +32,7 @@ function renderHook<R>(useHook: () => R) {
     return null;
   }
   act(() => {
-    create(<Probe />);
+    mounted.push(create(<Probe />));
   });
   return box as { current: R };
 }
@@ -37,6 +40,7 @@ function renderHook<R>(useHook: () => R) {
 const episode = { id: 'ep-1', availability: 'AVAILABLE' } as Episode;
 
 afterEach(() => {
+  act(() => mounted.splice(0).forEach((tree) => tree.unmount()));
   jest.restoreAllMocks();
   act(() => useDialogStore.setState({ queue: [] }));
 });
