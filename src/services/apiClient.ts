@@ -41,6 +41,7 @@ const REASON_MESSAGES: Record<string, string> = {
   CONCURRENT_LIMIT_REACHED: 'Tài khoản đang xem trên quá nhiều thiết bị cùng lúc. Hãy dừng xem ở thiết bị khác rồi thử lại.',
   DEVICE_LIMIT_REACHED: 'Tài khoản đã đăng ký đủ số thiết bị của gói. Hãy gỡ bớt một thiết bị để xem trên máy này.',
   DEVICE_ID_REQUIRED: 'Không nhận diện được thiết bị. Hãy mở lại ứng dụng rồi thử lại.',
+  DEVICE_PLATFORM_NOT_SUPPORTED: 'Tài khoản thành viên chỉ xem phim trên điện thoại Android. Hãy mở ứng dụng AI Cinema trên điện thoại Android.',
   MEDIA_NOT_READY: 'Tập phim chưa sẵn sàng để phát. Vui lòng quay lại sau.',
   EPISODE_UNDER_REVISION: 'Tập phim đang được chỉnh sửa, vui lòng quay lại sau.',
   PLAYBACK_ACCESS_REQUIRED: 'Bạn chưa có quyền xem tập này. Hãy mở khóa tập hoặc đăng ký gói.',
