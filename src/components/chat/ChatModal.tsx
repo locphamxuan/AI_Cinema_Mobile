@@ -22,6 +22,7 @@ import { AiOrb } from './AiOrb';
 import { ChatHero } from './ChatHero';
 import { ChatMessages } from './ChatMessages';
 import { ChatComposer } from './ChatComposer';
+import { EDGE_TO_EDGE, KEYBOARD_BEHAVIOR } from '../../lib/keyboard';
 
 const STATUS_LABELS: Record<SupportStatus, string> = {
   AI_HANDLING: 'AI sẵn sàng hỗ trợ',
@@ -79,9 +80,15 @@ export const ChatModal: React.FC = () => {
   const statusColor = isWaitingStaff ? colors.coin : isClosed ? colors.textMuted : colors.verified;
 
   return (
-    <Modal visible={isChatModalOpen} transparent animationType={Platform.OS === 'web' ? 'fade' : 'slide'} onRequestClose={() => setChatModalOpen(false)}>
+    <Modal
+      visible={isChatModalOpen}
+      transparent
+      animationType={Platform.OS === 'web' ? 'fade' : 'slide'}
+      onRequestClose={() => setChatModalOpen(false)}
+      {...EDGE_TO_EDGE}
+    >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={KEYBOARD_BEHAVIOR}
         style={[styles.backdrop, { backgroundColor: colors.overlay }]}
       >
         <View
