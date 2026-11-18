@@ -48,7 +48,8 @@ describe('supportService (real AI Customer Support on the BE)', () => {
       }),
     );
     const res = await supportService.sendMessage('conv-1', 'Phim hot?', 'mob-1');
-    expect(post).toHaveBeenCalledWith('/support/conversations/conv-1/messages', { content: 'Phim hot?', clientMessageId: 'mob-1' });
+    // An AI answer may take tens of seconds: the send waits longer than other calls.
+    expect(post).toHaveBeenCalledWith('/support/conversations/conv-1/messages', { content: 'Phim hot?', clientMessageId: 'mob-1' }, { timeoutMs: 60_000 });
     expect(res.data.aiMessage).toMatchObject({ senderType: 'AI', content: 'Top 1 là Phim A.' });
   });
 

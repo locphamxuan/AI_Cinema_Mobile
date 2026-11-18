@@ -27,7 +27,7 @@ const STATUS_LABELS: Record<SupportStatus, string> = {
   AI_HANDLING: 'AI sẵn sàng hỗ trợ',
   WAITING_FOR_STAFF: 'Đang chờ nhân viên hỗ trợ',
   STAFF_HANDLING: 'Nhân viên đang hỗ trợ',
-  RESOLVED: 'Đã hoàn tất',
+  RESOLVED: 'Chờ bạn xác nhận',
   CLOSED: 'Đã đóng hội thoại',
 };
 
@@ -181,6 +181,31 @@ export const ChatModal: React.FC = () => {
             </View>
           )}
 
+          {/* Staff marked the case resolved: the member closes it or sends it back; it also closes on its own */}
+          {conversation?.status === 'RESOLVED' && (
+            <View style={[styles.banner, { backgroundColor: colors.card, borderColor: colors.verified }]}>
+              <Text style={[styles.bannerText, { color: colors.text }]}>
+                Nhân viên đã xử lý yêu cầu của bạn. Vấn đề đã được giải quyết chưa? Yêu cầu tự đóng nếu bạn không phản hồi.
+              </Text>
+              <TouchableOpacity
+                onPress={() => void chat.confirmResolved()}
+                disabled={sending}
+                accessibilityLabel="Xác nhận đã giải quyết"
+                style={[styles.bannerBtn, { backgroundColor: colors.verified }]}
+              >
+                <Text style={styles.bannerBtnText}>Đã giải quyết</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleRequestStaff}
+                disabled={sending}
+                accessibilityLabel="Vẫn cần hỗ trợ"
+                style={[styles.bannerBtn, { backgroundColor: colors.ruby }]}
+              >
+                <Text style={styles.bannerBtnText}>Vẫn cần hỗ trợ</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Guest prompt banner */}
           {!isAuthenticated && (
             <View style={[styles.banner, { backgroundColor: colors.rubySoft, borderColor: colors.ruby }]}>
@@ -223,7 +248,7 @@ export const ChatModal: React.FC = () => {
           {errorMsg && (
             <View style={[styles.errorRow, { backgroundColor: colors.dangerSoft, borderColor: colors.danger }]}>
               <Text style={[styles.errorText, { color: colors.danger }]}>{errorMsg}</Text>
-              <TouchableOpacity onPress={handleStartNewConversation} style={[styles.bannerBtn, { backgroundColor: colors.ruby }]}>
+              <TouchableOpacity onPress={() => void chat.refresh()} style={[styles.bannerBtn, { backgroundColor: colors.ruby }]}>
                 <Text style={styles.bannerBtnText}>Thử lại</Text>
               </TouchableOpacity>
             </View>

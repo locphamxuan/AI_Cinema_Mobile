@@ -11,6 +11,8 @@ import type {
 } from '../types/support';
 
 const S = API_ROUTES.CHAT;
+/** An AI answer may take tens of seconds (retrieval, tools, the model): the send waits longer than other calls. */
+export const SEND_TIMEOUT_MS = 60_000;
 
 /** Suggested first questions, all inside the assistant's scope (BE docs/support-ai-member-scope.md). */
 export const DEFAULT_QUICK_REPLIES: SupportQuickReply[] = [
@@ -78,6 +80,7 @@ export const supportService = {
     const res = await apiClient.post<SupportSendResult & { memberMessage: BeMessage; aiMessage: BeMessage | null; systemMessage: BeMessage | null }>(
       S.MESSAGES(id),
       { content, clientMessageId },
+      { timeoutMs: SEND_TIMEOUT_MS },
     );
     if (!res.success || !res.data) return res as ApiResponse<SupportSendResult>;
     const d = res.data;
