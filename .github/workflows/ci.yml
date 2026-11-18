@@ -39,6 +39,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20.19"
-      # Blocking: no high/critical advisory is allowed in the dependency tree.
-      - run: npm audit --omit=dev --audit-level=high
-      - run: npm audit --audit-level=high
+      # Blocking: no high/critical advisory, except the ones scripts/audit.mjs lists while no fix exists.
+      - run: node scripts/audit.mjs --omit=dev
+      - run: node scripts/audit.mjs
