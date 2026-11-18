@@ -1,5 +1,5 @@
 import { adaptApiMovieToMovie, adaptApiEpisodeToEpisode, formatDuration, adaptUserProfile } from '../lib/apiAdapter';
-import { getTodayDayIndex, VN_DAY_LABELS } from '../lib/date';
+import { dayKey } from '../lib/date';
 import { movieService } from '../services';
 
 describe('API Adapters', () => {
@@ -93,22 +93,9 @@ describe('API Adapters', () => {
     jest.restoreAllMocks();
   });
 
-  it('date utils accurately calculates day index and labels', () => {
-    // Wednesday 2026-09-23 -> index 2 (T4)
-    const wed = new Date('2026-09-23T10:00:00');
-    expect(wed.getDay()).toBe(3); // JavaScript Wed = 3
-    expect(getTodayDayIndex(wed)).toBe(2);
-    expect(VN_DAY_LABELS[getTodayDayIndex(wed)]).toBe('T4');
-
-    // Sunday 2026-09-27 -> index 6 (CN)
-    const sun = new Date('2026-09-27T10:00:00');
-    expect(getTodayDayIndex(sun)).toBe(6);
-    expect(VN_DAY_LABELS[getTodayDayIndex(sun)]).toBe('CN');
-
-    // Monday 2026-09-21 -> index 0 (T2)
-    const mon = new Date('2026-09-21T10:00:00');
-    expect(getTodayDayIndex(mon)).toBe(0);
-    expect(VN_DAY_LABELS[getTodayDayIndex(mon)]).toBe('T2');
+  it('keys a moment by the calendar day of the device', () => {
+    expect(dayKey(new Date(2026, 0, 5, 23, 59))).toBe('2026-01-05');
+    expect(dayKey(new Date(2026, 10, 18, 0, 0))).toBe('2026-11-18');
   });
 
 });

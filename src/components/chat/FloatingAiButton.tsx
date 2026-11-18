@@ -34,7 +34,7 @@ export const FloatingAiButton: React.FC = () => {
     const minX = EDGE_MARGIN;
     const maxX = Math.max(minX, width - BUTTON_SIZE - EDGE_MARGIN);
     const minY = Math.max(insets.top + 8, EDGE_MARGIN);
-    const maxY = Math.max(minY, height - BUTTON_SIZE - insets.bottom - (Platform.OS === 'web' ? 16 : 92));
+    const maxY = Math.max(minY, height - BUTTON_SIZE - insets.bottom - (Platform.OS === 'web' ? 16 : 104));
     return { minX, maxX, minY, maxY };
   }, [width, height, insets.top, insets.bottom]);
 
