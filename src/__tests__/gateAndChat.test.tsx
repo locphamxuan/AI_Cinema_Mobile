@@ -133,6 +133,27 @@ describe('useSupportChat with Staff', () => {
     expect(detail).toHaveBeenCalledTimes(3);
   });
 
+  it('shows the sent message once, then the answer of the AI, and clears the retry id', async () => {
+    const ai = { id: 'c1', status: 'AI_HANDLING' } as SupportConversation;
+    jest.spyOn(supportService, 'startOrGetOpen').mockResolvedValue(ok(ai));
+    jest.spyOn(supportService, 'getDetail').mockResolvedValue(ok({ conversation: ai, messages: [], quickReplies: [] }));
+    const mine = { id: 'm1', senderType: 'MEMBER', content: 'Còn bao nhiêu Coin?' };
+    const answer = { id: 'm2', senderType: 'AI', content: 'Bạn còn 12 Coin.' };
+    const send = jest.spyOn(supportService, 'sendMessage').mockResolvedValue(
+      ok({ conversation: ai, memberMessage: mine, aiMessage: answer, systemMessage: null, quickReplies: ['CONFIRM_RESOLVED'] }) as never,
+    );
+    const chat = renderHook(() => useSupportChat(true, true));
+    await flush();
+    let sent = false;
+    await act(async () => {
+      sent = await chat.current.send('Còn bao nhiêu Coin?');
+    });
+    expect(sent).toBe(true);
+    expect(chat.current.messages.map((m) => m.id)).toEqual(['m1', 'm2']);
+    await act(async () => void (await chat.current.send('Còn bao nhiêu Coin?')));
+    expect(send.mock.calls[0][2]).not.toBe(send.mock.calls[1][2]);
+  });
+
   it('closes a resolved case on confirmation, and sends it back to Staff when it is not solved', async () => {
     const resolved = { id: 'c1', status: 'RESOLVED' } as SupportConversation;
     jest.spyOn(supportService, 'startOrGetOpen').mockResolvedValue(ok(resolved));

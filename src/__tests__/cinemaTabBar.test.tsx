@@ -50,3 +50,27 @@ describe('CinemaTabBar', () => {
     expect(style({ pressed: false }).filter(Boolean)).toHaveLength(1);
   });
 });
+
+describe('TabLayout', () => {
+  it('draws the custom tab bar and hides Gói Tháng from it', () => {
+    jest.isolateModules(() => {
+      const screens: { name: string; options: { href?: null } }[] = [];
+      let bar: React.ReactElement | null = null;
+      const Tabs = Object.assign(
+        ({ tabBar, children }: { tabBar: (p: unknown) => React.ReactElement; children: React.ReactNode }) => {
+          bar = tabBar({ state: { index: 0, routes } });
+          return <>{children}</>;
+        },
+        { Screen: (props: { name: string; options: { href?: null } }) => (screens.push(props), null) },
+      );
+      jest.doMock('expo-router', () => ({ Tabs }));
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const TabLayout = (require('../../app/(tabs)/_layout') as { default: React.FC }).default;
+      act(() => {
+        create(<TabLayout />);
+      });
+      expect(((bar as React.ReactElement | null)?.type as { name?: string }).name).toBe(CinemaTabBar.name);
+      expect(screens.find((s) => s.name === 'vip')?.options.href).toBeNull();
+    });
+  });
+});
