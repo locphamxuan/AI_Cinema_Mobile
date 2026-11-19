@@ -102,7 +102,7 @@ export function useSupportChat(open: boolean, isAuthenticated: boolean) {
       setError('Hội thoại chưa sẵn sàng. Bấm "Hội thoại mới" rồi gửi lại.');
       return false;
     }
-    if (pending.current?.text !== clean) pending.current = { text: clean, id: `mob-${Date.now()}` };
+    if (pending.current?.text !== clean) pending.current = { text: clean, id: `mob-${Date.now()}-${Math.random().toString(36).slice(2, 10)}` };
     setError(null);
     setSending(true);
     try {
