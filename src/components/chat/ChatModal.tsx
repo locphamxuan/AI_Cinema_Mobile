@@ -19,6 +19,7 @@ import { darkColors, lightColors, useTheme } from '../../theme';
 import type { SupportStatus } from '../../types/support';
 import { styles } from '../../styles/components/chat/ChatModal.styles';
 import { AiOrb } from './AiOrb';
+import { ChatGlow } from './ChatGlow';
 import { ChatHero } from './ChatHero';
 import { ChatMessages } from './ChatMessages';
 import { ChatComposer } from './ChatComposer';
@@ -102,6 +103,7 @@ export const ChatModal: React.FC = () => {
             drag.style,
           ]}
         >
+          <ChatGlow isDark={isDark} />
           {/* Header (draggable on Web) */}
           <View
             {...drag.handlers}
