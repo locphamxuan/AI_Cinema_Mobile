@@ -2,6 +2,7 @@ import { API_CONFIG } from '../constants/config';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import { tokenExpiresSoon } from '../lib/jwt';
 import type { ApiResponse } from '../types/api';
+import { inVietnamese } from '../lib/apiMessages';
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
   /** Sent as is when a string, otherwise as JSON. */
@@ -24,10 +25,26 @@ interface SessionTokens {
   refreshToken?: string;
 }
 
+/** The API answers in English: each part is worded in Vietnamese, and one it cannot word is left out. */
 const joinMessage = (value: unknown): string | undefined => {
-  if (Array.isArray(value)) return value.length ? value.join(', ') : undefined;
-  return typeof value === 'string' && value ? value : undefined;
+  const parts = (Array.isArray(value) ? value : [value])
+    .filter((part): part is string => typeof part === 'string' && part !== '')
+    .map((part) => inVietnamese(part, ''))
+    .filter(Boolean);
+  return parts.length ? [...new Set(parts)].join(' ') : undefined;
 };
+
+/** What a refusal means when the API said nothing the member can read. */
+export function statusMessage(status: number): string {
+  if (status === 400 || status === 422) return 'Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.';
+  if (status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+  if (status === 403) return 'Bạn không có quyền thực hiện thao tác này.';
+  if (status === 404) return 'Không tìm thấy nội dung này.';
+  if (status === 409) return 'Dữ liệu vừa thay đổi. Vui lòng tải lại rồi thử lại.';
+  if (status === 429) return 'Bạn thao tác quá nhanh. Vui lòng thử lại sau ít phút.';
+  if (status >= 500) return 'Hệ thống đang bận. Vui lòng thử lại sau.';
+  return 'Không thực hiện được thao tác này. Vui lòng thử lại.';
+}
 
 export const NETWORK_MESSAGE = 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.';
 export const TIMEOUT_MESSAGE = 'Máy chủ phản hồi quá lâu. Kiểm tra mạng rồi thử lại.';
@@ -237,7 +254,7 @@ class ApiClient {
       }
 
       if (!response.ok) {
-        let errorMessage = `HTTP error! status: ${response.status}`;
+        let errorMessage = statusMessage(response.status);
         let reason: string | undefined;
         try {
           const errJson = (await response.json()) as ErrorBody | null;
