@@ -131,7 +131,7 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
             disabled={paying}
             onPress={() => {
               close();
-              router.push('/(tabs)/vip');
+              router.push('/vip');
             }}
           >
             <Text style={[styles.planText, { color: colors.textSecondary }]}>

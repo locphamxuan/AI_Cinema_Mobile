@@ -4,7 +4,7 @@ import { planIsRunning, useAccountStore } from '../store';
 import { splitPrice } from '../components/player/UnlockEpisodeModal';
 import { ladderDays } from '../components/wallet/CheckInModal';
 import { coinsFor } from '../components/wallet/TopUpModal';
-import { cancelWindowText } from '../../app/(tabs)/vip';
+import { cancelWindowText } from '../../app/vip';
 import type { DailyRewardStatus, MySubscription } from '../types/episodeAccess';
 
 /** Answers each fetch by `METHOD path` (without the /api prefix) and records the calls. */

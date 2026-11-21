@@ -87,4 +87,36 @@ describe('watch room socket after the BE rejects the token', () => {
     expect(mockConnect).not.toHaveBeenCalled();
     expect(fresh).not.toHaveBeenCalled();
   });
+
+  /** The BE refuses the handshake itself (middleware): the socket hears connect_error, no room event. */
+  async function refuseHandshake() {
+    await act(async () => {
+      await new Promise<void>((resolve) => mockSocket.auth?.(() => resolve()));
+    });
+    act(() => mockHandlers.get('connect_error')?.(new Error('UNAUTHENTICATED')));
+    await flush();
+  }
+
+  it('refreshes the session once and connects again when the handshake is refused', async () => {
+    jest.spyOn(apiClient, 'getFreshAccessToken').mockResolvedValue('old');
+    const refresh = jest.spyOn(apiClient, 'refreshAccessToken').mockResolvedValue('new');
+    await refuseHandshake();
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+
+    // A second refusal in a row ends the room with the notice instead of looping.
+    act(() => mockHandlers.get('connect_error')?.(new Error('UNAUTHENTICATED')));
+    await flush();
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(probe.hook?.live).toMatchObject({ closed: true, notice: SESSION_EXPIRED_NOTICE });
+  });
+
+  it('leaves network errors to socket.io, and a connect resets the count and the notice', async () => {
+    const refresh = jest.spyOn(apiClient, 'refreshAccessToken').mockResolvedValue('new');
+    act(() => mockHandlers.get('connect_error')?.(new Error('xhr poll error')));
+    await flush();
+    expect(refresh).not.toHaveBeenCalled();
+    act(() => mockHandlers.get('connect')?.());
+    expect(probe.hook?.live).toMatchObject({ connected: true, notice: null });
+  });
 });

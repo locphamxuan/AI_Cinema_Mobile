@@ -1,9 +1,13 @@
 import { API_ROUTES } from '../constants/apiRoutes';
 import type { ApiResponse } from '../types/api';
 import type { Friendship, RoomPlaybackState, WatchRoom } from '../types/watchRoom';
+import { deviceKey } from '../lib/device';
 import { apiClient } from './apiClient';
 
 const R = API_ROUTES.WATCH_ROOMS;
+
+/** This phone (X-Device-Id): its own stream does not count against the device limit when it opens or joins a room. */
+const thisDevice = async () => ({ headers: { 'X-Device-Id': await deviceKey() } });
 const F = API_ROUTES.FRIENDS;
 
 /**
@@ -11,10 +15,11 @@ const F = API_ROUTES.FRIENDS;
  * checks each member's own right to watch the episode, age and device limits before letting them in.
  */
 export const watchRoomService = {
-  create: (episodeId: string): Promise<ApiResponse<WatchRoom>> => apiClient.post<WatchRoom>(R.CREATE, { episodeId }),
-  joinByCode: (roomCode: string): Promise<ApiResponse<WatchRoom>> =>
-    apiClient.post<WatchRoom>(R.JOIN_BY_CODE, { roomCode: roomCode.trim() }),
-  join: (roomId: string): Promise<ApiResponse<WatchRoom>> => apiClient.post<WatchRoom>(R.JOIN(roomId), {}),
+  create: async (episodeId: string): Promise<ApiResponse<WatchRoom>> =>
+    apiClient.post<WatchRoom>(R.CREATE, { episodeId }, await thisDevice()),
+  joinByCode: async (roomCode: string): Promise<ApiResponse<WatchRoom>> =>
+    apiClient.post<WatchRoom>(R.JOIN_BY_CODE, { roomCode: roomCode.trim() }, await thisDevice()),
+  join: async (roomId: string): Promise<ApiResponse<WatchRoom>> => apiClient.post<WatchRoom>(R.JOIN(roomId), {}, await thisDevice()),
   get: (roomId: string): Promise<ApiResponse<WatchRoom>> => apiClient.get<WatchRoom>(R.DETAIL(roomId)),
   /** Host only: the REST twin of the socket sync, used when the socket is down. */
   sync: (roomId: string, state: RoomPlaybackState, positionSeconds: number) =>
