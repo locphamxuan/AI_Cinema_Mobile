@@ -72,7 +72,7 @@ export default function ProfileScreen() {
                 : 'Xem mọi tập đã phát hành trong kỳ, trả bằng Coin.'}
             </Text>
           </View>
-          <TouchableOpacity style={styles.passBtn} onPress={member(() => router.push('/(tabs)/vip'))}>
+          <TouchableOpacity style={styles.passBtn} onPress={member(() => router.push('/vip'))}>
             <Text style={styles.passBtnText}>{running ? 'Xem gói' : 'Xem giá'}</Text>
           </TouchableOpacity>
         </LinearGradient>

@@ -70,7 +70,8 @@ describe('TabLayout', () => {
         create(<TabLayout />);
       });
       expect(((bar as React.ReactElement | null)?.type as { name?: string }).name).toBe(CinemaTabBar.name);
-      expect(screens.find((s) => s.name === 'vip')?.options.href).toBeNull();
+      // Gói Tháng is a stack screen now, not a hidden tab that could fall back to Trang chủ.
+      expect(screens.map((s) => s.name)).toEqual(['index', 'explore', 'profile']);
     });
   });
 });
