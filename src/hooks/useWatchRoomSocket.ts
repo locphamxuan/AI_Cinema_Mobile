@@ -66,6 +66,8 @@ export function useWatchRoomSocket(roomId: string | undefined, { join = true }: 
     let reauth = false;
     /** The token of the last handshake: a rejected one is never sent twice. */
     let sentToken = '';
+    /** Handshakes refused since the last connect: one fresh token is tried, then the room says the session ended. */
+    let refused = 0;
     void Promise.resolve().then(() => {
       if (cancelled) return;
       // A callback, so every (re)connect sends the current token, refreshed first when it has expired.
@@ -81,7 +83,8 @@ export function useWatchRoomSocket(roomId: string | undefined, { join = true }: 
       socketRef.current = socket;
       const patch = (next: Partial<WatchRoomLive>) => setLive((prev) => ({ ...prev, ...next }));
       socket.on('connect', () => {
-        patch({ connected: true });
+        refused = 0;
+        patch({ connected: true, notice: null });
         // The lobby only sends invites: taking the Host seat there would read as a drop when the room opens.
         if (join) socket?.emit(ROOM_EVENT.JOIN, { roomId });
       });
@@ -94,6 +97,21 @@ export function useWatchRoomSocket(roomId: string | undefined, { join = true }: 
         // otherwise loop forever on the same rejected handshake.
         const rejected = sentToken;
         void apiClient.getFreshAccessToken().then((token) => {
+          if (cancelled) return;
+          if (!token || token === rejected) {
+            patch({ closed: true, notice: SESSION_EXPIRED_NOTICE });
+            return;
+          }
+          socket?.connect();
+        });
+      });
+      // The BE checks the token in the handshake: a refused one arrives here, before any room event. socket.io does
+      // not retry that refusal by itself, so the hook refreshes the session once and connects again.
+      socket.on('connect_error', (error: Error) => {
+        if (error.message !== 'UNAUTHENTICATED' || cancelled) return;
+        const rejected = sentToken;
+        refused += 1;
+        void (refused > 1 ? Promise.resolve('') : apiClient.refreshAccessToken()).then((token) => {
           if (cancelled) return;
           if (!token || token === rejected) {
             patch({ closed: true, notice: SESSION_EXPIRED_NOTICE });

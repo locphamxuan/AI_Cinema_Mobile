@@ -310,3 +310,20 @@ describe('statusMessage', () => {
     expect(statusMessage(418)).toMatch(/Không thực hiện được/);
   });
 });
+
+describe('refreshAccessToken', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('gives the new token, or an empty one when the session cannot be renewed', async () => {
+    await storage.set(STORAGE_KEYS.REFRESH_TOKEN, 'r'.repeat(30));
+    jest.spyOn(global, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ accessToken: 'fresh', refreshToken: 's'.repeat(30) }),
+    } as Response);
+    await expect(apiClient.refreshAccessToken()).resolves.toBe('fresh');
+
+    jest.spyOn(global, 'fetch').mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({}) } as Response);
+    await expect(apiClient.refreshAccessToken()).resolves.toBe('');
+  });
+});

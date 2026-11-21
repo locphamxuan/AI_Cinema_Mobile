@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { View, Text, ScrollView, Switch, ActivityIndicator } from 'react-native';
-import { showDialog } from '../../src/lib/dialog';
+import { showDialog } from '../src/lib/dialog';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ScreenHeader } from '../../src/components/common/ScreenHeader';
-import { Button } from '../../src/components/common/Button';
-import { useTheme } from '../../src/theme';
-import { useSessionStore, useAccountStore, useUiStore, planIsRunning } from '../../src/store';
-import { episodeAccessService } from '../../src/services';
-import { splitPrice } from '../../src/components/player/UnlockEpisodeModal';
-import type { MembershipPlan, MySubscription } from '../../src/types/episodeAccess';
-import { styles } from '../../src/styles/screens/tabs/vip.styles';
+import { ScreenHeader } from '../src/components/common/ScreenHeader';
+import { Button } from '../src/components/common/Button';
+import { useTheme } from '../src/theme';
+import { useSessionStore, useAccountStore, useUiStore, planIsRunning } from '../src/store';
+import { episodeAccessService } from '../src/services';
+import { splitPrice } from '../src/components/player/UnlockEpisodeModal';
+import type { MembershipPlan, MySubscription } from '../src/types/episodeAccess';
+import { styles } from '../src/styles/screens/tabs/vip.styles';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const formatDate = (iso: string | null) => {
