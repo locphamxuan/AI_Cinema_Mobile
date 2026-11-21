@@ -167,6 +167,11 @@ class ApiClient {
     return token;
   }
 
+  /** A new access token now (the server refused the current one), or '' when the session cannot be renewed. */
+  public async refreshAccessToken(): Promise<string> {
+    return (await this.refreshSession()) ? storage.getString(STORAGE_KEYS.AUTH_TOKEN, '') : '';
+  }
+
   public getBaseUrl(): string {
     return this.baseUrl;
   }
