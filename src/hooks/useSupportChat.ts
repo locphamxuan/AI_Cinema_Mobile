@@ -1,13 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { supportService } from '../services/supportService';
-import type { SupportConversation, SupportConversationDetail, SupportMessage, SupportQuickReply } from '../types/support';
+import type { SupportConversation, SupportConversationDetail, SupportMessage, SupportQuickReply, SupportStatus } from '../types/support';
 import type { ApiResponse } from '../types/api';
 
 const HISTORY_ERROR = 'Không tải được lịch sử trò chuyện. Thử lại sau giây lát.';
+/** How often an open chat checks for a Staff reply. */
+export const POLL_MS = 4000;
+/** Cases where someone else may write next: Staff, or the clock closing a resolved case. */
+const LIVE_STATUSES: SupportStatus[] = ['WAITING_FOR_STAFF', 'STAFF_HANDLING', 'RESOLVED'];
 
 /**
  * The member's support case on the BE (FE-11, BR-22): open or reuse a case, send messages to the AI, hand over to
- * Staff, confirm it is solved, or start a fresh case. A Guest gets no case: the chat asks them to sign in.
+ * Staff, confirm it is solved or say it is not, or start a fresh case. While the chat is open and Staff may answer,
+ * the case is read again every few seconds, so a Staff reply shows without closing the chat. A Guest gets no case.
  */
 export function useSupportChat(open: boolean, isAuthenticated: boolean) {
   const [conversation, setConversation] = useState<SupportConversation | null>(null);
@@ -16,13 +22,15 @@ export function useSupportChat(open: boolean, isAuthenticated: boolean) {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** The message being sent and its id: a retry of the same text reuses the id, so the BE never stores it twice. */
+  const pending = useRef<{ text: string; id: string } | null>(null);
 
-  const applyDetail = (res: ApiResponse<SupportConversationDetail>) => {
-    if (!res.success || !res.data) return setError(res.message || HISTORY_ERROR);
+  const applyDetail = useCallback((res: ApiResponse<SupportConversationDetail>, quiet = false) => {
+    if (!res.success || !res.data) return quiet ? undefined : setError(res.message || HISTORY_ERROR);
     setConversation(res.data.conversation);
     setMessages(res.data.messages);
     setQuickReplies(res.data.quickReplies ?? []);
-  };
+  }, []);
 
   /** Opens the case through `start` (the open one, or a fresh one), then reads its messages. */
   const openCase = useCallback(
@@ -48,7 +56,7 @@ export function useSupportChat(open: boolean, isAuthenticated: boolean) {
         setLoading(false);
       }
     },
-    [isAuthenticated],
+    [isAuthenticated, applyDetail],
   );
 
   const reload = useCallback(
@@ -62,6 +70,23 @@ export function useSupportChat(open: boolean, isAuthenticated: boolean) {
     const timer = setTimeout(() => void reload(), 0);
     return () => clearTimeout(timer);
   }, [open, reload]);
+
+  /** Reads the case again without showing a loader or an error: what polling and a resync after a failure do. */
+  const refresh = useCallback(async () => {
+    if (!conversation) return;
+    applyDetail(await supportService.getDetail(conversation.id, conversation), true);
+  }, [conversation, applyDetail]);
+
+  const caseId = conversation?.id;
+  const live = !!conversation && LIVE_STATUSES.includes(conversation.status);
+  useEffect(() => {
+    if (!open || !caseId || !live || sending) return;
+    const timer = setInterval(() => {
+      // No reads while the app sits in the background.
+      if (AppState.currentState !== 'background') void refresh();
+    }, POLL_MS);
+    return () => clearInterval(timer);
+  }, [open, caseId, live, sending, refresh]);
 
   const startNew = () => {
     if (loading || sending) return;
@@ -77,17 +102,26 @@ export function useSupportChat(open: boolean, isAuthenticated: boolean) {
       setError('Hội thoại chưa sẵn sàng. Bấm "Hội thoại mới" rồi gửi lại.');
       return false;
     }
+    if (pending.current?.text !== clean) pending.current = { text: clean, id: `mob-${Date.now()}-${Math.random().toString(36).slice(2, 10)}` };
     setError(null);
     setSending(true);
     try {
-      const res = await supportService.sendMessage(conversation.id, clean, `mob-${Date.now()}`);
+      const res = await supportService.sendMessage(conversation.id, clean, pending.current.id);
       if (!res.success || !res.data) {
         setError(res.message || 'Chưa gửi được tin nhắn. Nếu hội thoại đã đóng, hãy mở hội thoại mới.');
+        // The BE may have taken the message although the answer did not arrive: show what it holds.
+        await refresh();
         return false;
       }
+      pending.current = null;
       const { memberMessage, aiMessage, systemMessage } = res.data;
       setConversation(res.data.conversation);
-      setMessages((prev) => [...prev, memberMessage, ...(aiMessage ? [aiMessage] : []), ...(systemMessage ? [systemMessage] : [])]);
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== memberMessage.id),
+        memberMessage,
+        ...(aiMessage ? [aiMessage] : []),
+        ...(systemMessage ? [systemMessage] : []),
+      ]);
       if (res.data.quickReplies?.length) setQuickReplies(res.data.quickReplies);
       return true;
     } finally {
@@ -95,6 +129,7 @@ export function useSupportChat(open: boolean, isAuthenticated: boolean) {
     }
   };
 
+  /** "Gặp nhân viên", or "Vẫn cần hỗ trợ" on a case Staff resolved: either way Staff picks it up. */
   const requestStaff = async () => {
     if (!conversation || sending || loading) return;
     setError(null);
@@ -113,8 +148,8 @@ export function useSupportChat(open: boolean, isAuthenticated: boolean) {
     if (!conversation || sending) return;
     const res = await supportService.confirmResolved(conversation.id);
     if (!res.success) return setError(res.message || 'Chưa đóng được hội thoại. Thử lại sau giây lát.');
-    await reload();
+    await refresh();
   };
 
-  return { conversation, messages, quickReplies, loading, sending, error, startNew, send, requestStaff, confirmResolved };
+  return { conversation, messages, quickReplies, loading, sending, error, startNew, send, refresh, requestStaff, confirmResolved };
 }

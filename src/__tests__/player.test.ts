@@ -1,6 +1,6 @@
 import { clock, cueAt, parseVtt } from '../lib/vtt';
 import { adaptApiEpisodeToEpisode, adaptApiMovieToMovie } from '../lib/apiAdapter';
-import { trackFor, languageName } from '../components/movie/AudioModeTabs';
+import { trackFor, languageName } from '../components/movie/SubtitleChips';
 import { compactCount } from '../components/movie/LikeButton';
 import { MEMBER_NOTIFICATION_TABS } from '../lib/notificationTabs';
 import { API_ROUTES } from '../constants/apiRoutes';
@@ -38,17 +38,18 @@ describe('subtitles', () => {
   });
 });
 
-describe('Phụ đề / Thuyết minh', () => {
+describe('Phụ đề', () => {
   const tracks = [
     { id: 'en', language: 'en', label: 'English', isDefault: false },
     { id: 'vi', language: 'vi', label: 'Tiếng Việt', isDefault: true },
   ];
 
-  it('turns subtitles off for Thuyết minh and picks the default track for Phụ đề', () => {
-    expect(trackFor('voiceover', tracks, 'en')).toBeNull();
-    expect(trackFor('subtitle', tracks, null)).toBe('vi');
-    expect(trackFor('subtitle', tracks, 'en')).toBe('en');
-    expect(trackFor('subtitle', [], null)).toBeNull();
+  it('plays no subtitles when turned off, else the chosen, the default or the first track', () => {
+    expect(trackFor(false, tracks, 'en')).toBeNull();
+    expect(trackFor(true, tracks, null)).toBe('vi');
+    expect(trackFor(true, tracks, 'en')).toBe('en');
+    expect(trackFor(true, [tracks[0]], null)).toBe('en');
+    expect(trackFor(true, [], null)).toBeNull();
     expect(languageName('vi')).toBe('Tiếng Việt');
   });
 

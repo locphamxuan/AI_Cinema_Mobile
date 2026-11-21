@@ -1,6 +1,5 @@
 
 import { View } from 'react-native';
-import { showDialog } from '../src/lib/dialog';
 import Constants from 'expo-constants';
 import { useRouter, type Href } from 'expo-router';
 import { ScreenHeader } from '../src/components/common/ScreenHeader';
@@ -12,19 +11,8 @@ import { styles } from '../src/styles/screens/settings.styles';
 export default function SettingsScreen() {
   const router = useRouter();
   const { colors, isDark, toggleTheme } = useTheme();
-  const { isAuthenticated, logout } = useSessionStore();
-
-  const signOut = () => {
-    const leave = () => {
-      logout();
-      if (router.canGoBack()) router.back();
-      else router.replace('/');
-    };
-    showDialog('Đăng xuất?', 'Ví Coin và gói Tháng vẫn giữ nguyên, bạn đăng nhập lại là thấy.', [
-      { text: 'Ở lại', style: 'cancel' },
-      { text: 'Đăng xuất', style: 'destructive', onPress: leave },
-    ]);
-  };
+  // Signing out lives on Hồ sơ, where the account is; Cài đặt only holds app preferences.
+  const isAuthenticated = useSessionStore((s) => s.isAuthenticated);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -36,8 +24,7 @@ export default function SettingsScreen() {
         </MenuCard>
         {isAuthenticated && (
           <MenuCard>
-            <MenuRow icon="person-circle-outline" label="Tài khoản" onPress={() => router.push('/account' as Href)} />
-            <MenuRow icon="log-out-outline" label="Đăng xuất" danger onPress={signOut} last />
+            <MenuRow icon="person-circle-outline" label="Tài khoản" onPress={() => router.push('/account' as Href)} last />
           </MenuCard>
         )}
       </View>

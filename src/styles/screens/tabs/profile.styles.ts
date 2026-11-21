@@ -25,6 +25,8 @@ export const styles = StyleSheet.create({
   historyRow: { paddingHorizontal: 16, gap: 10 },
   historyItem: { width: 92 },
   historyPoster: { width: 92, height: 126, borderRadius: 6 },
+  historyTrack: { position: 'absolute', left: 6, right: 6, bottom: 6, height: 3, borderRadius: 2, overflow: 'hidden' },
+  historyFill: { height: 3, borderRadius: 2 },
   historyTitle: { ...textStyle.label, marginTop: 6 },
   historyEp: { ...textStyle.caption },
 });

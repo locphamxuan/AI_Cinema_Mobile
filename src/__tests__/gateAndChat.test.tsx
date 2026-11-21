@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 import { useEpisodeGate } from '../hooks/useEpisodeGate';
-import { useSupportChat } from '../hooks/useSupportChat';
+import { POLL_MS, useSupportChat } from '../hooks/useSupportChat';
 import { useFriends } from '../hooks/useFriends';
 import { episodeAccessService } from '../services/episodeAccessService';
 import { supportService } from '../services/supportService';
@@ -19,6 +19,9 @@ const flush = () => act(async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
 });
 
+/** Every hook rendered by a test, unmounted after it so no timer outlives the test environment. */
+const mounted: ReturnType<typeof create>[] = [];
+
 function renderHook<R>(useHook: () => R) {
   const box: { current?: R } = {};
   function Probe() {
@@ -29,7 +32,7 @@ function renderHook<R>(useHook: () => R) {
     return null;
   }
   act(() => {
-    create(<Probe />);
+    mounted.push(create(<Probe />));
   });
   return box as { current: R };
 }
@@ -37,6 +40,7 @@ function renderHook<R>(useHook: () => R) {
 const episode = { id: 'ep-1', availability: 'AVAILABLE' } as Episode;
 
 afterEach(() => {
+  act(() => mounted.splice(0).forEach((tree) => tree.unmount()));
   jest.restoreAllMocks();
   act(() => useDialogStore.setState({ queue: [] }));
 });
@@ -93,6 +97,75 @@ describe('useSupportChat', () => {
     });
     expect(sent).toBe(false);
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe('useSupportChat with Staff', () => {
+  const waiting = { id: 'c1', status: 'WAITING_FOR_STAFF' } as SupportConversation;
+  const staffReply = { id: 'm9', senderType: 'STAFF', content: 'Nhân viên đây', createdAt: 'x' } as const;
+  afterEach(() => jest.useRealTimers());
+
+  it('shows a Staff reply without closing the chat, by reading the case every few seconds', async () => {
+    jest.useFakeTimers();
+    jest.spyOn(supportService, 'startOrGetOpen').mockResolvedValue(ok(waiting));
+    const detail = jest
+      .spyOn(supportService, 'getDetail')
+      .mockResolvedValueOnce(ok({ conversation: waiting, messages: [], quickReplies: [] }))
+      .mockResolvedValue(ok({ conversation: waiting, messages: [staffReply], quickReplies: [] }));
+    const chat = renderHook(() => useSupportChat(true, true));
+    await act(async () => jest.advanceTimersByTimeAsync(0));
+    expect(chat.current.messages).toEqual([]);
+    await act(async () => jest.advanceTimersByTimeAsync(POLL_MS));
+    expect(chat.current.messages).toEqual([staffReply]);
+    expect(detail).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads the case again after a failed send and retries with the same message id', async () => {
+    const ai = { id: 'c1', status: 'AI_HANDLING' } as SupportConversation;
+    jest.spyOn(supportService, 'startOrGetOpen').mockResolvedValue(ok(ai));
+    const detail = jest.spyOn(supportService, 'getDetail').mockResolvedValue(ok({ conversation: ai, messages: [], quickReplies: [] }));
+    const send = jest.spyOn(supportService, 'sendMessage').mockResolvedValue({ success: false, data: null as never, message: 'Máy chủ phản hồi quá lâu' });
+    const chat = renderHook(() => useSupportChat(true, true));
+    await flush();
+    await act(async () => void (await chat.current.send('Còn bao nhiêu Coin?')));
+    await act(async () => void (await chat.current.send('Còn bao nhiêu Coin?')));
+    expect(send.mock.calls[0][2]).toBe(send.mock.calls[1][2]);
+    expect(detail).toHaveBeenCalledTimes(3);
+  });
+
+  it('shows the sent message once, then the answer of the AI, and clears the retry id', async () => {
+    const ai = { id: 'c1', status: 'AI_HANDLING' } as SupportConversation;
+    jest.spyOn(supportService, 'startOrGetOpen').mockResolvedValue(ok(ai));
+    jest.spyOn(supportService, 'getDetail').mockResolvedValue(ok({ conversation: ai, messages: [], quickReplies: [] }));
+    const mine = { id: 'm1', senderType: 'MEMBER', content: 'Còn bao nhiêu Coin?' };
+    const answer = { id: 'm2', senderType: 'AI', content: 'Bạn còn 12 Coin.' };
+    const send = jest.spyOn(supportService, 'sendMessage').mockResolvedValue(
+      ok({ conversation: ai, memberMessage: mine, aiMessage: answer, systemMessage: null, quickReplies: ['CONFIRM_RESOLVED'] }) as never,
+    );
+    const chat = renderHook(() => useSupportChat(true, true));
+    await flush();
+    let sent = false;
+    await act(async () => {
+      sent = await chat.current.send('Còn bao nhiêu Coin?');
+    });
+    expect(sent).toBe(true);
+    expect(chat.current.messages.map((m) => m.id)).toEqual(['m1', 'm2']);
+    await act(async () => void (await chat.current.send('Còn bao nhiêu Coin?')));
+    expect(send.mock.calls[0][2]).not.toBe(send.mock.calls[1][2]);
+  });
+
+  it('closes a resolved case on confirmation, and sends it back to Staff when it is not solved', async () => {
+    const resolved = { id: 'c1', status: 'RESOLVED' } as SupportConversation;
+    jest.spyOn(supportService, 'startOrGetOpen').mockResolvedValue(ok(resolved));
+    jest.spyOn(supportService, 'getDetail').mockResolvedValue(ok({ conversation: resolved, messages: [], quickReplies: [] }));
+    const confirm = jest.spyOn(supportService, 'confirmResolved').mockResolvedValue(ok({}));
+    const staff = jest.spyOn(supportService, 'requestStaff').mockResolvedValue(ok(waiting));
+    const chat = renderHook(() => useSupportChat(true, true));
+    await flush();
+    await act(async () => chat.current.confirmResolved());
+    expect(confirm).toHaveBeenCalledWith('c1');
+    await act(async () => chat.current.requestStaff());
+    expect(staff).toHaveBeenCalledWith('c1');
   });
 });
 

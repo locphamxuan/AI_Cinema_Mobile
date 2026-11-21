@@ -4,7 +4,7 @@ import {
   walletService,
   episodeAccessService,
 } from '../services';
-import { apiClient, extractErrorMessage, NETWORK_MESSAGE, TIMEOUT_MESSAGE } from '../services/apiClient';
+import { apiClient, extractErrorMessage, NETWORK_MESSAGE, statusMessage, TIMEOUT_MESSAGE } from '../services/apiClient';
 import { API_ROUTES } from '../constants/apiRoutes';
 import { API_CONFIG } from '../constants/config';
 import { storage, STORAGE_KEYS } from '../lib/storage';
@@ -84,14 +84,14 @@ describe('authService against a mocked backend', () => {
     const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: false,
       status: 401,
-      json: async () => ({ error: { code: 'UNAUTHORIZED', message: 'Invalid email or password' } }),
+      json: async () => ({ error: { code: 'UNAUTHORIZED', message: 'Incorrect email or password' } }),
     } as Response);
 
     const res = await authService.login({ email: ' Someone@Example.com ', password: 'wrongpassword1' });
 
     expect(res.success).toBe(false);
     expect(res.statusCode).toBe(401);
-    expect(res.message).toBe('Invalid email or password');
+    expect(res.message).toBe('Email hoặc mật khẩu không đúng.');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).email).toBe('someone@example.com');
     jest.restoreAllMocks();
@@ -126,7 +126,7 @@ describe('authService against a mocked backend', () => {
     jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: false,
       status: 409,
-      json: async () => ({ message: 'Email already exists' }),
+      json: async () => ({ message: 'An account with this email already exists' }),
     } as Response);
     const res = await authService.register({
       name: 'Test Duplicate',
@@ -136,7 +136,7 @@ describe('authService against a mocked backend', () => {
     });
     expect(res.success).toBe(false);
     expect(res.statusCode).toBe(409);
-    expect(res.message).toMatch(/(email already|exists|tồn tại)/i);
+    expect(res.message).toBe('Đã có tài khoản dùng email này.');
     jest.restoreAllMocks();
   });
 
@@ -156,7 +156,7 @@ describe('authService against a mocked backend', () => {
     });
     expect(res.success).toBe(false);
     expect(res.statusCode).toBe(400);
-    expect(res.message).toBe('email must be an email');
+    expect(res.message).toBe('Email không hợp lệ.');
     jest.restoreAllMocks();
   });
 });
@@ -248,9 +248,14 @@ describe('session tokens', () => {
 
 describe('extractErrorMessage', () => {
   it('prefers details, then error.message, then message', () => {
-    expect(extractErrorMessage({ error: { message: 'Conflict', details: ['a', 'b'] } })).toBe('a, b');
-    expect(extractErrorMessage({ error: { message: 'Email already exists' } })).toBe('Email already exists');
-    expect(extractErrorMessage({ message: ['x', 'y'] })).toBe('x, y');
+    const details = ['email must be an email', 'password must be longer than or equal to 8 characters'];
+    expect(extractErrorMessage({ error: { message: 'The request is invalid', details } })).toBe(
+      'Email không hợp lệ. Thông tin quá ngắn: cần ít nhất 8 ký tự.',
+    );
+    expect(extractErrorMessage({ error: { message: 'An account with this email already exists' } })).toBe('Đã có tài khoản dùng email này.');
+    expect(extractErrorMessage({ message: 'Tập này đã được mở khoá.' })).toBe('Tập này đã được mở khoá.');
+    // English the app has no wording for is never shown: the caller falls back to what the status means.
+    expect(extractErrorMessage({ error: { message: 'Some new refusal' } })).toBeUndefined();
     expect(extractErrorMessage(null)).toBeUndefined();
   });
 });
@@ -270,7 +275,7 @@ describe('typed error and list bodies', () => {
   });
 
   it('ignores a reason that is not a string', () => {
-    expect(extractErrorMessage({ error: { message: 'Bad', details: { reason: 42 } } })).toBe('Bad');
+    expect(extractErrorMessage({ error: { message: 'Room is closed', details: { reason: 42 } } })).toBe('Phòng đã đóng.');
   });
 
   it('reports a timeout when the request is aborted', async () => {
@@ -290,5 +295,18 @@ describe('typed error and list bodies', () => {
     const failed = await movieService.listMovies();
     expect(failed.success).toBe(false);
     expect(failed.data).toEqual([]);
+  });
+});
+
+describe('statusMessage', () => {
+  it('says in Vietnamese what a refusal means when the API gave no readable reason', () => {
+    expect(statusMessage(400)).toMatch(/chưa hợp lệ/);
+    expect(statusMessage(401)).toMatch(/hết hạn/);
+    expect(statusMessage(403)).toMatch(/không có quyền/);
+    expect(statusMessage(404)).toMatch(/Không tìm thấy/);
+    expect(statusMessage(409)).toMatch(/tải lại/);
+    expect(statusMessage(429)).toMatch(/quá nhanh/);
+    expect(statusMessage(503)).toMatch(/đang bận/);
+    expect(statusMessage(418)).toMatch(/Không thực hiện được/);
   });
 });

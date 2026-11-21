@@ -13,7 +13,7 @@ import { resumeEpisode } from '../../src/lib/watchHistory';
 import { Movie, Episode } from '../../src/types/movie';
 import { AIComplianceModal } from '../../src/components/player/AIComplianceModal';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
-import { AudioModeTabs, trackFor, type AudioMode } from '../../src/components/movie/AudioModeTabs';
+import { SubtitleChips, trackFor } from '../../src/components/movie/SubtitleChips';
 import { EpisodeList } from '../../src/components/movie/EpisodeList';
 import { RecommendationRail } from '../../src/components/movie/RecommendationRail';
 import { recommendationService } from '../../src/services/recommendationService';
@@ -36,7 +36,7 @@ export default function MovieDetailScreen() {
   const history = useWatchHistory(isAuthenticated);
 
   const { movie, loading, error: loadError, retry } = useMovieWithEpisodes(id);
-  const [audioMode, setAudioMode] = useState<AudioMode>('subtitle');
+  const [subtitlesOn, setSubtitlesOn] = useState(true);
   const [chosenTrack, setChosenTrack] = useState<string | null>(null);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [aiInfoOpen, setAiInfoOpen] = useState(false);
@@ -46,8 +46,9 @@ export default function MovieDetailScreen() {
   // Released episodes only; a movie with none says so instead of showing placeholders.
   const episodes: Episode[] = movie?.episodes ?? [];
 
-  // The watch screen starts in the mode chosen here: subtitles on (Phụ đề) or the film's own audio (Thuyết minh).
-  const watch = (ep: Episode) => router.push({ pathname: '/watch/[id]', params: { id, episodeId: ep.id, mode: audioMode } });
+  // The watch screen starts with the subtitles chosen here (on or off).
+  const watch = (ep: Episode) =>
+    router.push({ pathname: '/watch/[id]', params: { id, episodeId: ep.id, ...(subtitlesOn ? {} : { subtitles: 'off' }) } });
   // Every episode is opened through the BE access decision (free starter, plan, purchase).
   const gate = useEpisodeGate(watch);
   const handleSelectEpisode = (ep: Episode) => void gate.open(ep);
@@ -137,14 +138,14 @@ export default function MovieDetailScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Phụ đề = subtitles on; Thuyết minh = the film's own audio. The choice carries over to the player. */}
-        <AudioModeTabs
-          mode={audioMode}
-          onModeChange={setAudioMode}
+        {/* The subtitle choice carries over to the player. */}
+        <SubtitleChips
           tracks={episodes[0]?.subtitles ?? []}
-          trackId={trackFor(audioMode, episodes[0]?.subtitles ?? [], chosenTrack)}
-          onTrackChange={setChosenTrack}
-          language={movie.language}
+          trackId={trackFor(subtitlesOn, episodes[0]?.subtitles ?? [], chosenTrack)}
+          onChange={(trackId) => {
+            setSubtitlesOn(trackId !== null);
+            if (trackId) setChosenTrack(trackId);
+          }}
         />
 
         {loadError ? (

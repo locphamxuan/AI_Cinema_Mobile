@@ -1,6 +1,7 @@
 import React from 'react';
-import { Platform, Text, TextInput, TouchableOpacity, View, type TextInputKeyPressEvent } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, type TextInputKeyPressEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { ThemeColors } from '../../theme';
 import { styles } from '../../styles/components/chat/ChatModal.styles';
 
@@ -61,9 +62,10 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({ colors, isDark, draf
         onPress={onSend}
         disabled={!ready}
         accessibilityLabel="Gửi tin nhắn"
-        style={[styles.send, { backgroundColor: ready ? colors.ruby : colors.textMuted }]}
+        style={[styles.send, { backgroundColor: colors.textMuted }]}
       >
-        <Ionicons name="send" size={16} color={colors.white} />
+        {ready && <LinearGradient colors={[colors.ruby, colors.neon]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />}
+        <Ionicons name="arrow-up" size={20} color={colors.white} />
       </TouchableOpacity>
     </View>
   );

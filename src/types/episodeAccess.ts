@@ -62,7 +62,6 @@ export interface WalletBalance {
   mainBalance: number;
   bonusBalance: number;
   version: number;
-  expiringBonus: { lotId: string; amount: number; expiresAt: string }[];
 }
 
 export type TopUpStatus = 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
@@ -211,7 +210,6 @@ export interface DailyRewardStatus {
   availableSpins: number;
   mainBalance: number;
   bonusBalance: number;
-  expiringBonus: { lotId: string; amount: number; expiresAt: string }[];
 }
 
 /** POST /daily-rewards/check-in */

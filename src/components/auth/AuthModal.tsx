@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { showDialog } from '../../lib/dialog';
 import { useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ import { AgeConfirmModal } from './AgeConfirmModal';
 import { ForgotPasswordView } from './ForgotPasswordView';
 import { GoogleSignInSection } from './GoogleSignInSection';
 import { styles } from '../../styles/components/auth/AuthModal.styles';
+import { EDGE_TO_EDGE, KEYBOARD_BEHAVIOR } from '../../lib/keyboard';
 
 const digitsOnly = (value: string, maxLen: number) => value.replace(/\D/g, '').slice(0, maxLen);
 
@@ -134,8 +135,9 @@ export const AuthModal: React.FC = () => {
   );
 
   return (
-    <Modal visible={isAuthModalOpen} transparent animationType="slide" onRequestClose={closeAuthModal}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.backdrop, { backgroundColor: colors.overlay }]}>
+    <Modal visible={isAuthModalOpen} transparent animationType="slide" onRequestClose={closeAuthModal} {...EDGE_TO_EDGE}>
+      {/* The sheet rises with the keyboard on Android too: edge to edge, the window itself no longer shrinks. */}
+      <KeyboardAvoidingView behavior={KEYBOARD_BEHAVIOR} style={[styles.backdrop, { backgroundColor: colors.overlay }]}>
         <View style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.text }]}>{forgotOpen ? 'Quên mật khẩu' : isLogin ? 'Đăng nhập' : 'Tạo tài khoản'}</Text>
@@ -144,7 +146,13 @@ export const AuthModal: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            automaticallyAdjustKeyboardInsets
+            contentContainerStyle={styles.form}
+            showsVerticalScrollIndicator={false}
+          >
             {forgotOpen ? (
               <ForgotPasswordView initialEmail={email} onBack={() => setForgotOpen(false)} />
             ) : (<>

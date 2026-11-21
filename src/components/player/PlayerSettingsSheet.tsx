@@ -11,14 +11,14 @@ interface PlayerSettingsSheetProps {
   visible: boolean;
   onClose: () => void;
   subtitles: SubtitleTrack[];
-  /** Null = subtitles off: the original audio only (Thuyết minh). */
+  /** Null = subtitles off. */
   subtitleTrackId: string | null;
   onSubtitleChange: (trackId: string | null) => void;
   /** Spoken language of the film, e.g. "Tiếng Việt". */
   audioLabel: string;
   rate: number;
   onRateChange: (rate: number) => void;
-  /** Watch room: the stream quality (`auto` or `720p`…); hidden when absent. */
+  /** The stream quality (`auto` or `720p`…), only the ones the plan allows; hidden when absent. */
   quality?: { options: string[]; value: string; onChange?: (quality: string) => void };
   /** Watch room: everyone plays at 1x, so the speed row is hidden. */
   hideRate?: boolean;
