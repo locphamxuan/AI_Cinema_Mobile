@@ -52,7 +52,7 @@ export default function WalletScreen() {
               <View style={styles.col}>
                 <Text style={[styles.amount, { color: colors.text }]}>{wallet.bonusCoin}</Text>
                 <Text style={[styles.colLabel, { color: colors.textSecondary }]}>Coin thưởng</Text>
-                <Text style={[styles.colNote, { color: colors.textMuted }]}>Từ điểm danh, vòng quay; có hạn dùng</Text>
+                <Text style={[styles.colNote, { color: colors.textMuted }]}>Từ điểm danh, vòng quay</Text>
               </View>
             </View>
             <Text style={[styles.rule, { color: colors.textMuted }]}>
