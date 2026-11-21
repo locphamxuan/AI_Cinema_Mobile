@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
 import { usePlaybackSession } from '../../hooks/usePlaybackSession';
-import { useRoomQuality } from '../../hooks/useRoomQuality';
+import { useStreamQuality } from '../../hooks/useStreamQuality';
 import { useSubtitleCues } from '../../hooks/useSubtitleCues';
 import { attachWebStream, toggleWebFullscreen, watchWebFullscreen } from '../../lib/attachWebStream';
 import { lockLandscape, lockPortrait } from '../../lib/orientation';
@@ -60,7 +60,7 @@ export function PartyPlayer(props: PartyPlayerProps) {
   // Heartbeats keep this viewer's own streaming session alive; it also schedules the Admin's mid-roll ads for a
   // viewer without the Monthly plan (BR-32), exactly as outside a room.
   const playback = usePlaybackSession(player, session, currentTime, isHost);
-  const stream = useRoomQuality(player, session, quality);
+  const stream = useStreamQuality(player, session.stream.masterUrl, quality);
   const memberAd = !isHost && roomAd.active;
   const adShown = useRef(false);
   const host = useRef<React.ComponentRef<typeof View>>(null);
