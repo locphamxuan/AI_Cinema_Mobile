@@ -15,7 +15,7 @@ import type { StreamingSession } from '../../src/types/playback';
 import { episodeLabel } from '../../src/lib/episodeLabel';
 import { UnlockEpisodeModal } from '../../src/components/player/UnlockEpisodeModal';
 import { EpisodePlayer } from '../../src/components/player/EpisodePlayer';
-import { AudioModeTabs, languageName, trackFor, type AudioMode } from '../../src/components/movie/AudioModeTabs';
+import { SubtitleChips, languageName, trackFor } from '../../src/components/movie/SubtitleChips';
 import { EpisodeList } from '../../src/components/movie/EpisodeList';
 import { RecommendationRail } from '../../src/components/movie/RecommendationRail';
 import { useAfterWatching } from '../../src/hooks/useAfterWatching';
@@ -29,7 +29,7 @@ import { styles } from '../../src/styles/screens/watch/id.styles';
 const DEVICE_LIMITS = new Set(['DEVICE_LIMIT_REACHED', 'CONCURRENT_LIMIT_REACHED']);
 
 export default function WatchScreen() {
-  const { id, episodeId, mode } = useLocalSearchParams<{ id: string; episodeId?: string; mode?: AudioMode }>();
+  const { id, episodeId, subtitles } = useLocalSearchParams<{ id: string; episodeId?: string; subtitles?: 'off' }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
@@ -41,7 +41,7 @@ export default function WatchScreen() {
   const { movie, loading, error: loadError, retry } = useMovieWithEpisodes(id, (loaded) =>
     setActiveEpisode(loaded.episodes.find((ep) => ep.id === episodeId) || loaded.episodes[0] || null),
   );
-  const [audioMode, setAudioMode] = useState<AudioMode>(mode === 'voiceover' ? 'voiceover' : 'subtitle');
+  const [subtitlesOn, setSubtitlesOn] = useState(subtitles !== 'off');
   const [chosenTrack, setChosenTrack] = useState<string | null>(null);
   const [session, setSession] = useState<StreamingSession | null>(null);
   const [opening, setOpening] = useState(false);
@@ -53,7 +53,7 @@ export default function WatchScreen() {
   const episodes: Episode[] = movie?.episodes ?? [];
   const currentActiveEpisode = activeEpisode || episodes[0] || null;
   const tracks = currentActiveEpisode?.subtitles ?? [];
-  const subtitleTrackId = trackFor(audioMode, tracks, chosenTrack);
+  const subtitleTrackId = trackFor(subtitlesOn, tracks, chosenTrack);
 
   // BR-68: once the member has seen the last episode through (85 % or its end), the AI suggests what to watch
   // next from this account's own behaviour (Member only; a Guest has no history to read).
@@ -110,7 +110,7 @@ export default function WatchScreen() {
 
   const changeTrack = (trackId: string | null) => {
     if (trackId) setChosenTrack(trackId);
-    setAudioMode(trackId ? 'subtitle' : 'voiceover');
+    setSubtitlesOn(trackId !== null);
   };
 
   if (loading || !movie) {
@@ -205,14 +205,7 @@ export default function WatchScreen() {
           </View>
         </View>
 
-        <AudioModeTabs
-          mode={audioMode}
-          onModeChange={setAudioMode}
-          tracks={tracks}
-          trackId={subtitleTrackId}
-          onTrackChange={(trackId) => changeTrack(trackId)}
-          language={movie.language}
-        />
+        <SubtitleChips tracks={tracks} trackId={subtitleTrackId} onChange={changeTrack} />
 
         {loadError ? (
           <LoadError message={loadError} onRetry={retry} />

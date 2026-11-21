@@ -11,7 +11,7 @@ interface PlayerSettingsSheetProps {
   visible: boolean;
   onClose: () => void;
   subtitles: SubtitleTrack[];
-  /** Null = subtitles off: the original audio only (Thuyết minh). */
+  /** Null = subtitles off. */
   subtitleTrackId: string | null;
   onSubtitleChange: (trackId: string | null) => void;
   /** Spoken language of the film, e.g. "Tiếng Việt". */

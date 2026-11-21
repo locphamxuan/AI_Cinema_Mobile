@@ -30,7 +30,7 @@ interface EpisodePlayerProps {
   checking: boolean;
   onRequestPlay: () => void;
   subtitles?: SubtitleTrack[];
-  /** Null = subtitles off (Thuyết minh: the film's own audio only). */
+  /** Null = subtitles off. */
   subtitleTrackId?: string | null;
   onSubtitleChange?: (trackId: string | null) => void;
   /** Spoken language of the film, shown in the settings. */
