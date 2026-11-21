@@ -6,7 +6,7 @@ import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { LoadError } from '../src/components/common/LoadError';
 import { notificationService, type AppNotification } from '../src/services/notificationService';
 import { MEMBER_NOTIFICATION_TABS, notificationIcon } from '../src/lib/notificationTabs';
-import { dayKey } from '../src/lib/releaseDays';
+import { dayKey } from '../src/lib/date';
 import { useSessionStore } from '../src/store';
 import { useTheme } from '../src/theme';
 import { styles } from '../src/styles/screens/notifications.styles';

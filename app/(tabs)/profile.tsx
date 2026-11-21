@@ -9,14 +9,15 @@ import { useTheme } from '../../src/theme';
 import { useSessionStore, useAccountStore, useCatalogStore, useUiStore } from '../../src/store';
 import { useUnreadNotifications } from '../../src/hooks/useUnreadNotifications';
 import { useWatchHistory } from '../../src/hooks/useWatchHistory';
-import { latestPerMovie } from '../../src/lib/watchHistory';
+import { latestPerMovie, watchProgress } from '../../src/lib/watchHistory';
+import { confirmSignOut } from '../../src/lib/signOut';
 import { styles } from '../../src/styles/screens/tabs/profile.styles';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { isAuthenticated, user } = useSessionStore();
+  const { isAuthenticated, user, logout } = useSessionStore();
   const { wallet, subscription, isVIPMode } = useAccountStore();
   const { movies } = useCatalogStore();
   const { openAuthModal, setCheckInModalOpen, setChatModalOpen } = useUiStore();
@@ -83,7 +84,9 @@ export default function ProfileScreen() {
               <Text style={[styles.blockEmpty, { color: colors.textMuted }]}>Phim bạn mở sẽ hiện ở đây để xem tiếp.</Text>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.historyRow}>
-                {watching.map((item) => (
+                {watching.map((item) => {
+                  const progress = watchProgress(item);
+                  return (
                   <TouchableOpacity
                     key={item.episodeId}
                     style={styles.historyItem}
@@ -91,15 +94,23 @@ export default function ProfileScreen() {
                     onPress={() => router.push({ pathname: '/watch/[id]', params: { id: item.movieId, episodeId: item.episodeId } })}
                     accessibilityLabel={`${item.movieTitle}, tập ${item.episodeNumber}`}
                   >
-                    <Image source={{ uri: posterOf(item.movieId, item.thumbnailUrl) }} style={[styles.historyPoster, { backgroundColor: colors.cardAlt }]} />
+                    <View>
+                      <Image source={{ uri: posterOf(item.movieId, item.thumbnailUrl) }} style={[styles.historyPoster, { backgroundColor: colors.cardAlt }]} />
+                      {progress.ratio > 0 && (
+                        <View style={[styles.historyTrack, { backgroundColor: 'rgba(255,255,255,0.28)' }]} accessibilityElementsHidden>
+                          <View style={[styles.historyFill, { width: `${Math.round(progress.ratio * 100)}%`, backgroundColor: colors.ruby }]} />
+                        </View>
+                      )}
+                    </View>
                     <Text style={[styles.historyTitle, { color: colors.text }]} numberOfLines={1}>
                       {item.movieTitle}
                     </Text>
                     <Text style={[styles.historyEp, { color: colors.textMuted }]} numberOfLines={2}>
-                      {item.available ? `Tập ${item.episodeNumber}` : item.notice || 'Tập này tạm không xem được'}
+                      {item.available ? progress.label : item.notice || 'Tập này tạm không xem được'}
                     </Text>
                   </TouchableOpacity>
-                ))}
+                  );
+                })}
               </ScrollView>
             )}
           </View>
@@ -121,6 +132,12 @@ export default function ProfileScreen() {
           <MenuRow icon="chatbubble-ellipses-outline" label="Trợ lý AI & Hỗ trợ" onPress={() => setChatModalOpen(true)} />
           <MenuRow icon="settings-outline" label="Cài đặt" onPress={() => router.push('/settings')} last />
         </MenuCard>
+
+        {isAuthenticated && (
+          <MenuCard>
+            <MenuRow icon="log-out-outline" label="Đăng xuất" danger onPress={() => confirmSignOut(logout, () => router.replace('/'))} last />
+          </MenuCard>
+        )}
       </ScrollView>
     </View>
   );

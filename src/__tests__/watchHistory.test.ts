@@ -1,4 +1,6 @@
-import { latestPerMovie, resumeEpisode } from '../lib/watchHistory';
+import { latestPerMovie, resumeEpisode, watchProgress } from '../lib/watchHistory';
+import { confirmSignOut } from '../lib/signOut';
+import { useDialogStore } from '../store/dialogStore';
 import { playbackService } from '../services/playbackService';
 import { apiClient } from '../services/apiClient';
 import type { Episode } from '../types/movie';
@@ -63,5 +65,42 @@ describe('watch history', () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(String(url)).toMatch(/\/playback\/history\?limit=50$/);
     expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer member');
+  });
+});
+
+describe('watchProgress', () => {
+  it('shows where the member stopped out of the episode length, and how far along for the bar', () => {
+    expect(watchProgress({ episodeNumber: 3, positionSeconds: 754, durationSeconds: 2700, completed: false })).toEqual({
+      label: 'Tập 3 · 12:34 / 45:00',
+      ratio: 754 / 2700,
+    });
+  });
+
+  it('says a finished episode is done, and shows the position alone when the length is unknown', () => {
+    expect(watchProgress({ episodeNumber: 1, positionSeconds: 2700, durationSeconds: 2700, completed: true })).toEqual({
+      label: 'Tập 1 · Đã xem hết',
+      ratio: 1,
+    });
+    expect(watchProgress({ episodeNumber: 2, positionSeconds: 95, durationSeconds: null, completed: false })).toEqual({
+      label: 'Tập 2 · đang ở 1:35',
+      ratio: 0,
+    });
+    expect(watchProgress({ episodeNumber: 2, positionSeconds: 9999, durationSeconds: 100, completed: false }).ratio).toBe(1);
+  });
+});
+
+describe('confirmSignOut', () => {
+  it('asks first, and signs out then leaves only on confirmation', () => {
+    const logout = jest.fn();
+    const leave = jest.fn();
+    useDialogStore.setState({ queue: [] });
+    confirmSignOut(logout, leave);
+    const dialog = useDialogStore.getState().queue[0];
+    expect(dialog.title).toBe('Đăng xuất?');
+    expect(logout).not.toHaveBeenCalled();
+    dialog.buttons.find((b) => b.text === 'Đăng xuất')!.onPress!();
+    expect(logout).toHaveBeenCalled();
+    expect(leave).toHaveBeenCalled();
+    useDialogStore.setState({ queue: [] });
   });
 });
