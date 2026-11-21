@@ -5,6 +5,8 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
 import { usePlaybackSession } from '../../hooks/usePlaybackSession';
 import { useSubtitleCues } from '../../hooks/useSubtitleCues';
+import { useStreamQuality } from '../../hooks/useStreamQuality';
+import { usePlayerHealth } from '../../hooks/usePlayerHealth';
 import { lockLandscape, lockPortrait } from '../../lib/orientation';
 import { seekTarget } from '../../lib/seek';
 import { cueAt } from '../../lib/vtt';
@@ -16,6 +18,7 @@ import { PlayerSettingsSheet } from './PlayerSettingsSheet';
 import { AiLabelOverlay } from './AiLabelOverlay';
 import { FullscreenStage } from './FullscreenStage';
 import { AdBreakOverlay, ResumePrompt } from './PlaybackOverlays';
+import { NetworkOverlay } from './NetworkOverlay';
 import { styles } from '../../styles/components/player/EpisodePlayer.styles';
 const HIDE_CONTROLS_MS = 3000;
 
@@ -55,6 +58,9 @@ function StreamPlayer(props: StreamPlayerProps) {
   });
   const { currentTime, duration, playing } = usePlayerClock(player);
   const playback = usePlaybackSession(player, session, currentTime);
+  const [quality, setQuality] = React.useState('auto');
+  const stream = useStreamQuality(player, streamUrl, quality);
+  const health = usePlayerHealth(player, stream.url, quality, setQuality);
   const cues = useSubtitleCues(subtitleTrackId);
   const line = subtitleTrackId ? cueAt(cues, currentTime) : null;
   const [controls, setControls] = React.useState(true);
@@ -83,7 +89,7 @@ function StreamPlayer(props: StreamPlayerProps) {
   React.useEffect(() => {
     if (duration > 0 && currentTime / duration >= FINISHED_RATIO) finish();
   }, [currentTime, duration, finish]);
-  React.useEffect(() => attachWebStream(host.current, streamUrl), [streamUrl]);
+  React.useEffect(() => attachWebStream(host.current, stream.url), [stream.url]);
   React.useEffect(() => watchWebFullscreen(host.current, setFullscreen), []);
   React.useEffect(() => {
     if (Platform.OS === 'web') player.play();
@@ -158,6 +164,7 @@ function StreamPlayer(props: StreamPlayerProps) {
           onToggleFullscreen={() => touched(toggleFullscreen)()}
         />
       )}
+      {!playback.activeAd ? <NetworkOverlay health={health} /> : null}
       {playback.resumeAt !== null && !playback.activeAd ? (
         <ResumePrompt at={playback.resumeAt} onAnswer={playback.answerResume} />
       ) : null}
@@ -183,6 +190,7 @@ function StreamPlayer(props: StreamPlayerProps) {
           setRate(r);
           player.playbackRate = r;
         }}
+        quality={stream.options.length > 1 ? { options: stream.options, value: quality, onChange: setQuality } : undefined}
       />
     </>
   );
