@@ -13,10 +13,12 @@ describe('watchRoomService (BR-69, Member only on the BE)', () => {
     await watchRoomService.create('e1');
     await watchRoomService.joinByCode('  ab2-cd9 ');
     await watchRoomService.join('r1');
+    // Each call names this phone, so its own stream does not count against the device limit (MF-4).
+    const device = { headers: { 'X-Device-Id': expect.stringMatching(/^[0-9a-f-]{36}$/) as unknown } };
     expect(post.mock.calls).toEqual([
-      ['/watch-rooms', { episodeId: 'e1' }],
-      ['/watch-rooms/join', { roomCode: 'ab2-cd9' }],
-      ['/watch-rooms/r1/join', {}],
+      ['/watch-rooms', { episodeId: 'e1' }, device],
+      ['/watch-rooms/join', { roomCode: 'ab2-cd9' }, device],
+      ['/watch-rooms/r1/join', {}, device],
     ]);
   });
 
