@@ -6,7 +6,7 @@ import { CinemaTabBar } from '../components/navigation/CinemaTabBar';
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 20, left: 0, right: 0 }) }));
 
-const routes = ['index', 'explore', 'profile', 'vip'].map((name) => ({ key: `${name}-k`, name }));
+const routes = ['index', 'explore', 'history', 'profile', 'vip'].map((name) => ({ key: `${name}-k`, name }));
 
 function renderBar(index = 0, prevented = false) {
   const emitter = { emit: jest.fn(() => ({ defaultPrevented: prevented })) };
@@ -26,7 +26,12 @@ function renderBar(index = 0, prevented = false) {
 describe('CinemaTabBar', () => {
   it('shows the three tabs, the active one with its label, and no Lịch chiếu or Gói Tháng tab', () => {
     const { tabs, texts } = renderBar(0);
-    expect(tabs.map((t) => t.props.accessibilityLabel)).toEqual(['Trang chủ', 'Khám phá', 'Hồ sơ']);
+    expect(tabs.map((t) => t.props.accessibilityLabel)).toEqual([
+      'Trang chủ',
+      'Khám phá',
+      'Lịch sử xem',
+      'Hồ sơ',
+    ]);
     // Inactive tabs show their icon only, still named for screen readers.
     expect(texts).toEqual(['Trang chủ']);
     expect(tabs[0].props.accessibilityState).toEqual({ selected: true });
@@ -71,7 +76,7 @@ describe('TabLayout', () => {
       });
       expect(((bar as React.ReactElement | null)?.type as { name?: string }).name).toBe(CinemaTabBar.name);
       // Gói Tháng is a stack screen now, not a hidden tab that could fall back to Trang chủ.
-      expect(screens.map((s) => s.name)).toEqual(['index', 'explore', 'profile']);
+      expect(screens.map((s) => s.name)).toEqual(['index', 'explore', 'history', 'profile']);
     });
   });
 });

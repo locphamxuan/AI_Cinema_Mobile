@@ -13,6 +13,7 @@ type IconName = keyof typeof Ionicons.glyphMap;
 export const TAB_ITEMS: Record<string, { label: string; icon: IconName; activeIcon: IconName }> = {
   index: { label: 'Trang chủ', icon: 'home-outline', activeIcon: 'home' },
   explore: { label: 'Khám phá', icon: 'compass-outline', activeIcon: 'compass' },
+  history: { label: 'Lịch sử xem', icon: 'book-outline', activeIcon: 'book' },
   profile: { label: 'Hồ sơ', icon: 'person-circle-outline', activeIcon: 'person-circle' },
 };
 
