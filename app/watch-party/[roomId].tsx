@@ -11,10 +11,11 @@ import { RecommendationRail } from '../../src/components/movie/RecommendationRai
 import { LoadError } from '../../src/components/common/LoadError';
 import { showDialog } from '../../src/lib/dialog';
 import { FriendsPanel } from '../../src/components/watchParty/FriendsPanel';
+import { ParticipantsPanel } from '../../src/components/watchParty/ParticipantsPanel';
 import { movieService } from '../../src/services';
 import { playbackService } from '../../src/services/playbackService';
 import { watchRoomService } from '../../src/services/watchRoomService';
-import { useSessionStore } from '../../src/store';
+import { useSessionStore, useAccountStore } from '../../src/store';
 import { useTheme } from '../../src/theme';
 import type { SubtitleTrack } from '../../src/types/movie';
 import type { StreamingSession } from '../../src/types/playback';
@@ -28,6 +29,7 @@ export default function WatchPartyScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const me = useSessionStore((s) => s.user?.id);
+  const { isVIPMode } = useAccountStore();
   const [room, setRoom] = useState<WatchRoom | null>(null);
   const [session, setSession] = useState<StreamingSession | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -174,20 +176,21 @@ export default function WatchPartyScreen() {
       </View>
 
       {session && current ? (
-        <PartyPlayer
-          key={session.sessionId}
-          session={session}
-          isHost={isHost}
-          sync={live.lastSync}
-          subtitles={subtitles}
-          audioLabel="Âm thanh gốc của phim"
-          onHostAction={onHostAction}
-          onEnded={onEnded}
-          roomAd={live.ad}
-          onAdChange={sendAd}
-          quality={live.quality}
-          onQualityChange={sendQuality}
-        />
+          <PartyPlayer
+            key={session.sessionId}
+            session={session}
+            isHost={isHost}
+            sync={live.lastSync}
+            subtitles={subtitles}
+            audioLabel="Âm thanh gốc của phim"
+            onHostAction={onHostAction}
+            onEnded={onEnded}
+            ads={isHost && !isVIPMode}
+            roomAd={live.ad}
+            onAdChange={sendAd}
+            quality={live.quality}
+            onQualityChange={sendQuality}
+          />
       ) : (
         <View style={styles.playerPlaceholder}>
           <ActivityIndicator color={colors.ruby} />
@@ -195,18 +198,20 @@ export default function WatchPartyScreen() {
       )}
 
       <ScrollView contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 24 }]}>
-        <View style={styles.chips}>
-          <View style={[styles.chip, { backgroundColor: colors.rubySoft }]}>
-            <Ionicons name="people" size={13} color={colors.ruby} />
-            <Text style={[styles.chipText, { color: colors.ruby }]}>{viewers} người đang xem</Text>
+        {isHost ? (
+          <ParticipantsPanel participants={current?.participants ?? []} sync={live.lastSync} />
+        ) : (
+          <View style={styles.chips}>
+            <View style={[styles.chip, { backgroundColor: colors.rubySoft }]}>
+              <Ionicons name="people" size={13} color={colors.ruby} />
+              <Text style={[styles.chipText, { color: colors.ruby }]}>{viewers} người đang xem</Text>
+            </View>
+            <View style={[styles.chip, { backgroundColor: colors.card }]}>
+              <Ionicons name="radio-outline" size={13} color={colors.textSecondary} />
+              <Text style={[styles.chipText, { color: colors.textSecondary }]}>Chủ phòng điều khiển</Text>
+            </View>
           </View>
-          <View style={[styles.chip, { backgroundColor: colors.card }]}>
-            <Ionicons name={isHost ? 'star' : 'radio-outline'} size={13} color={colors.textSecondary} />
-            <Text style={[styles.chipText, { color: colors.textSecondary }]}>
-              {isHost ? 'Bạn là chủ phòng' : 'Chủ phòng điều khiển'}
-            </Text>
-          </View>
-        </View>
+        )}
 
         {live.notice ? (
           <Text style={[styles.notice, { color: colors.text, backgroundColor: colors.rubySoft }]}>{live.notice}</Text>

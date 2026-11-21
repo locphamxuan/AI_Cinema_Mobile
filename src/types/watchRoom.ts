@@ -9,6 +9,8 @@ export interface WatchRoom {
   status: string;
   currentPositionSeconds: number;
   participantCount?: number;
+  /** Members currently in the room (who is watching together). */
+  participants?: { userId: string; fullName: string }[];
   serverTimestamp?: number;
 }
 
