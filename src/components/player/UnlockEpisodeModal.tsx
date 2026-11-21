@@ -29,7 +29,7 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { setWalletBalance } = useAccountStore();
+  const { setWalletBalance, setOwnedEpisodeIds } = useAccountStore();
   const { markEpisodeUnlocked, currentMovie } = useCatalogStore();
   const { setTopUpModalOpen, setPendingPurchase } = useUiStore();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -69,6 +69,11 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
     }
     setWalletBalance(res.data.mainBalance, res.data.bonusBalance);
     markEpisodeUnlocked(episode.id);
+    // Refresh the owned-episode hint so the lock icon disappears on the episode list right away.
+    const ownedRes = await episodeAccessService.listOwnedEpisodeIds();
+    if (ownedRes.success) {
+      setOwnedEpisodeIds(ownedRes.data);
+    }
     onUnlocked(episode);
     close();
   };
