@@ -14,8 +14,8 @@ interface PlayerSettingsSheetProps {
   /** Null = subtitles off. */
   subtitleTrackId: string | null;
   onSubtitleChange: (trackId: string | null) => void;
-  /** Spoken language of the film, e.g. "Tiếng Việt". */
-  audioLabel: string;
+  /** Spoken language of the film, e.g. "Tiếng Việt"; absent when the episode has no subtitle track. */
+  audioLabel?: string;
   rate: number;
   onRateChange: (rate: number) => void;
   /** The stream quality (`auto` or `720p`…), only the ones the plan allows; hidden when absent. */
@@ -46,7 +46,7 @@ export function PlayerSettingsSheet(props: PlayerSettingsSheetProps) {
         <View style={[styles.handle, { backgroundColor: colors.borderLight }]} />
         <ScrollView>
           <Text style={[styles.heading, { color: colors.textMuted }]}>Phụ đề</Text>
-          {option('off', `Tắt, nghe âm thanh gốc (${audioLabel})`, subtitleTrackId === null, () => onSubtitleChange(null))}
+          {option('off', audioLabel ? `Tắt, nghe âm thanh gốc (${audioLabel})` : 'Tắt, nghe âm thanh gốc', subtitleTrackId === null, () => onSubtitleChange(null))}
           {subtitles.map((track) => option(track.id, track.label, subtitleTrackId === track.id, () => onSubtitleChange(track.id)))}
           {subtitles.length === 0 && <Text style={[styles.note, { color: colors.textMuted }]}>Tập này chưa có phụ đề.</Text>}
 

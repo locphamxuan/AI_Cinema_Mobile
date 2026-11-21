@@ -143,11 +143,12 @@ export default function WatchScreen() {
         posterUrl={ep?.thumbnailUrl || movie.bannerUrl || movie.posterUrl}
         aiLabel={playing?.aiLabel?.text ?? ep?.aiLabel ?? null}
         checking={gate.checkingId !== null || opening}
+        ads={!isVIPMode}
         onRequestPlay={() => ep && handleSelectEpisode(ep)}
         subtitles={tracks}
         subtitleTrackId={subtitleTrackId}
         onSubtitleChange={changeTrack}
-        audioLabel={languageName(movie.language)}
+        audioLabel={tracks.length > 0 ? languageName(movie.language) : undefined}
         onStarted={countView}
         onFinished={onFinished}
       />
