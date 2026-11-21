@@ -165,7 +165,10 @@ export default function WatchScreen() {
           <TouchableOpacity style={styles.titleRow} onPress={() => router.back()} accessibilityLabel={`Quay lại ${movie.title}`}>
             <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
             <Text style={[styles.movieTitle, { color: colors.text }]} numberOfLines={1}>
-              {movie.title}
+                {movie.title}
+            </Text>
+            <Text style={[styles.movieGenre, { color: colors.textSecondary }]} numberOfLines={1}>
+                {movie.genre?.join(', ') || ''}
             </Text>
           </TouchableOpacity>
           {ep ? (
