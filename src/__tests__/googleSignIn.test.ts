@@ -60,7 +60,7 @@ describe('Google sign-in', () => {
     const res = await authService.googleLogin({ idToken: 'id-token' });
 
     expect(res.success).toBe(false);
-    expect(res.message).toBe('Đăng nhập Google chỉ dành cho thành viên. Tài khoản quản trị / nhân sự hãy đăng nhập bằng mật khẩu.');
+    expect(res.message).toBe('Đăng nhập bằng Google chỉ dành cho người xem. Tài khoản quản trị và nhân viên hãy đăng nhập bằng mật khẩu.');
   });
 
   it('turns staff accounts away like the password sign-in does', async () => {
@@ -86,6 +86,6 @@ describe('Google sign-in', () => {
     const res = await authService.googleLogin({ idToken: 'id-token' });
 
     expect(res.statusCode).toBe(403);
-    expect(res.message).toContain('Studio Web');
+    expect(res.message).toContain('trang web dành cho Studio');
   });
 });

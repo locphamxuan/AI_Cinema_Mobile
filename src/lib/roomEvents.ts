@@ -59,7 +59,7 @@ const ROOM_ERROR_NOTICE: Record<string, string> = {
   DEVICE_LIMIT_EXCEEDED: 'Tài khoản đang phát trên đủ số thiết bị của gói. Dừng xem ở một thiết bị rồi thử lại.',
   NOT_HOST: 'Chỉ chủ phòng mới điều khiển được phòng.',
   NOT_IN_ROOM: 'Bạn không còn ở trong phòng này. Mở lại phòng để vào tiếp.',
-  UNAUTHENTICATED: 'Phiên đăng nhập đã hết hạn, đang kết nối lại phòng.',
+  UNAUTHENTICATED: 'Hết hạn đăng nhập, đang kết nối lại phòng.',
   ROOM_NOT_FOUND: 'Phòng không còn tồn tại.',
 };
 

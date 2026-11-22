@@ -70,7 +70,7 @@ export function AdBreakOverlay({ cue, onDone }: { cue: AdScheduleItem; onDone: (
           testID="ad-skip"
         >
           <Text style={[styles.adSkipText, !over && styles.adSkipTextWaiting]}>
-            {over ? 'Bỏ qua quảng cáo ›' : `Bỏ qua sau ${left}s`}
+            {over ? 'Bỏ qua quảng cáo ›' : `Bỏ qua sau ${left} giây`}
           </Text>
         </TouchableOpacity>
       </View>

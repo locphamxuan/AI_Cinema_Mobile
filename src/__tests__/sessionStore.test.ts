@@ -89,7 +89,7 @@ describe('sign-in on the store', () => {
     const res = await useSessionStore.getState().login('studio@example.com', 'password123');
 
     expect(res.success).toBe(false);
-    expect(res.error).toContain('Studio Web');
+    expect(res.error).toContain('trang web dành cho Studio');
     expect(appState().isAuthenticated).toBe(false);
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
       expect.stringContaining('/auth/login'),

@@ -118,7 +118,7 @@ export const CheckInModal: React.FC = () => {
         <View style={[styles.handle, { backgroundColor: colors.borderLight }]} />
         <Text style={[styles.title, { color: colors.text }]}>Điểm danh</Text>
         <Text style={[styles.sub, { color: colors.textSecondary }]}>
-          {streak > 0 ? `Bạn đang giữ chuỗi ${streak} ngày. ` : ''}Lỡ một ngày, chuỗi tính lại từ ngày 1.
+          {streak > 0 ? `Bạn đã điểm danh liên tục ${streak} ngày. ` : ''}Lỡ một ngày, chuỗi tính lại từ ngày 1.
         </Text>
 
         {!dailyReward && !errorMsg && <ActivityIndicator style={styles.loading} color={colors.ruby} />}
@@ -154,7 +154,7 @@ export const CheckInModal: React.FC = () => {
           <View style={[styles.done, { backgroundColor: colors.verifiedSoft }]}>
             <Text style={[styles.doneTitle, { color: colors.text }]}>+{claimed.bonusGranted} Coin thưởng đã vào ví</Text>
             {claimed.spinGranted && (
-              <Text style={[styles.doneText, { color: colors.textSecondary }]}>Hôm nay là ngày mốc nên bạn có thêm 1 lượt quay.</Text>
+              <Text style={[styles.doneText, { color: colors.textSecondary }]}>Hôm nay là ngày cuối chuỗi nên bạn có thêm 1 lượt quay.</Text>
             )}
           </View>
         )}

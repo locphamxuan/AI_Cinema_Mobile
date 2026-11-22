@@ -95,7 +95,7 @@ function SpinDialog() {
       });
     } catch {
       setSpinning(false);
-      setErrorMsg('Chưa nhận được kết quả. Bấm "Xem kết quả" để hỏi lại lượt vừa quay.');
+      setErrorMsg('Chưa nhận được kết quả. Bấm "Xem kết quả" để xem lại lượt vừa quay.');
       try {
         const refreshed = await rewardService.getWheel();
         if (refreshed.success && refreshed.data) setWheel(refreshed.data);
@@ -172,7 +172,7 @@ function SpinDialog() {
 
         <Button label={spinLabel} onPress={spin} disabled={cannotSpin} loading={spinning} />
         {spins <= 0 && !spinning && !loading && (
-          <Text style={[styles.footnote, { color: colors.textMuted }]}>Bạn đang xem trước vòng quay. Điểm danh liên tục tới ngày mốc của chuỗi để nhận lượt quay.</Text>
+          <Text style={[styles.footnote, { color: colors.textMuted }]}>Bạn đang xem trước vòng quay. Điểm danh liên tục tới ngày cuối chuỗi để nhận lượt quay.</Text>
         )}
       </View>
     </Modal>

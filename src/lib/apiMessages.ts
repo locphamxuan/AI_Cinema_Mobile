@@ -35,7 +35,7 @@ const VALUES: Record<string, string> = {
   SUBMITTED: 'Đã nộp',
   REVIEWER_APPROVED: 'Reviewer đã duyệt',
   REVISION_REQUESTED: 'Cần sửa',
-  FINAL: 'Kịch bản Final',
+  FINAL: 'Kịch bản bản cuối',
   SENT: 'Đã gửi Studio',
   STUDIO_SIGNED: 'Studio đã ký',
   ADMIN_COUNTERED: 'Admin đề xuất giá mới',

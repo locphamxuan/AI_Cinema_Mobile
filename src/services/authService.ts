@@ -21,11 +21,11 @@ const AUTH_CALL = { skipAuthRefresh: true } as const;
 // The mobile app is for viewers only (BE `UserRole.MEMBER`).
 const MEMBER_ROLE = 'MEMBER';
 const STAFF_ON_MOBILE_MESSAGE =
-  'Tài khoản Sản xuất, Kiểm duyệt và Quản trị dùng trên Web Studio ở máy tính. App điện thoại chỉ dành cho người xem.';
+  'Tài khoản sản xuất, kiểm duyệt và quản trị chỉ dùng trên trang web quản lý ở máy tính. Ứng dụng điện thoại chỉ dành cho người xem.';
 /** MF-1 (07/11/2026): a partner studio logs in on its own Studio Web, never on the viewer app. */
 const STUDIO_ROLE = 'STUDIO';
 const STUDIO_ON_MOBILE_MESSAGE =
-  'Tài khoản Studio đối tác dùng trên Studio Web để ký hợp đồng và nộp phim. App điện thoại chỉ dành cho người xem.';
+  'Tài khoản Studio đối tác dùng trang web dành cho Studio để ký hợp đồng và nộp phim. Ứng dụng điện thoại chỉ dành cho người xem.';
 
 class AuthService {
   async login(dto: LoginRequestDto): Promise<ApiResponse<AuthResponseDto>> {

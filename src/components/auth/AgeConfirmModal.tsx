@@ -16,20 +16,20 @@ interface AgeConfirmModalProps {
 
 const TERMS_ITEMS = [
   {
-    title: '1. Độ tuổi thành viên',
-    body: 'Nền tảng AI Cinema chỉ cung cấp dịch vụ cho người dùng từ đủ 18 tuổi trở lên. Thông tin ngày sinh phải trung thực và chính xác.',
+    title: '1. Độ tuổi',
+    body: 'AI Cinema chỉ dành cho người từ đủ 18 tuổi trở lên. Bạn cần khai đúng ngày sinh của mình.',
   },
   {
     title: '2. Nội dung có dùng AI',
-    body: 'Phim ngắn, hình ảnh và phụ đề có ứng dụng AI được kiểm duyệt và gắn nhãn minh bạch theo Điều 44 trước khi phát hành.',
+    body: 'Phim, hình ảnh và phụ đề có dùng AI đều được kiểm duyệt và gắn nhãn AI rõ ràng trước khi phát hành, theo Điều 44.',
   },
   {
     title: '3. Ví Coin, gói Tháng và thanh toán',
-    body: 'Coin nạp qua VNPay và gói thành viên được dùng để mở khóa tập phim trên hệ sinh thái AI Cinema, không quy đổi thành tiền mặt.',
+    body: 'Coin nạp qua VNPay và gói Tháng chỉ dùng để mở khóa tập phim trên AI Cinema, không đổi lại thành tiền mặt.',
   },
   {
     title: '4. Bảo mật tài khoản và thiết bị',
-    body: 'Bạn chịu trách nhiệm bảo vệ mật khẩu và tuân thủ giới hạn thiết bị xem đồng thời theo gói hiện hành.',
+    body: 'Bạn cần giữ kín mật khẩu và chỉ xem cùng lúc trên số thiết bị mà gói của bạn cho phép.',
   },
 ];
 
@@ -89,7 +89,7 @@ export const AgeConfirmModal: React.FC<AgeConfirmModalProps> = ({
             <View style={[styles.warningBox, { backgroundColor: colors.dangerSoft, borderColor: colors.danger }]}>
               <Text style={[styles.warningText, { color: colors.danger }]}>
                 {age === null
-                  ? 'Ngày sinh chưa hợp lệ (nhập dạng DD/MM/YYYY, ví dụ 14/05/2003). Vui lòng quay lại chỉnh sửa.'
+                  ? 'Ngày sinh chưa hợp lệ (nhập theo dạng ngày/tháng/năm, ví dụ 14/05/2003). Vui lòng quay lại chỉnh sửa.'
                   : 'Bạn cần đủ 18 tuổi trở lên để đăng ký tài khoản xem phim trên AI Cinema.'}
               </Text>
             </View>

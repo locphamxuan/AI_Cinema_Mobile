@@ -74,7 +74,7 @@ describe('authService against a mocked backend', () => {
 
     expect(res.success).toBe(false);
     expect(res.statusCode).toBe(403);
-    expect(res.message).toContain('Web Studio');
+    expect(res.message).toContain('trang web quản lý');
     expect(String(fetchMock.mock.calls[1][0])).toContain('/auth/logout');
     expect(await storage.getString(STORAGE_KEYS.AUTH_TOKEN, '')).toBe('');
     jest.restoreAllMocks();
@@ -301,7 +301,7 @@ describe('typed error and list bodies', () => {
 describe('statusMessage', () => {
   it('says in Vietnamese what a refusal means when the API gave no readable reason', () => {
     expect(statusMessage(400)).toMatch(/chưa hợp lệ/);
-    expect(statusMessage(401)).toMatch(/hết hạn/);
+    expect(statusMessage(401)).toMatch(/hết hạn đăng nhập/i);
     expect(statusMessage(403)).toMatch(/không có quyền/);
     expect(statusMessage(404)).toMatch(/Không tìm thấy/);
     expect(statusMessage(409)).toMatch(/tải lại/);
