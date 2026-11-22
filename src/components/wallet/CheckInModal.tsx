@@ -177,7 +177,13 @@ export const CheckInModal: React.FC = () => {
 
         {doneToday && dailyReward ? <NextCheckIn /> : null}
 
-        {spins > 0 && <Button label={`Quay thưởng (còn ${spins} lượt)`} icon="gift-outline" variant="secondary" onPress={openWheel} />}
+        {/* Always reachable: with no spin the wheel opens as a preview of the prizes the Admin set (BR-09). */}
+        <Button
+          label={spins > 0 ? `Quay thưởng (còn ${spins} lượt)` : 'Xem vòng quay'}
+          icon="gift-outline"
+          variant="secondary"
+          onPress={openWheel}
+        />
 
         <Text style={[styles.footnote, { color: colors.textMuted }]}>Coin thưởng có hạn dùng và được trừ sau Coin chính.</Text>
       </View>

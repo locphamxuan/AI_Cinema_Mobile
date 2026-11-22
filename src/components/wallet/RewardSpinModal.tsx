@@ -13,9 +13,11 @@ import { styles } from '../../styles/components/wallet/RewardSpinModal.styles';
 const SPIN_MS = 2400;
 const LOAD_ERROR = 'Không tải được vòng quay.';
 
-/** "+20 Coin thưởng (15%)" or "Gói Tháng 30 ngày (2%)". */
-const prizeLabel = (p: Pick<RewardPrize, 'type' | 'bonusCoins' | 'planDays' | 'chancePercent'>) =>
-  `${p.type === 'BONUS_COIN' ? `+${p.bonusCoins} Coin thưởng` : `Gói Tháng ${p.planDays} ngày`} (${p.chancePercent ?? 0}%)`;
+/** "+20 Coin thưởng (15%)" or "Gói Tháng 30 ngày (2%)"; no percent when the BE sends no chance. */
+export const prizeLabel = (p: Pick<RewardPrize, 'type' | 'bonusCoins' | 'planDays' | 'chancePercent'>) => {
+  const prize = p.type === 'BONUS_COIN' ? `+${p.bonusCoins} Coin thưởng` : `Gói Tháng ${p.planDays} ngày`;
+  return typeof p.chancePercent === 'number' ? `${prize} (${p.chancePercent}%)` : prize;
+};
 
 /** BR-09: a milestone check-in earns a spin; the BE draws the prize and pays it out. */
 export const RewardSpinModal: React.FC = () => {
@@ -105,7 +107,7 @@ function SpinDialog() {
 
   const rotate = turn.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '1800deg'] });
 
-  let spinLabel = spins > 0 ? `Quay (còn ${spins} lượt)` : 'Hết lượt quay';
+  let spinLabel = spins > 0 ? `Quay (còn ${spins} lượt)` : 'Chưa có lượt quay';
   if (loading) spinLabel = 'Đang tải…';
   else if (spinning) spinLabel = 'Đang quay…';
   else if (pendingSpinKey) spinLabel = 'Xem kết quả';
@@ -170,7 +172,7 @@ function SpinDialog() {
 
         <Button label={spinLabel} onPress={spin} disabled={cannotSpin} loading={spinning} />
         {spins <= 0 && !spinning && !loading && (
-          <Text style={[styles.footnote, { color: colors.textMuted }]}>Điểm danh đủ tới ngày mốc của chuỗi để có thêm lượt quay.</Text>
+          <Text style={[styles.footnote, { color: colors.textMuted }]}>Bạn đang xem trước vòng quay. Điểm danh liên tục tới ngày mốc của chuỗi để nhận lượt quay.</Text>
         )}
       </View>
     </Modal>
