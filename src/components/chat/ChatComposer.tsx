@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, type TextInputKeyPressEvent } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, type TextInputKeyPressEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ThemeColors } from '../../theme';
@@ -20,9 +20,8 @@ interface ChatComposerProps {
 
 /** The bottom of the chat: the message box with its send button, or "new conversation" once a case is over. */
 export const ChatComposer: React.FC<ChatComposerProps> = ({ colors, isDark, draft, onDraft, onSend, closed, onNewConversation, canType, busy }) => {
-  // On the web, Enter sends and Shift+Enter starts a new line, as in any chat.
+  // Enter gửi tin nhắn trên mọi nền tảng (trên mobile phím mềm cũng nhấn được Enter), Shift+Enter xuống dòng trên web.
   const onKeyPress = (e: TextInputKeyPressEvent) => {
-    if (Platform.OS !== 'web') return;
     const key = e.nativeEvent as unknown as { key?: string; shiftKey?: boolean; preventDefault?: () => void };
     if (key.key === 'Enter' && !key.shiftKey) {
       key.preventDefault?.();

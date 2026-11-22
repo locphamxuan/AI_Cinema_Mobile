@@ -9,6 +9,7 @@ export const styles = StyleSheet.create({
   head: { paddingHorizontal: 16, paddingTop: 14, gap: 6 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: -4 },
   movieTitle: { ...textStyle.title, fontSize: 19, flex: 1 },
+  movieGenre: { ...textStyle.label, fontSize: 13 },
   episodeTitle: { ...textStyle.label, fontSize: 14 },
   notice: { ...textStyle.labelStrong },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 },

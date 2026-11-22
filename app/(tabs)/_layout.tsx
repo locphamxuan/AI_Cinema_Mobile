@@ -13,6 +13,7 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="index" options={{ title: 'Trang chủ' }} />
       <Tabs.Screen name="explore" options={{ title: 'Khám phá' }} />
+      <Tabs.Screen name="history" options={{ title: 'Lịch sử xem' }} />
       <Tabs.Screen name="profile" options={{ title: 'Hồ sơ' }} />
     </Tabs>
   );

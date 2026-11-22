@@ -143,11 +143,12 @@ export default function WatchScreen() {
         posterUrl={ep?.thumbnailUrl || movie.bannerUrl || movie.posterUrl}
         aiLabel={playing?.aiLabel?.text ?? ep?.aiLabel ?? null}
         checking={gate.checkingId !== null || opening}
+        ads={!isVIPMode}
         onRequestPlay={() => ep && handleSelectEpisode(ep)}
         subtitles={tracks}
         subtitleTrackId={subtitleTrackId}
         onSubtitleChange={changeTrack}
-        audioLabel={languageName(movie.language)}
+        audioLabel={tracks.length > 0 ? languageName(movie.language) : undefined}
         onStarted={countView}
         onFinished={onFinished}
       />
@@ -164,7 +165,10 @@ export default function WatchScreen() {
           <TouchableOpacity style={styles.titleRow} onPress={() => router.back()} accessibilityLabel={`Quay lại ${movie.title}`}>
             <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
             <Text style={[styles.movieTitle, { color: colors.text }]} numberOfLines={1}>
-              {movie.title}
+                {movie.title}
+            </Text>
+            <Text style={[styles.movieGenre, { color: colors.textSecondary }]} numberOfLines={1}>
+                {movie.genre?.join(', ') || ''}
             </Text>
           </TouchableOpacity>
           {ep ? (

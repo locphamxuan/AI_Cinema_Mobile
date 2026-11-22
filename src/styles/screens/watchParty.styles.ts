@@ -49,4 +49,17 @@ export const styles = StyleSheet.create({
   episodeInfo: { flex: 1, gap: 2 },
   episodeTitle: { ...textStyle.bodyStrong },
   link: { ...textStyle.labelStrong, fontSize: 14, textAlign: 'center' },
+  participantList: { gap: 8 },
+  participantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#cbd5e1',
+  },
+  participantInfo: { flex: 1, gap: 2 },
+  participantName: { ...textStyle.bodyStrong, fontSize: 14 },
+  participantRoleRow: { flexDirection: 'row', gap: 6 },
+  participantRole: { ...textStyle.caption, fontSize: 11 },
 });
