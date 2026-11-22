@@ -1,3 +1,4 @@
+import { replaceSafely } from '../lib/playerSafe';
 import { useCallback, useEffect, useState } from 'react';
 import type { VideoPlayer } from 'expo-video';
 
@@ -46,10 +47,13 @@ export function usePlayerHealth(
 
   const retry = useCallback(() => {
     const at = player.currentTime;
-    void player.replaceAsync({ uri: url }).then(() => {
-      player.currentTime = at;
-      player.play();
-    });
+    replaceSafely(
+      () => player.replaceAsync({ uri: url }),
+      () => {
+        player.currentTime = at;
+        player.play();
+      },
+    );
   }, [player, url]);
 
   return { buffering: status === 'loading', failed: status === 'error' && !fixed, downgraded, retry };
