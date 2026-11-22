@@ -47,7 +47,7 @@ export default function JoinWatchPartyScreen() {
           </View>
           <Text style={[styles.title, { color: colors.text }]}>Vào phòng của bạn bè</Text>
           <Text style={[styles.meta, { color: colors.textSecondary, textAlign: 'center' }]}>
-            Nhập mã 6 ký tự bạn bè gửi. Phim phát đồng bộ theo chủ phòng, mỗi người cần quyền xem tập đó.
+            Nhập mã 6 ký tự bạn bè gửi. Phim phát cùng lúc theo chủ phòng, mỗi người cần quyền xem tập đó.
           </Text>
         </View>
         <TextInput

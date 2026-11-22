@@ -129,7 +129,7 @@ export const ChatModal: React.FC = () => {
             <View style={styles.headerActions}>
               <TouchableOpacity
                 onPress={() => setChatDarkOverride(!isDark)}
-                accessibilityLabel={isDark ? 'Chuyển khung chat sang màu trắng' : 'Chuyển khung chat sang màu đen'}
+                accessibilityLabel={isDark ? 'Chuyển khung trò chuyện sang màu trắng' : 'Chuyển khung trò chuyện sang màu đen'}
                 style={[styles.iconBtn, { backgroundColor: isDark ? colors.cardAlt : colors.card }]}
               >
                 <Ionicons

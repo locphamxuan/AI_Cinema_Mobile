@@ -74,7 +74,7 @@ export function PlayerSettingsSheet(props: PlayerSettingsSheetProps) {
                   key={r}
                   style={[styles.rate, { backgroundColor: on ? colors.ruby : colors.cardAlt }]}
                   onPress={() => onRateChange(r)}
-                  accessibilityLabel={`Tốc độ ${r}x`}
+                  accessibilityLabel={`Tốc độ ${r} lần`}
                   accessibilityState={{ selected: on }}
                 >
                   <Text style={[styles.rateText, { color: on ? '#FFFFFF' : colors.text }]}>{r === 1 ? 'Bình thường' : `${r}x`}</Text>

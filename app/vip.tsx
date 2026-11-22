@@ -30,7 +30,7 @@ export function cancelWindowText(plan: MySubscription, now = Date.now()): string
   if (!plan.cancelDeadline) return 'Gói tự gia hạn khi hết kỳ.';
   return new Date(plan.cancelDeadline).getTime() > now
     ? `Bạn còn tắt được tự gia hạn đến ${formatDateTime(plan.cancelDeadline)}.`
-    : `Đã qua mốc hủy của kỳ này: lần gia hạn tới (${formatDate(plan.currentPeriodEnd)}) vẫn trừ Coin; gói sẽ dừng ở kỳ sau.`;
+    : `Đã quá hạn tắt tự gia hạn của kỳ này: lần gia hạn ngày ${formatDate(plan.currentPeriodEnd)} vẫn trừ Coin, gói sẽ dừng khi hết kỳ tiếp theo.`;
 }
 
 export default function VipScreen() {
@@ -88,7 +88,7 @@ export default function VipScreen() {
         : `Trừ ${split.main} Coin chính và ${split.bonus} Coin thưởng (Coin chính trước, Coin thưởng bù phần thiếu).`;
     showDialog(
       `Đăng ký ${plan.name}`,
-      `${price} Coin cho ${plan.durationDays} ngày. ${charge} Gói tự gia hạn mỗi kỳ, bạn tắt được trước mốc hủy.`,
+      `${price} Coin cho ${plan.durationDays} ngày. ${charge} Gói tự gia hạn mỗi kỳ, bạn có thể tắt trước hạn chót của từng kỳ.`,
       [
         { text: 'Để sau', style: 'cancel' },
         {
@@ -117,7 +117,7 @@ export default function VipScreen() {
             }
             setWalletBalance(res.data.mainBalance, res.data.bonusBalance);
             await reload();
-            showDialog('Đã kích hoạt', `${plan.name} dùng được đến ${formatDateTime(res.data.currentPeriodEnd)}.`);
+            showDialog('Đã bật gói', `${plan.name} dùng được đến ${formatDateTime(res.data.currentPeriodEnd)}.`);
           },
         },
       ],

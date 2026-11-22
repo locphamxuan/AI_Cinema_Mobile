@@ -41,9 +41,9 @@ export function profileFormErrors(form: ProfileForm, now: Date = new Date(), sav
 
   const dob = form.dateOfBirth.trim();
   if (!dob) {
-    if (savedDateOfBirth) errors.dateOfBirth = 'Nhập ngày sinh dạng DD/MM/YYYY.';
+    if (savedDateOfBirth) errors.dateOfBirth = 'Nhập ngày sinh theo dạng ngày/tháng/năm, ví dụ 14/05/2003.';
   }
-  else if (!normalizeDateOfBirth(dob)) errors.dateOfBirth = 'Ngày sinh chưa hợp lệ, nhập dạng DD/MM/YYYY.';
+  else if (!normalizeDateOfBirth(dob)) errors.dateOfBirth = 'Ngày sinh chưa hợp lệ, nhập theo dạng ngày/tháng/năm.';
   else if (!isAtLeast18(dob, now)) errors.dateOfBirth = 'Tài khoản xem phim cần đủ 18 tuổi trở lên.';
   return errors;
 }

@@ -1,3 +1,4 @@
+import { replaceSafely } from '../lib/playerSafe';
 import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import type { VideoPlayer } from 'expo-video';
@@ -35,10 +36,13 @@ export function useStreamQuality(player: VideoPlayer, masterUrl: string, quality
     loaded.current = url;
     const at = player.currentTime;
     const wasPlaying = player.playing;
-    void player.replaceAsync({ uri: url }).then(() => {
-      player.currentTime = at;
-      if (wasPlaying) player.play();
-    });
+    replaceSafely(
+      () => player.replaceAsync({ uri: url }),
+      () => {
+        player.currentTime = at;
+        if (wasPlaying) player.play();
+      },
+    );
   }, [player, url]);
 
   /** Labels the viewer (or the Host of a room) can pick, `auto` first. */

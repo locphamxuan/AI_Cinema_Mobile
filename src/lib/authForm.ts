@@ -97,7 +97,7 @@ export function authFormError(isLogin: boolean, form: AuthForm): string | null {
     return 'Điền đủ họ tên, ngày sinh, email và mật khẩu.';
   }
   if (!normalizeDateOfBirth(form.dateOfBirth)) {
-    return 'Ngày sinh chưa hợp lệ (nhập dạng DD/MM/YYYY, ví dụ 14/05/2003).';
+    return 'Ngày sinh chưa hợp lệ (nhập theo dạng ngày/tháng/năm, ví dụ 14/05/2003).';
   }
   if (!isAtLeast18(form.dateOfBirth)) {
     return 'Bạn cần đủ 18 tuổi trở lên để đăng ký tài khoản xem phim trên AI Cinema.';
