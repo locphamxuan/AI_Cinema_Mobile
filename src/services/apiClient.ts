@@ -37,7 +37,7 @@ const joinMessage = (value: unknown): string | undefined => {
 /** What a refusal means when the API said nothing the member can read. */
 export function statusMessage(status: number): string {
   if (status === 400 || status === 422) return 'Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.';
-  if (status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+  if (status === 401) return 'Hết hạn đăng nhập, vui lòng đăng nhập lại.';
   if (status === 403) return 'Bạn không có quyền thực hiện thao tác này.';
   if (status === 404) return 'Không tìm thấy nội dung này.';
   if (status === 409) return 'Dữ liệu vừa thay đổi. Vui lòng tải lại rồi thử lại.';
@@ -51,14 +51,14 @@ export const TIMEOUT_MESSAGE = 'Máy chủ phản hồi quá lâu. Kiểm tra m�
 
 /** Refusals the viewer can act on, keyed by the BE `details.reason` (Main Flow 3). */
 const REASON_MESSAGES: Record<string, string> = {
-  GOOGLE_STAFF_ACCOUNT: 'Đăng nhập Google chỉ dành cho thành viên. Tài khoản quản trị / nhân sự hãy đăng nhập bằng mật khẩu.',
+  GOOGLE_STAFF_ACCOUNT: 'Đăng nhập bằng Google chỉ dành cho người xem. Tài khoản quản trị và nhân viên hãy đăng nhập bằng mật khẩu.',
   GOOGLE_EMAIL_REGISTERED: 'Email này đã có tài khoản. Hãy đăng nhập bằng mật khẩu.',
   GOOGLE_ACCOUNT_MISMATCH: 'Email này đã được liên kết với một tài khoản Google khác.',
   PROVIDER_NOT_CONFIGURED: 'Đăng nhập bằng Google hiện chưa được bật.',
   CONCURRENT_LIMIT_REACHED: 'Tài khoản đang xem trên quá nhiều thiết bị cùng lúc. Hãy dừng xem ở thiết bị khác rồi thử lại.',
   DEVICE_LIMIT_REACHED: 'Tài khoản đã đăng ký đủ số thiết bị của gói. Hãy gỡ bớt một thiết bị để xem trên máy này.',
   DEVICE_ID_REQUIRED: 'Không nhận diện được thiết bị. Hãy mở lại ứng dụng rồi thử lại.',
-  DEVICE_PLATFORM_NOT_SUPPORTED: 'Tài khoản thành viên chỉ xem phim trên điện thoại Android. Hãy mở ứng dụng AI Cinema trên điện thoại Android.',
+  DEVICE_PLATFORM_NOT_SUPPORTED: 'Tài khoản người xem chỉ xem phim được trên điện thoại Android. Hãy mở ứng dụng AI Cinema trên điện thoại Android.',
   MEDIA_NOT_READY: 'Tập phim chưa sẵn sàng để phát. Vui lòng quay lại sau.',
   EPISODE_UNDER_REVISION: 'Tập phim đang được chỉnh sửa, vui lòng quay lại sau.',
   PLAYBACK_ACCESS_REQUIRED: 'Bạn chưa có quyền xem tập này. Hãy mở khóa tập hoặc đăng ký gói.',
@@ -68,8 +68,8 @@ const REASON_MESSAGES: Record<string, string> = {
   ENTITLEMENT_REQUIRED: 'Bạn chưa có quyền xem tập này. Mở khóa tập hoặc đăng ký gói Tháng để vào phòng.',
   AGE_RESTRICTED: 'Tập này dành cho người từ 18 tuổi trở lên.',
   ROOM_FULL: 'Phòng đã đủ 8 người.',
-  GUEST_KEY_REQUIRED: 'Phiên xem đã hết hạn. Mở lại tập phim để xem tiếp.',
-  GUEST_KEY_INVALID: 'Phiên xem đã hết hạn. Mở lại tập phim để xem tiếp.',
+  GUEST_KEY_REQUIRED: 'Lượt xem đã hết hạn. Mở lại tập phim để xem tiếp.',
+  GUEST_KEY_INVALID: 'Lượt xem đã hết hạn. Mở lại tập phim để xem tiếp.',
 };
 
 /** The BE error envelope; `details` is a list of validation messages or a `{ reason }` object. */

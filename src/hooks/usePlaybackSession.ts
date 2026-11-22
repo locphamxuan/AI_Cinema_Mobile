@@ -1,3 +1,4 @@
+import { onLivePlayer } from '../lib/playerSafe';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { VideoPlayer } from 'expo-video';
 import { cuesReached, resumePointOf } from '../lib/playback';
@@ -50,9 +51,12 @@ export function usePlaybackSession(
     // Counts the seconds that really played; a pause or an ad beats with 0 so it neither expires nor earns.
     let seconds = 0;
     let watched = 0;
+    let alive = true;
     const tick = setInterval(() => {
       if (finished.current) return;
-      if (player.playing) watched += 1;
+      onLivePlayer(() => {
+        if (player.playing) watched += 1;
+      });
       seconds += 1;
       if (seconds < HEARTBEAT_SECONDS) return;
       const credit = watched;
@@ -61,7 +65,8 @@ export function usePlaybackSession(
       void playbackService.heartbeat(sessionId, position.current, credit).then((res) => {
         const due = res.data?.dueAdBreakId;
         const cue = due && !handled.current.has(due) ? session?.adSchedule.find((c) => c.breakId === due) : undefined;
-        if (cue) startAd(cue);
+        // The answer may come back after the viewer left: the player is gone by then.
+        if (cue && alive) onLivePlayer(() => startAd(cue));
       });
     }, 1000);
     const ended = player.addListener('playToEnd', () => {
@@ -70,6 +75,7 @@ export function usePlaybackSession(
       void playbackService.complete(sessionId, position.current);
     });
     return () => {
+      alive = false;
       clearInterval(tick);
       ended.remove();
       if (!finished.current) void playbackService.stop(sessionId, position.current);
@@ -93,7 +99,7 @@ export function usePlaybackSession(
       activeRef.current = null;
       setActiveAd(null);
       if (watched && sessionId) void playbackService.adFinished(sessionId, cue.breakId);
-      player.play();
+      onLivePlayer(() => player.play());
     },
     [player, sessionId],
   );

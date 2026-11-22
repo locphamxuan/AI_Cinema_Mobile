@@ -41,7 +41,7 @@ export const TopUpModal: React.FC = () => {
     if (!isTopUpModalOpen) return;
     walletService.getTopUpOptions().then((res) => {
       if (res.success && res.data) setOptions(res.data);
-      else setErrorMsg(res.message || 'Không tải được tỉ giá nạp Coin.');
+      else setErrorMsg(res.message || 'Không tải được bảng giá nạp Coin.');
     });
   }, [isTopUpModalOpen]);
 
@@ -88,7 +88,7 @@ export const TopUpModal: React.FC = () => {
         poll(topUpId, round + 1);
       } else {
         setPhase('form');
-        setErrorMsg('Chưa nhận được kết quả từ cổng thanh toán. Số dư sẽ tự cập nhật khi cổng xác nhận.');
+        setErrorMsg('Chưa nhận được kết quả từ VNPay. Số dư sẽ tự cập nhật khi VNPay xác nhận.');
       }
     }, POLL_MS);
   };
@@ -173,7 +173,7 @@ export const TopUpModal: React.FC = () => {
               {errorMsg && <Text style={[styles.error, { color: colors.danger }]}>{errorMsg}</Text>}
 
               <Button
-                label={phase === 'waiting' ? 'Đang chờ cổng thanh toán…' : inRange ? `Thanh toán ${vnd(amountVnd)}` : 'Thanh toán'}
+                label={phase === 'waiting' ? 'Đang chờ VNPay xác nhận…' : inRange ? `Thanh toán ${vnd(amountVnd)}` : 'Thanh toán'}
                 onPress={handleTopUp}
                 disabled={!inRange || phase !== 'form'}
               />

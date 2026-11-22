@@ -88,7 +88,7 @@ export const AuthModal: React.FC = () => {
     const normalizedDob = normalizeDateOfBirth(dateOfBirthInput);
     if (!normalizedDob) {
       setAgeModalOpen(false);
-      setError('Ngày sinh chưa hợp lệ (nhập dạng DD/MM/YYYY, ví dụ 14/05/2003).');
+      setError('Ngày sinh chưa hợp lệ (nhập theo dạng ngày/tháng/năm, ví dụ 14/05/2003).');
       return;
     }
     setAgeModalOpen(false);

@@ -27,7 +27,7 @@ export function useEpisodeGate(onGranted: (episode: Episode) => void) {
   const open = useCallback(
     async (episode: Episode) => {
       if (episode.availability === 'UNDER_REVISION') {
-        showDialog('Tập đang bảo trì', episode.notice || 'Tập phim đang được chỉnh sửa, vui lòng quay lại sau.');
+        showDialog('Tập đang được chỉnh sửa', episode.notice || 'Tập phim đang được chỉnh sửa, vui lòng quay lại sau.');
         return;
       }
       setCheckingId(episode.id);

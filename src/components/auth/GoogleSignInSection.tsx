@@ -27,7 +27,7 @@ export const GoogleSignInSection: React.FC = () => {
       const res = await loginWithGoogle(token);
       if (!res.success) setError(res.error || 'Chưa đăng nhập được bằng Google. Thử lại sau ít phút.');
     } catch {
-      setError('Chưa mở được đăng nhập Google. Kiểm tra mạng và Google Play Services rồi thử lại.');
+      setError('Chưa mở được đăng nhập Google. Kiểm tra mạng và ứng dụng Google trên máy rồi thử lại.');
     } finally {
       setLoading(false);
     }

@@ -129,7 +129,7 @@ export default function AccountScreen() {
               label="Ngày sinh"
               value={form.dateOfBirth}
               onChangeText={(v) => setForm((f) => ({ ...f, dateOfBirth: maskDateInput(v) }))}
-              placeholder="DD/MM/YYYY"
+              placeholder="Ngày/tháng/năm"
               keyboardType="number-pad"
               maxLength={10}
               hint={saved.dateOfBirth ? 'Tài khoản xem phim cần đủ 18 tuổi.' : 'Chưa có ngày sinh. Có thể để trống, nếu nhập thì cần đủ 18 tuổi.'}

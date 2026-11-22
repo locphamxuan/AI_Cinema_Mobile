@@ -37,7 +37,7 @@ describe('age confirmation helpers (BR-54)', () => {
 
   it('blocks malformed text or underage dates in authFormError before opening modal', () => {
     const base = { name: 'Phước', email: 'phuoc@mail.com', password: 'Secret123', confirmPassword: 'Secret123' };
-    expect(authFormError(false, { ...base, dateOfBirth: 'Phuoc' })).toContain('DD/MM/YYYY');
+    expect(authFormError(false, { ...base, dateOfBirth: 'Phuoc' })).toContain('ngày/tháng/năm');
     expect(authFormError(false, { ...base, dateOfBirth: '14/05/2015' })).toContain('18 tuổi');
     expect(authFormError(false, { ...base, dateOfBirth: '14/05/2003' })).toBeNull();
   });

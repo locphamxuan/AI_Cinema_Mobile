@@ -3,7 +3,7 @@ import type { SubtitleTrack } from '../../types/movie';
 import { useTheme } from '../../theme';
 import { styles } from '../../styles/components/movie/SubtitleChips.styles';
 
-const LANGUAGE_NAME: Record<string, string> = { vi: 'Tiếng Việt', en: 'English', zh: '中文', ko: '한국어', ja: '日本語' };
+const LANGUAGE_NAME: Record<string, string> = { vi: 'Tiếng Việt', en: 'Tiếng Anh', zh: 'Tiếng Trung', ko: 'Tiếng Hàn', ja: 'Tiếng Nhật' };
 
 export const languageName = (code: string) => LANGUAGE_NAME[code] ?? code;
 

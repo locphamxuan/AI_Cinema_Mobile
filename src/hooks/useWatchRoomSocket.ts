@@ -7,7 +7,7 @@ import type { RoomAdState, RoomChatMessage, RoomPlaybackState, RoomScreen, RoomS
 
 export { ROOM_EVENT };
 
-export const SESSION_EXPIRED_NOTICE = 'Phiên đăng nhập đã hết hạn. Đăng nhập lại rồi mở phòng lần nữa.';
+export const SESSION_EXPIRED_NOTICE = 'Hết hạn đăng nhập, vui lòng đăng nhập lại rồi mở phòng lần nữa.';
 
 /**
  * The `/watch` namespace on the backend. On the web the REST calls go through the same-origin `/api` proxy

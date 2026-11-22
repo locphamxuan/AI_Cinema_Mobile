@@ -170,7 +170,7 @@ export default function WatchPartyScreen() {
             style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: live.connected ? '#2ecc71' : colors.textMuted }}
           />
           <Text style={[styles.chipText, { color: colors.textSecondary }]}>
-            {live.connected ? 'Trực tiếp' : 'Đang nối lại…'}
+            {live.connected ? 'Trực tiếp' : 'Đang kết nối lại…'}
           </Text>
         </View>
       </View>
