@@ -25,6 +25,8 @@ interface AccountState {
   /** Coin chính / Coin thưởng (BR-01), always the BE's numbers. */
   wallet: WalletState;
   setWalletBalance: (main: number, bonus: number) => void;
+  /** Called after a purchase so the lock-icon hint disappears without reloading the whole account. */
+  setOwnedEpisodeIds: (ids: string[]) => void;
   /** GET /subscriptions/me, as the BE last answered. */
   subscription: MySubscription | null;
   /** The monthly plan is running. A display hint only: every episode is still opened through the BE. */
@@ -52,6 +54,8 @@ export const useAccountStore = create<AccountState>()(
       ...signedOutAccount(),
 
       setWalletBalance: (main, bonus) => set((s) => ({ wallet: { ...s.wallet, mainCoin: main, bonusCoin: bonus } })),
+  /** Called after a purchase so the lock-icon hint disappears without reloading the whole account. */
+  setOwnedEpisodeIds: (ids: string[]) => set({ ownedEpisodeIds: ids }),
 
       loadAccountData: async () => {
         const [walletRes, planRes, ownedRes] = await Promise.all([
