@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stack } from 'expo-router';
+import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -21,6 +21,12 @@ import { TopUpModal } from '../src/components/wallet/TopUpModal';
 import { RewardSpinModal } from '../src/components/wallet/RewardSpinModal';
 import { ChatModal } from '../src/components/chat/ChatModal';
 import { FloatingAiButton } from '../src/components/chat/FloatingAiButton';
+import { AppErrorScreen } from '../src/components/common/AppErrorScreen';
+
+/** A screen that throws while drawing shows a retry screen instead of closing the whole app. */
+export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+  return <AppErrorScreen retry={retry} />;
+}
 
 // Text would flash in the system font otherwise.
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
