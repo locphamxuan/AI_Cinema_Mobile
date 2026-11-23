@@ -74,3 +74,12 @@ export function roomErrorCode(error: { reason?: string; details?: unknown } | nu
 export function roomErrorNotice(error: { reason?: string; details?: unknown } | null | undefined): string {
   return ROOM_ERROR_NOTICE[roomErrorCode(error) ?? ''] ?? 'Không thể đồng bộ phòng xem nhóm. Thử lại sau giây lát.';
 }
+
+/**
+ * Shapes what the member types into the XXX-XXX room code. The BE codes use base32 without the look-alikes
+ * 0/O and 1/I (room-codes.ts), so those letters are dropped here: they could never match a room.
+ */
+export function formatRoomCodeInput(raw: string): string {
+  const clean = raw.toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g, '').slice(0, 6);
+  return clean.length > 3 ? `${clean.slice(0, 3)}-${clean.slice(3)}` : clean;
+}
