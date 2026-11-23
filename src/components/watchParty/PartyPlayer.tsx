@@ -47,6 +47,16 @@ interface PartyPlayerProps {
 }
 
 /**
+ * Where a member should be for the Host's last sync, or null when the socket sent no usable position: seeking a
+ * native player to NaN is rejected by AVPlayer on iOS, so a broken payload must never reach `player.currentTime`.
+ */
+export function syncTarget(sync: RoomSync, now = Date.now()): number | null {
+  if (!Number.isFinite(sync.positionSeconds)) return null;
+  const lag = sync.state === 'PLAYING' && Number.isFinite(sync.serverTimestamp) ? (now - sync.serverTimestamp) / 1000 : 0;
+  return Math.max(0, sync.positionSeconds + Math.max(0, lag));
+}
+
+/**
  * The shared screen of a watch room (BR-69, 13/11/2026): the room watches the Host's screen. The Host has the full
  * controls (play, ±10 s, seek bar, quality) and every action reaches the room; members follow the Host's clock and
  * quality and only pick their own subtitles. Only the Host is served mid-roll ads: the room sees the same ad and
@@ -110,9 +120,8 @@ export function PartyPlayer(props: PartyPlayerProps) {
   // Members follow the Host: jump when drifting, mirror play / pause.
   useEffect(() => {
     if (isHost || !sync || memberAd) return;
-    const lag = sync.state === 'PLAYING' ? (Date.now() - sync.serverTimestamp) / 1000 : 0;
-    const target = sync.positionSeconds + Math.max(0, lag);
-    if (Math.abs(player.currentTime - target) > DRIFT_TOLERANCE_S) player.currentTime = target;
+    const target = syncTarget(sync);
+    if (target !== null && Math.abs(player.currentTime - target) > DRIFT_TOLERANCE_S) player.currentTime = target;
     if (sync.state === 'PLAYING') player.play();
     else player.pause();
   }, [sync, isHost, player, memberAd]);
@@ -148,58 +157,56 @@ export function PartyPlayer(props: PartyPlayerProps) {
   };
 
   return (
-    <View style={styles.container}>
-      <FullscreenStage fullscreen={fullscreen} onExit={toggleFullscreen}>
-        <View style={styles.fill} ref={host}>
-          <VideoView style={styles.fill} player={player} nativeControls={false} contentFit="contain" />
-          <Pressable
-            style={styles.fill}
-            onPress={touched(() => setControls((v) => !v))}
-            accessibilityLabel={controls ? 'Ẩn điều khiển' : 'Hiện điều khiển'}
+    <FullscreenStage fullscreen={fullscreen} onExit={toggleFullscreen}>
+      <View style={styles.fill} ref={host}>
+        <VideoView style={styles.fill} player={player} nativeControls={false} contentFit="contain" />
+        <Pressable
+          style={styles.fill}
+          onPress={touched(() => setControls((v) => !v))}
+          accessibilityLabel={controls ? 'Ẩn điều khiển' : 'Hiện điều khiển'}
+        />
+        {line ? (
+          <View style={[styles.subtitleBox, controls && styles.subtitleRaised]} pointerEvents="none">
+            <Text style={styles.subtitle}>{line}</Text>
+          </View>
+        ) : null}
+        {controls && isHost && !playback.activeAd ? (
+          <PlayerControls
+            currentTime={currentTime}
+            duration={duration}
+            playing={playing}
+            fullscreen={fullscreen}
+            rate={1}
+            onTogglePlay={touched(togglePlay)}
+            onSeekBy={touched((s: number) => seekTo(currentTime + s))}
+            onSeekTo={touched(seekTo)}
+            onSettings={() => setSettings(true)}
+            onToggleFullscreen={() => touched(toggleFullscreen)()}
           />
-          {line ? (
-            <View style={[styles.subtitleBox, controls && styles.subtitleRaised]} pointerEvents="none">
-              <Text style={styles.subtitle}>{line}</Text>
+        ) : null}
+        {controls && !isHost && !memberAd ? (
+          <View style={party.memberBar}>
+            <View style={party.followPill}>
+              <Ionicons name="people" size={13} color="#fff" />
+              <Text style={party.followText}>Đang xem theo chủ phòng</Text>
             </View>
-          ) : null}
-          {controls && isHost && !playback.activeAd ? (
-            <PlayerControls
-              currentTime={currentTime}
-              duration={duration}
-              playing={playing}
-              fullscreen={fullscreen}
-              rate={1}
-              onTogglePlay={touched(togglePlay)}
-              onSeekBy={touched((s: number) => seekTo(currentTime + s))}
-              onSeekTo={touched(seekTo)}
-              onSettings={() => setSettings(true)}
-              onToggleFullscreen={() => touched(toggleFullscreen)()}
-            />
-          ) : null}
-          {controls && !isHost && !memberAd ? (
-            <View style={party.memberBar}>
-              <View style={party.followPill}>
-                <Ionicons name="people" size={13} color="#fff" />
-                <Text style={party.followText}>Đang xem theo chủ phòng</Text>
-              </View>
-              <View style={party.memberActions}>
-                <TouchableOpacity onPress={() => setSettings(true)} accessibilityLabel="Phụ đề và chất lượng" hitSlop={8}>
-                  <Ionicons name="settings-outline" size={20} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={toggleFullscreen} accessibilityLabel="Toàn màn hình" hitSlop={8}>
-                  <Ionicons name={fullscreen ? 'contract' : 'expand'} size={20} color="#fff" />
-                </TouchableOpacity>
-              </View>
+            <View style={party.memberActions}>
+              <TouchableOpacity onPress={() => setSettings(true)} accessibilityLabel="Phụ đề và chất lượng" hitSlop={8}>
+                <Ionicons name="settings-outline" size={20} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={toggleFullscreen} accessibilityLabel="Toàn màn hình" hitSlop={8}>
+                <Ionicons name={fullscreen ? 'contract' : 'expand'} size={20} color="#fff" />
+              </TouchableOpacity>
             </View>
-          ) : null}
-          {playback.activeAd ? (
-            <AdBreakOverlay key={playback.activeAd.breakId} cue={playback.activeAd} onDone={playback.finishAd} />
-          ) : null}
-          {memberAd ? <RoomAdOverlay key={roomAd.startedAt ?? 0} ad={roomAd} /> : null}
-          {/* Last child: above the video, the controls and both ad overlays (BR-10). */}
-          <AiLabelOverlay text={session.aiLabel?.text} />
-        </View>
-      </FullscreenStage>
+          </View>
+        ) : null}
+        {playback.activeAd ? (
+          <AdBreakOverlay key={playback.activeAd.breakId} cue={playback.activeAd} onDone={playback.finishAd} />
+        ) : null}
+        {memberAd ? <RoomAdOverlay key={roomAd.startedAt ?? 0} ad={roomAd} /> : null}
+        {/* Last child: above the video, the controls and both ad overlays (BR-10). */}
+        <AiLabelOverlay text={session.aiLabel?.text} />
+      </View>
       <PlayerSettingsSheet
         visible={settings}
         onClose={() => setSettings(false)}
@@ -213,6 +220,6 @@ export function PartyPlayer(props: PartyPlayerProps) {
         hideRate
         quality={{ options: stream.options, value: quality, onChange: isHost ? onQualityChange : undefined }}
       />
-    </View>
+    </FullscreenStage>
   );
 }

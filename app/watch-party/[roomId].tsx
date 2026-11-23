@@ -159,7 +159,9 @@ export default function WatchPartyScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* A spacer, not padding: the fullscreen player covers the whole screen from its very top edge. */}
+      <View style={{ height: insets.top }} />
       <View style={styles.topBar}>
         <TouchableOpacity onPress={exit} accessibilityLabel="Rời phòng" hitSlop={10}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />

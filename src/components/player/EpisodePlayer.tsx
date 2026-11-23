@@ -176,10 +176,8 @@ function StreamPlayer(props: StreamPlayerProps) {
   );
 
   return (
-    <>
-      <FullscreenStage fullscreen={fullscreen} onExit={toggleFullscreen}>
-        {stage}
-      </FullscreenStage>
+    <FullscreenStage fullscreen={fullscreen} onExit={toggleFullscreen}>
+      {stage}
       <PlayerSettingsSheet
         visible={settings}
         onClose={() => setSettings(false)}
@@ -194,7 +192,7 @@ function StreamPlayer(props: StreamPlayerProps) {
         }}
         quality={stream.options.length > 1 ? { options: stream.options, value: quality, onChange: setQuality } : undefined}
       />
-    </>
+    </FullscreenStage>
   );
 }
 
@@ -213,34 +211,33 @@ export function EpisodePlayer({
   onStarted,
   onFinished,
 }: EpisodePlayerProps) {
+  // The key makes a new episode start from its own player instead of reusing the old one.
+  if (streamUrl) {
+    return (
+      <StreamPlayer
+        key={streamUrl}
+        streamUrl={streamUrl}
+        session={session}
+        aiLabel={aiLabel}
+        subtitles={subtitles}
+        subtitleTrackId={subtitleTrackId}
+        onSubtitleChange={onSubtitleChange}
+        audioLabel={audioLabel}
+        ads={ads ?? true}
+        onStarted={onStarted}
+        onFinished={onFinished}
+      />
+    );
+  }
   return (
     <View style={styles.container}>
-      {streamUrl ? (
-        // The key makes a new episode start from its own player instead of reusing the old one.
-        <StreamPlayer
-          key={streamUrl}
-          streamUrl={streamUrl}
-          session={session}
-          aiLabel={aiLabel}
-          subtitles={subtitles}
-          subtitleTrackId={subtitleTrackId}
-          onSubtitleChange={onSubtitleChange}
-          audioLabel={audioLabel}
-          ads={ads ?? true}
-          onStarted={onStarted}
-          onFinished={onFinished}
-        />
-      ) : (
-        <>
-          {posterUrl ? <Image source={{ uri: posterUrl }} style={styles.fill} resizeMode="cover" /> : null}
-          <View style={styles.posterShade}>
-            <TouchableOpacity style={styles.playBtn} onPress={onRequestPlay} activeOpacity={0.8} disabled={checking} accessibilityLabel="Phát tập">
-              {checking ? <ActivityIndicator color="#FFFFFF" /> : <Ionicons name="play" size={32} color="#FFFFFF" />}
-            </TouchableOpacity>
-          </View>
-          <AiLabelOverlay text={aiLabel} />
-        </>
-      )}
+      {posterUrl ? <Image source={{ uri: posterUrl }} style={styles.fill} resizeMode="cover" /> : null}
+      <View style={styles.posterShade}>
+        <TouchableOpacity style={styles.playBtn} onPress={onRequestPlay} activeOpacity={0.8} disabled={checking} accessibilityLabel="Phát tập">
+          {checking ? <ActivityIndicator color="#FFFFFF" /> : <Ionicons name="play" size={32} color="#FFFFFF" />}
+        </TouchableOpacity>
+      </View>
+      <AiLabelOverlay text={aiLabel} />
     </View>
   );
 }
