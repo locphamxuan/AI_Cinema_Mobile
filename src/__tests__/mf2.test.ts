@@ -4,7 +4,7 @@ import { planIsRunning, useAccountStore } from '../store';
 import { splitPrice } from '../components/player/UnlockEpisodeModal';
 import { ladderDays } from '../components/wallet/CheckInModal';
 import { coinsFor } from '../components/wallet/TopUpModal';
-import { cancelWindowText } from '../../app/vip';
+import { cancelWindowOpen, cancelWindowText } from '../../app/vip';
 import type { DailyRewardStatus, MySubscription } from '../types/episodeAccess';
 
 /** Answers each fetch by `METHOD path` (without the /api prefix) and records the calls. */
@@ -63,9 +63,14 @@ describe('MF-2 rules on the client', () => {
     const before = plan('ACTIVE', '2026-10-31T00:00:00.000Z', { cancelDeadline: '2026-10-30T00:00:00.000Z' });
     const after = plan('ACTIVE', '2026-10-31T00:00:00.000Z', { cancelDeadline: '2026-10-09T00:00:00.000Z' });
     expect(cancelWindowText(before, now)).toContain('còn tắt được');
+    // The window length comes from the BE dates (renewal minus deadline), 24 hours here (BR-30).
+    expect(cancelWindowText(before, now)).toContain('ít nhất 24 giờ');
     expect(cancelWindowText(after, now)).toContain('Đã quá hạn tắt tự gia hạn');
-    expect(cancelWindowText(after, now)).toContain('vẫn trừ Coin, gói sẽ dừng khi hết kỳ tiếp theo');
+    // Past the deadline the BE refuses (CANCELLATION_WINDOW_CLOSED): the next renewal still charges.
+    expect(cancelWindowText(after, now)).toContain('vẫn trừ Coin. Sau lần gia hạn đó bạn tắt được');
     expect(cancelWindowText(after, now)).toContain('31/10');
+    expect(cancelWindowOpen(before, now)).toBe(true);
+    expect(cancelWindowOpen(after, now)).toBe(false);
     expect(cancelWindowText({ ...before, autoRenew: false }, now)).toContain('Đã tắt tự gia hạn');
   });
 
