@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Modal, Pressable, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -85,17 +85,26 @@ export const CheckInModal: React.FC = () => {
     setRewardSpinOpen(true);
   };
 
+  // One claim per tap burst (BR-08): a second tap in the same frame still sees `busy` false.
+  const claiming = useRef(false);
   const handleClaim = async () => {
+    if (claiming.current) return;
+    claiming.current = true;
     setBusy(true);
     setErrorMsg(null);
     try {
       const res = await claimDailyCheckIn();
       if (res.success && res.result) setClaimed(res.result);
-      else setErrorMsg(res.error || 'Chưa điểm danh được. Thử lại sau ít phút.');
+      else {
+        // Already done today (another device) or lost on the way: the BE status says what today looks like.
+        await reloadStatus();
+        setErrorMsg(res.error || 'Chưa điểm danh được. Thử lại sau ít phút.');
+      }
     } catch {
       // The claim may have gone through; the status from the BE says whether today is done.
       await reloadStatus();
     } finally {
+      claiming.current = false;
       setBusy(false);
     }
   };
@@ -185,7 +194,7 @@ export const CheckInModal: React.FC = () => {
           onPress={openWheel}
         />
 
-        <Text style={[styles.footnote, { color: colors.textMuted }]}>Coin thưởng có hạn dùng và được trừ sau Coin chính.</Text>
+        <Text style={[styles.footnote, { color: colors.textMuted }]}>Coin thưởng không hết hạn và được trừ sau Coin chính.</Text>
       </View>
     </Modal>
   );
