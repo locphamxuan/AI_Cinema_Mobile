@@ -22,11 +22,15 @@ import { RewardSpinModal } from '../src/components/wallet/RewardSpinModal';
 import { ChatModal } from '../src/components/chat/ChatModal';
 import { FloatingAiButton } from '../src/components/chat/FloatingAiButton';
 import { AppErrorScreen } from '../src/components/common/AppErrorScreen';
+import { installGlobalErrorHandler } from '../src/lib/globalErrorHandler';
 
 /** A screen that throws while drawing shows a retry screen instead of closing the whole app. */
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   return <AppErrorScreen retry={retry} />;
 }
+
+// Errors outside drawing (handlers, timers, sockets) are logged instead of closing a release build.
+installGlobalErrorHandler();
 
 // Text would flash in the system font otherwise.
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
