@@ -4,9 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme';
 import type { RewardPrize } from '../../types/episodeAccess';
 import { styles } from '../../styles/components/wallet/LuckyWheel.styles';
-import { segmentAngle, segmentColorIndexes, segmentLabel } from './luckyWheelMath';
+import { labelFontSize, POINTER_OVERHANG, segmentColorIndexes, segmentLabel, WHEEL_RIM as RIM, wheelLayout } from './luckyWheelMath';
 
-const RIM = 14;
 const BULBS = 16;
 /** Turns the Animated degrees into a rotate transform; spins stay well under this range. */
 const MAX_DEG = 7200;
@@ -33,29 +32,22 @@ interface Props {
  */
 export function LuckyWheel({ prizes, rotation, size, hubText, hubLabel, hubHint, disabled, busy, onSpin }: Props) {
   const { colors } = useTheme();
-  const disc = size - RIM * 2;
-  const r = disc / 2;
   const count = prizes.length;
-  const seg = segmentAngle(count);
+  const { disc, r, seg, hub, hubFont, labelStart, labelLength, labelHeight } = wheelLayout(size, count);
   const palette = [
     { bg: colors.ruby, fg: colors.white },
     { bg: colors.coin, fg: colors.vipText },
     { bg: colors.rubyDark, fg: colors.white },
-    { bg: colors.neon, fg: colors.white },
+    // Dark text on the orange: white on it is too faint to read.
+    { bg: colors.neon, fg: colors.vipText },
   ];
   const colorOf = segmentColorIndexes(count, palette.length);
-  // Label box: along the radius, from just inside the rim to before the hub.
-  const labelLength = r * 0.58;
-  const arcAtMiddle = (r * 0.62 * seg * Math.PI) / 180;
-  const labelHeight = Math.max(12, Math.min(28, arcAtMiddle * 0.6));
-  const fontSize = Math.max(9, Math.min(14, labelHeight * 0.62));
-  const hub = Math.max(64, disc * 0.27);
   const rotate = rotation.interpolate({ inputRange: [-MAX_DEG, MAX_DEG], outputRange: [`-${MAX_DEG}deg`, `${MAX_DEG}deg`] });
   const summary = prizes.map((p) => segmentLabel(p)).join(', ');
 
   return (
-    <View style={[styles.root, { width: size, height: size + 6 }]}>
-      <View style={[styles.pointer, { left: size / 2 - 15 }]} pointerEvents="none">
+    <View style={[styles.root, { width: size, height: size + POINTER_OVERHANG }]}>
+      <View testID="wheel-pointer" style={[styles.pointer, { left: size / 2 - 15 }]} pointerEvents="none">
         <View style={[styles.pointerOuter, { borderTopColor: colors.vipGradient[2] }]} />
         <View style={[styles.pointerInner, { borderTopColor: colors.white }]} />
       </View>
@@ -64,7 +56,7 @@ export function LuckyWheel({ prizes, rotation, size, hubText, hubLabel, hubHint,
         colors={colors.vipGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.rim, { width: size, height: size, borderRadius: size / 2 }]}
+        style={[styles.rim, { width: size, height: size, borderRadius: size / 2, marginTop: POINTER_OVERHANG }]}
       >
         {Array.from({ length: BULBS }, (_, i) => {
           const a = (i * 2 * Math.PI) / BULBS;
@@ -89,6 +81,7 @@ export function LuckyWheel({ prizes, rotation, size, hubText, hubLabel, hubHint,
         >
           {prizes.map((prize, i) => {
             const color = palette[colorOf[i]];
+            const text = segmentLabel(prize);
             return (
               <View key={prize.id} style={[styles.fill, { width: disc, height: disc, transform: [{ rotate: `${i * seg}deg` }] }]}>
                 <Segment count={count} r={r} seg={seg} color={color.bg} />
@@ -99,13 +92,17 @@ export function LuckyWheel({ prizes, rotation, size, hubText, hubLabel, hubHint,
                       width: labelLength,
                       height: labelHeight,
                       left: r - labelLength / 2,
-                      top: 10 + labelLength / 2 - labelHeight / 2,
+                      top: labelStart + labelLength / 2 - labelHeight / 2,
                       transform: [{ rotate: '90deg' }],
                     },
                   ]}
                 >
-                  <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.labelText, { color: color.fg, fontSize }]}>
-                    {segmentLabel(prize)}
+                  <Text
+                    numberOfLines={1}
+                    ellipsizeMode="clip"
+                    style={[styles.labelText, { color: color.fg, fontSize: labelFontSize(text, labelLength, labelHeight) }]}
+                  >
+                    {text}
                   </Text>
                 </View>
               </View>
@@ -132,7 +129,7 @@ export function LuckyWheel({ prizes, rotation, size, hubText, hubLabel, hubHint,
           style={[styles.hub, { width: hub, height: hub, borderRadius: hub / 2, borderWidth: 4, borderColor: colors.vipGradient[1], opacity: disabled && !busy ? 0.6 : 1 }]}
         >
           <LinearGradient colors={colors.accentGradient} style={[styles.hubFace, { borderRadius: hub / 2 }]}>
-            {busy ? <ActivityIndicator color={colors.white} /> : <Text style={[styles.hubText, { color: colors.white }]}>{hubText}</Text>}
+            {busy ? <ActivityIndicator color={colors.white} /> : <Text numberOfLines={1} style={[styles.hubText, { color: colors.white, fontSize: hubFont }]}>{hubText}</Text>}
           </LinearGradient>
         </Pressable>
       </LinearGradient>
