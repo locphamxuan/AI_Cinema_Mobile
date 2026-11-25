@@ -5,6 +5,7 @@ import { storage, STORAGE_KEYS } from '../lib/storage';
 import { adaptUserProfile } from '../lib/apiAdapter';
 import { MIN_PASSWORD } from '../lib/authForm';
 import { resetFailureMessage } from '../lib/passwordReset';
+import { isNewAccount } from '../lib/homeFeed';
 import { authService } from '../services';
 import { apiClient } from '../services/apiClient';
 import { changePasswordFailureMessage, profileFailureMessage } from '../lib/accountForm';
@@ -42,12 +43,16 @@ export function signOutEverywhere() {
   useAccountStore.getState().reset();
 }
 
-/** Opens the member's session; whether they have a plan is the BE's answer (loadAccountData), not the profile's. */
-async function startSession(user: BEUserDto) {
+/**
+ * Opens the member's session; whether they have a plan is the BE's answer (loadAccountData), not the profile's.
+ * A just-opened account has nothing to recommend yet, so Home shows it "Phim mới" first.
+ */
+async function startSession(user: BEUserDto, opensAccount = false) {
   const profile = adaptUserProfile(user);
   useAccountStore.getState().reset();
   useSessionStore.setState({ isAuthenticated: true, user: { ...profile, role: 'user', isVIP: false } });
   useUiStore.getState().closeAuthModal();
+  if (opensAccount) useUiStore.getState().requestHomeTab('new');
   await useAccountStore.getState().loadAccountData();
 }
 
@@ -78,7 +83,8 @@ export const useSessionStore = create<SessionState>()(
         try {
           const res = await authService.googleLogin({ idToken });
           if (res.success && res.data?.user) {
-            await startSession(res.data.user);
+            // The first Google sign-in opens the account (the BE answers no flag for it, only the creation time).
+            await startSession(res.data.user, isNewAccount(res.data.user.createdAt));
             return { success: true };
           }
           return { success: false, error: res.message };
@@ -100,7 +106,7 @@ export const useSessionStore = create<SessionState>()(
         try {
           const res = await authService.register({ fullName: trimmedName, email: trimmedEmail, password, dateOfBirth: trimmedDob });
           if (res.success && res.data?.user) {
-            await startSession(res.data.user);
+            await startSession(res.data.user, true);
             return { success: true };
           }
           return { success: false, error: res.message || 'Chưa tạo được tài khoản. Thử lại sau ít phút.' };

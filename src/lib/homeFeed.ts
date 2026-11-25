@@ -11,6 +11,18 @@ export const HOME_TABS: { key: HomeTabKey; label: string }[] = [
 
 export const ALL_GENRES = 'Tất cả';
 
+/** How old an account may be and still count as just opened (a first Google sign-in), clock drift included. */
+export const NEW_ACCOUNT_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * The BE opens a member account on the first Google sign-in without saying so; an account created moments ago is
+ * that one. A missing or unreadable date is an existing account.
+ */
+export function isNewAccount(createdAt: string | null | undefined, now = Date.now()): boolean {
+  const created = createdAt ? Date.parse(createdAt) : NaN;
+  return Number.isFinite(created) && Math.abs(now - created) <= NEW_ACCOUNT_WINDOW_MS;
+}
+
 /** Newest release year first; movies with the same year keep the order the BE gave (newest created first). */
 export function newestFirst(movies: Movie[]): Movie[] {
   return movies
