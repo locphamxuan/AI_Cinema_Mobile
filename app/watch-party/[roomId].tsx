@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, BackHandler, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -93,9 +93,13 @@ export default function WatchPartyScreen() {
     if (current) void Share.share({ message: `Vào xem phim cùng mình trên AI Cinema, mã phòng: ${current.roomCode}` });
   };
 
+  // Leaving once: a double tap would send two leaves and go back twice, closing the screen under the room too.
+  const leaving = useRef(false);
   const exit = () => {
-    if (!roomId) return;
+    if (!roomId || leaving.current) return;
     const go = (action?: 'TRANSFER' | 'DISBAND') => {
+      if (leaving.current) return;
+      leaving.current = true;
       void watchRoomService.leave(roomId, action).finally(() => {
         leave();
         router.back();
@@ -118,12 +122,34 @@ export default function WatchPartyScreen() {
     else setError(opened.message || 'Bạn chưa có quyền xem tập tiếp theo của phòng.');
   }, []);
 
+  // One move per tap burst: a double tap would skip the room two episodes ahead.
+  const moving = useRef(false);
   const nextEpisode = async () => {
-    if (!roomId) return;
+    if (!roomId || moving.current) return;
+    moving.current = true;
     const res = await watchRoomService.nextEpisode(roomId);
-    if (!res.success || !res.data) return showDialog('Chưa chuyển được tập', res.message);
+    if (!res.success || !res.data) {
+      moving.current = false;
+      return showDialog('Chưa chuyển được tập', res.message);
+    }
     await followEpisode(res.data);
+    moving.current = false;
   };
+
+  // Android back leaves the room the same way as "Rời phòng" (a Host chooses to hand over or disband);
+  // the fullscreen player registers its own handler later, so back leaves fullscreen first.
+  const exitRef = useRef(exit);
+  useEffect(() => {
+    exitRef.current = exit;
+  });
+  useEffect(() => {
+    if (error) return;
+    const back = BackHandler.addEventListener('hardwareBackPress', () => {
+      exitRef.current();
+      return true;
+    });
+    return () => back.remove();
+  }, [error]);
 
   // The BE tells members nothing when the Host moves on: once playback resumes after the episode ended, a member
   // reads the room again and follows the Host to the new episode.

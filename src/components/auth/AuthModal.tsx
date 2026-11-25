@@ -171,6 +171,7 @@ export const AuthModal: React.FC = () => {
                   maxLength={255}
                   placeholderTextColor={colors.textMuted}
                   autoComplete="name"
+                  accessibilityLabel="Họ và tên"
                   style={inputStyle}
                 />,
               )}
@@ -233,7 +234,7 @@ export const AuthModal: React.FC = () => {
 
             {field(
               'Email',
-              <TextInput value={email} onChangeText={setEmail} placeholder="ten@email.com" placeholderTextColor={colors.textMuted} autoCapitalize="none" keyboardType="email-address" autoComplete="email" maxLength={255} style={inputStyle} />,
+              <TextInput value={email} onChangeText={setEmail} placeholder="ten@email.com" placeholderTextColor={colors.textMuted} autoCapitalize="none" keyboardType="email-address" autoComplete="email" maxLength={255} accessibilityLabel="Email" style={inputStyle} />,
             )}
             {field(
               'Mật khẩu',
@@ -244,6 +245,7 @@ export const AuthModal: React.FC = () => {
                   placeholderTextColor={colors.textMuted}
                   secureTextEntry={!showPassword}
                   autoComplete={isLogin ? 'password' : 'new-password'}
+                  accessibilityLabel="Mật khẩu"
                   style={[inputStyle, styles.passwordInput]}
                 />
                 <TouchableOpacity onPress={() => setShowPassword((v) => !v)} style={styles.eye} hitSlop={8} accessibilityLabel={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>
@@ -255,7 +257,7 @@ export const AuthModal: React.FC = () => {
             {!isLogin &&
               field(
                 'Nhập lại mật khẩu',
-                <TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!showPassword} placeholderTextColor={colors.textMuted} style={inputStyle} />,
+                <TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!showPassword} placeholderTextColor={colors.textMuted} accessibilityLabel="Nhập lại mật khẩu" style={inputStyle} />,
               )}
 
             <View style={styles.optionsRow}>

@@ -126,7 +126,8 @@ export interface StatementLine {
 export interface SubscriptionCycleView {
   id: string;
   cycleNumber: number;
-  status: 'PAID' | 'FAILED' | 'SKIPPED';
+  /** REFUNDED: the Admin gave the Coins of this cycle back (the plan ended, CANCELLED_BY_ADMIN). */
+  status: 'PAID' | 'FAILED' | 'SKIPPED' | 'REFUNDED';
   priceCoins: number;
   periodStart: string;
   periodEnd: string;

@@ -61,6 +61,8 @@ const ROOM_ERROR_NOTICE: Record<string, string> = {
   NOT_IN_ROOM: 'Bạn không còn ở trong phòng này. Mở lại phòng để vào tiếp.',
   UNAUTHENTICATED: 'Hết hạn đăng nhập, đang kết nối lại phòng.',
   ROOM_NOT_FOUND: 'Phòng không còn tồn tại.',
+  ROOM_CLOSED: 'Phòng đã đóng.',
+  INVALID_PAYLOAD: 'Thao tác chưa gửi được tới phòng. Thử lại sau giây lát.',
 };
 
 /** The BE sends `{ reason, details }`: `reason` is its own (English) message or a code; never shown raw. */
