@@ -40,3 +40,22 @@ export function watchProgress(row: Pick<WatchHistoryEntry, 'episodeNumber' | 'po
     ? { label: `${episode} · ${at} / ${clock(duration)}`, ratio: Math.min(1, Math.max(0, row.positionSeconds / duration)) }
     : { label: `${episode} · đang ở ${at}`, ratio: 0 };
 }
+
+/** The episode's own title when it says more than its number ("Tập 1 · Khởi đầu"), otherwise just "Tập 1". */
+export function episodeCaption(row: Pick<WatchHistoryEntry, 'episodeNumber' | 'episodeTitle'>): string {
+  const number = `Tập ${row.episodeNumber}`;
+  const title = row.episodeTitle?.trim() ?? '';
+  const sameAsNumber = !title || title.toLocaleLowerCase('vi') === number.toLocaleLowerCase('vi');
+  return sameAsNumber ? number : `${number} · ${title}`;
+}
+
+/**
+ * The second line of a "Lịch sử xem" card: the episode once, then where the member stopped
+ * ("Tập 1 · 1:34 / 2:31"), or why the episode cannot be opened now.
+ */
+export function historyMeta(row: WatchHistoryEntry): string {
+  if (!row.available) return row.notice || 'Tập này tạm không xem được';
+  const { label } = watchProgress(row);
+  // `watchProgress` already starts with "Tập N · "; the caption replaces it so the episode is named once.
+  return `${episodeCaption(row)}${label.slice(`Tập ${row.episodeNumber}`.length)}`;
+}
