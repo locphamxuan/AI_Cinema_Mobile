@@ -5,7 +5,7 @@
  */
 import './env';
 import React from 'react';
-import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // Internal helper of the library: the same lookup `fireEvent` does, used to tap twice in one frame.
 import { findEventHandler } from '@testing-library/react-native/dist/events/propagation';
@@ -220,6 +220,8 @@ export const fail = (status: number, message: string, reason?: string): Reply =>
 export const api = {
   routes: new Map<string, Route[]>(),
   calls: [] as ApiCall[],
+  /** Requests still waiting for their reply (slow replies included); `settle` and the reset wait for them. */
+  inFlight: new Set<Promise<unknown>>(),
   on(key: string, ...replies: Route[]) {
     this.routes.set(key, replies);
     return this;
@@ -240,7 +242,15 @@ export const api = {
 
 const API_PATH = /\/api(\/[^?#]*)(\?[^#]*)?$/;
 
-async function fakeFetch(input: string | URL | Request, init: RequestInit = {}): Promise<Response> {
+/** Every request is tracked until its reply is out, so no reply lands in a later step or a later test. */
+function fakeFetch(input: string | URL | Request, init: RequestInit = {}): Promise<Response> {
+  const response = answer(input, init);
+  api.inFlight.add(response);
+  void response.finally(() => api.inFlight.delete(response)).catch(() => undefined);
+  return response;
+}
+
+async function answer(input: string | URL | Request, init: RequestInit): Promise<Response> {
   const url = String(input instanceof Request ? input.url : input);
   const match = API_PATH.exec(url);
   // Not the API (an HLS playlist, a subtitle file): nothing is on the network in a test.
@@ -330,12 +340,22 @@ export async function renderApp(ui: React.ReactElement) {
   );
 }
 
-/** Lets pending promises, timers at 0 ms and the renders they cause settle. */
+const nextTick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+/**
+ * Lets the app finish what it started: every request in flight gets its reply (slow ones too), then the promises,
+ * 0 ms timers and renders that follow settle. Done once `rounds` turns in a row start no new request.
+ */
 export const settle = async (rounds = 5) => {
-  for (let i = 0; i < rounds; i += 1) {
+  let quiet = 0;
+  // A cap, so a screen that keeps asking (a poll) cannot hold the test forever.
+  for (let turn = 0; quiet < rounds && turn < 200; turn += 1) {
+    const waiting = [...api.inFlight];
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      if (waiting.length) await Promise.allSettled(waiting);
+      await nextTick();
     });
+    quiet = waiting.length || api.inFlight.size ? 0 : quiet + 1;
   }
 };
 
@@ -369,6 +389,13 @@ const initial = {
   player: usePlayerStore.getState(),
 };
 
+// The fake network is in place before the start-up read below, so it never reaches the real one.
+const realFetch = globalThis.fetch;
+globalThis.fetch = fakeFetch as typeof fetch;
+afterAll(() => {
+  globalThis.fetch = realFetch;
+});
+
 beforeAll(async () => {
   // The store barrel starts the start-up read once the session is back from storage; let it finish first.
   await useSessionStore.persist.rehydrate();
@@ -376,7 +403,6 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  jest.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch as typeof fetch);
   api.reset();
   mockSocket.reset();
   mockVideo.players = [];
@@ -387,6 +413,13 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  // In this order: the test's own work finishes, the screen unmounts (its timers stop), what the unmount started
+  // finishes, and only then the stores are reset, so nothing of this test reaches the next one.
+  await settle();
+  await act(async () => {
+    await cleanup();
+  });
+  await settle();
   await AsyncStorage.clear();
   await act(() => {
     useSessionStore.setState(initial.session, true);
