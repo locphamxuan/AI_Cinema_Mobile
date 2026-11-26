@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, Modal, Pressable, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
@@ -7,18 +7,13 @@ import { useAccountStore, useUiStore } from '../../store';
 import { useTheme } from '../../theme';
 import { walletService } from '../../services/walletService';
 import { Button } from '../common/Button';
+import { topUpCreateFailure, topUpFailureText } from '../../lib/topUps';
 import type { TopUpOptions, TopUpStatus } from '../../types/episodeAccess';
 import { styles } from '../../styles/components/wallet/TopUpModal.styles';
 
 const POLL_MS = 2500;
 const POLL_LIMIT = 24;
 const FINAL: TopUpStatus[] = ['PAID', 'FAILED', 'CANCELLED', 'EXPIRED'];
-
-const STATUS_TEXT: Record<Exclude<TopUpStatus, 'PENDING' | 'PAID'>, string> = {
-  FAILED: 'Thanh toán không thành công. Bạn có thể tạo đơn nạp mới.',
-  CANCELLED: 'Bạn đã hủy thanh toán.',
-  EXPIRED: 'Đơn nạp đã hết hạn. Tạo đơn mới để nạp.',
-};
 
 const vnd = (n: number) => `${n.toLocaleString('vi-VN')}đ`;
 
@@ -36,20 +31,33 @@ export const TopUpModal: React.FC = () => {
   const [phase, setPhase] = useState<'form' | 'waiting' | 'paid'>('form');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // A second tap in the same frame still sees phase 'form': the ref keeps it to one VNPay order.
+  const creating = useRef(false);
+  // Bumped when the sheet closes: an order answer or a poll that lands later belongs to a closed sheet and is ignored.
+  const opening = useRef(0);
+  const [optionsFailed, setOptionsFailed] = useState(false);
 
-  useEffect(() => {
-    if (!isTopUpModalOpen) return;
-    walletService.getTopUpOptions().then((res) => {
-      if (res.success && res.data) setOptions(res.data);
-      else setErrorMsg(res.message || 'Không tải được bảng giá nạp Coin.');
+  const loadOptions = useCallback(() => {
+    void walletService.getTopUpOptions().then((res) => {
+      if (res.success && res.data) {
+        setErrorMsg(null);
+        setOptionsFailed(false);
+        return setOptions(res.data);
+      }
+      setOptionsFailed(true);
+      setErrorMsg(res.message || 'Không tải được bảng giá nạp Coin.');
     });
-  }, [isTopUpModalOpen]);
+  }, []);
+  useEffect(() => {
+    if (isTopUpModalOpen) loadOptions();
+  }, [isTopUpModalOpen, loadOptions]);
 
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
   }, []);
 
   const close = () => {
+    opening.current += 1;
     if (timer.current) clearTimeout(timer.current);
     setPhase('form');
     setErrorMsg(null);
@@ -74,39 +82,45 @@ export const TopUpModal: React.FC = () => {
   const amountVnd = Number(amount) || 0;
   const inRange = options !== null && amountVnd >= options.minVnd && amountVnd <= options.maxVnd;
 
-  const poll = (topUpId: string, round = 0) => {
+  const poll = (topUpId: string, sheet: number, round = 0) => {
     timer.current = setTimeout(async () => {
       const res = await walletService.getTopUp(topUpId);
+      if (sheet !== opening.current) return;
       const status = res.success ? res.data?.status : undefined;
       if (status === 'PAID') {
         await loadAccountData();
         setPhase('paid');
       } else if (status && FINAL.includes(status)) {
         setPhase('form');
-        setErrorMsg(STATUS_TEXT[status as keyof typeof STATUS_TEXT]);
+        setErrorMsg(topUpFailureText(res.data!) ?? 'Thanh toán không thành công. Bạn có thể tạo đơn nạp mới.');
       } else if (round + 1 < POLL_LIMIT) {
-        poll(topUpId, round + 1);
+        poll(topUpId, sheet, round + 1);
       } else {
         setPhase('form');
-        setErrorMsg('Chưa nhận được kết quả từ VNPay. Số dư sẽ tự cập nhật khi VNPay xác nhận.');
+        setErrorMsg('Chưa nhận được kết quả từ VNPay. Nếu bạn đã thanh toán, Coin tự vào ví khi VNPay xác nhận; xem trạng thái đơn ở Lịch sử nạp Coin.');
       }
     }, POLL_MS);
   };
 
   const handleTopUp = async () => {
-    if (!inRange) return;
+    if (!inRange || creating.current) return;
+    creating.current = true;
+    const sheet = opening.current;
     setErrorMsg(null);
     setPhase('waiting');
     const res = await walletService.createTopUp('VNPAY', amountVnd);
+    creating.current = false;
+    // Closed while the order was being made: it stays pending in Lịch sử nạp Coin, no payment page opens.
+    if (sheet !== opening.current) return;
     if (!res.success || !res.data?.redirectUrl) {
       setPhase('form');
-      setErrorMsg(res.message || 'Chưa tạo được đơn nạp. Kiểm tra kết nối rồi thử lại.');
+      setErrorMsg(topUpCreateFailure(res));
       return;
     }
     // The backend's return trip opens the aicinema:// link, which closes this session; then reconcile.
     if (Platform.OS === 'web') await WebBrowser.openBrowserAsync(res.data.redirectUrl);
     else await WebBrowser.openAuthSessionAsync(res.data.redirectUrl, 'aicinema://');
-    poll(res.data.topUpId);
+    if (sheet === opening.current) poll(res.data.topUpId, sheet);
   };
 
   const presets = options ? [options.minVnd, 50_000, 100_000, 200_000].filter((v, i, all) => v >= options.minVnd && v <= options.maxVnd && all.indexOf(v) === i) : [];
@@ -171,6 +185,7 @@ export const TopUpModal: React.FC = () => {
               <Text style={[styles.label, { color: colors.textSecondary }]}>Thanh toán qua VNPay</Text>
 
               {errorMsg && <Text style={[styles.error, { color: colors.danger }]}>{errorMsg}</Text>}
+              {optionsFailed ? <Button label="Tải lại bảng giá" variant="secondary" onPress={loadOptions} /> : null}
 
               <Button
                 label={phase === 'waiting' ? 'Đang chờ VNPay xác nhận…' : inRange ? `Thanh toán ${vnd(amountVnd)}` : 'Thanh toán'}

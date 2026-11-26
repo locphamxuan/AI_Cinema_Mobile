@@ -36,7 +36,10 @@ export default function SearchScreen() {
   const suggestions = useMemo(() => suggestionPage(movies, page, SUGGESTION_SIZE), [movies, page]);
 
   useEffect(() => {
-    void storage.get<string[]>(STORAGE_KEYS.RECENT_SEARCHES, []).then(setRecent);
+    // A damaged saved value (not a list of words) is dropped rather than breaking the screen.
+    void storage
+      .get<unknown>(STORAGE_KEYS.RECENT_SEARCHES, [])
+      .then((saved) => setRecent(Array.isArray(saved) ? saved.filter((s): s is string => typeof s === 'string') : []));
   }, []);
 
   // Search on the server without touching the store, so the home lists stay as they were.

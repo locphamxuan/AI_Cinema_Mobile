@@ -4,7 +4,8 @@ import { fonts } from '../../../theme';
 export const styles = StyleSheet.create({
   container: { width: '100%', aspectRatio: 16 / 9, maxHeight: 360, backgroundColor: '#000000' },
   fill: { width: '100%', height: '100%', position: 'absolute' },
-  fullscreen: { flex: 1, backgroundColor: '#000000' },
+  // Covers the whole screen above the page (and its later siblings) while the video is fullscreen.
+  fullscreen: { ...StyleSheet.absoluteFill, zIndex: 100, backgroundColor: '#000000' },
   fullscreenStage: { flex: 1 },
   posterShade: {
     ...StyleSheet.absoluteFill,

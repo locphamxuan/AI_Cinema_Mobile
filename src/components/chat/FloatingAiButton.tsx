@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fonts, useTheme } from '../../theme';
 import { useUiStore } from '../../store';
+import { usePlayerStore } from '../../store/playerStore';
 import { AiOrb } from './AiOrb';
 
 const BUTTON_SIZE = 58;
@@ -27,6 +28,8 @@ function clamp(value: number, min: number, max: number): number {
 export const FloatingAiButton: React.FC = () => {
   const { colors, isDark } = useTheme();
   const { isChatModalOpen, isAuthModalOpen, setChatModalOpen } = useUiStore();
+  // A fullscreen video owns the whole screen; the orb would sit on the picture.
+  const videoFullscreen = usePlayerStore((s) => s.fullscreen);
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -84,7 +87,7 @@ export const FloatingAiButton: React.FC = () => {
     setGestureStart(null);
   };
 
-  if (isChatModalOpen || isAuthModalOpen) return null;
+  if (isChatModalOpen || isAuthModalOpen || videoFullscreen) return null;
 
   return (
     <View

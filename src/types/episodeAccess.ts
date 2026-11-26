@@ -126,7 +126,8 @@ export interface StatementLine {
 export interface SubscriptionCycleView {
   id: string;
   cycleNumber: number;
-  status: 'PAID' | 'FAILED' | 'SKIPPED';
+  /** REFUNDED: the Admin gave the Coins of this cycle back (the plan ended, CANCELLED_BY_ADMIN). */
+  status: 'PAID' | 'FAILED' | 'SKIPPED' | 'REFUNDED';
   priceCoins: number;
   periodStart: string;
   periodEnd: string;
@@ -235,12 +236,21 @@ export interface RewardPrize {
   chancePercent?: number;
 }
 
+/** What a spin won, copied on the spin: `id` is null once the Admin deleted that prize. */
+export interface WonPrize {
+  id: string | null;
+  name: string;
+  type: RewardPrizeType;
+  bonusCoins: number | null;
+  planDays: number | null;
+}
+
 export interface RewardSpinHistoryItem {
   id: string;
   status: 'AVAILABLE' | 'USED';
   grantedAt: string;
   spunAt: string | null;
-  prize: RewardPrize | null;
+  prize: WonPrize | null;
   bonusCoins: number | null;
   planDays: number | null;
 }
@@ -254,7 +264,7 @@ export interface RewardWheelStatus {
 
 /** POST /rewards/spins */
 export interface SpinResult extends RewardSpinHistoryItem {
-  prize: RewardPrize;
+  prize: WonPrize;
   planActiveUntil: string | null;
   mainBalance: number;
   bonusBalance: number;

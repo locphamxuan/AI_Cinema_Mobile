@@ -4,7 +4,7 @@ import { showDialog } from '../../src/lib/dialog';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAccountStore, useCatalogStore, useSessionStore } from '../../src/store';
+import { useAccountStore, useCatalogStore, useSessionStore, useUiStore } from '../../src/store';
 import { useEpisodeGate } from '../../src/hooks/useEpisodeGate';
 import { useMovieWithEpisodes } from '../../src/hooks/useMovieWithEpisodes';
 import { LoadError } from '../../src/components/common/LoadError';
@@ -45,6 +45,7 @@ export default function WatchScreen() {
   const [chosenTrack, setChosenTrack] = useState<string | null>(null);
   const [session, setSession] = useState<StreamingSession | null>(null);
   const [opening, setOpening] = useState(false);
+  const openingRef = useRef(false);
   const [engagement, setEngagement] = useMovieEngagement(id);
   const scrollViewRef = useRef<ComponentRef<typeof ScrollView>>(null);
 
@@ -75,14 +76,40 @@ export default function WatchScreen() {
     router.push(`/watch-party/create?episodeId=${currentActiveEpisode.id}&label=${label}` as Href);
   }, [currentActiveEpisode, movie, router]);
 
+  // A T18 episode opens only for a member the BE knows is 18 or older (AGE_RESTRICTED otherwise).
+  const user = useSessionStore((s) => s.user);
+  const openAuthModal = useUiStore((s) => s.openAuthModal);
+  const explainAgeLimit = () => {
+    const title = 'Tập dành cho người từ 18 tuổi';
+    if (!isAuthenticated) {
+      return showDialog(title, 'Đăng nhập bằng tài khoản đủ 18 tuổi để xem tập này.', [
+        { text: 'Để sau', style: 'cancel' },
+        { text: 'Đăng nhập', onPress: () => openAuthModal('login') },
+      ]);
+    }
+    // A Google account may have no birthday yet: the member adds it on the Account screen.
+    if (!user?.dateOfBirth) {
+      return showDialog(title, 'Tài khoản chưa có ngày sinh. Thêm ngày sinh ở mục Tài khoản để xem tập này.', [
+        { text: 'Để sau', style: 'cancel' },
+        { text: 'Cập nhật ngày sinh', onPress: () => router.push('/account') },
+      ]);
+    }
+    showDialog(title, 'Tài khoản của bạn chưa đủ 18 tuổi nên chưa xem được tập này.');
+  };
+
   // MF-3: a granted episode plays through a streaming session (ads, stream limit, progress).
   const play = async (ep: Episode) => {
+    // One session at a time: a second one opened meanwhile would never be stopped and hold a stream slot.
+    if (openingRef.current) return;
+    openingRef.current = true;
     // Unmounting the current player stops its session (with its position) before the next one opens.
     setSession(null);
     setOpening(true);
     const res = await playbackService.openSession(ep.id);
+    openingRef.current = false;
     setOpening(false);
     if (!res.success || !res.data) {
+      if (res.reason === 'AGE_RESTRICTED') return explainAgeLimit();
       if (res.reason && DEVICE_LIMITS.has(res.reason)) {
         showDialog('Đã đạt giới hạn thiết bị', res.message, [
           { text: 'Để sau', style: 'cancel' },
@@ -143,7 +170,6 @@ export default function WatchScreen() {
         posterUrl={ep?.thumbnailUrl || movie.bannerUrl || movie.posterUrl}
         aiLabel={playing?.aiLabel?.text ?? ep?.aiLabel ?? null}
         checking={gate.checkingId !== null || opening}
-        ads={!isVIPMode}
         onRequestPlay={() => ep && handleSelectEpisode(ep)}
         subtitles={tracks}
         subtitleTrackId={subtitleTrackId}

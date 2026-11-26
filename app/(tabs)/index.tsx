@@ -8,7 +8,7 @@ import { HomeTabBar } from '../../src/components/home/HomeTabBar';
 import { PosterGrid } from '../../src/components/home/PosterGrid';
 import { RankingList } from '../../src/components/home/RankingList';
 import { useTheme } from '../../src/theme';
-import { useSessionStore, useAccountStore, useCatalogStore, loadInitialData } from '../../src/store';
+import { useSessionStore, useAccountStore, useCatalogStore, useUiStore, loadInitialData } from '../../src/store';
 import { movieService } from '../../src/services';
 import { useHomeRecommendations } from '../../src/hooks/useHomeRecommendations';
 import { LoadError } from '../../src/components/common/LoadError';
@@ -32,6 +32,14 @@ export default function HomeScreen() {
   const [page, setPage] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [ranked, setRanked] = useState<Movie[]>([]);
+  const homeTabRequest = useUiStore((s) => s.homeTabRequest);
+
+  // A tab asked for from elsewhere: a member who just opened their account starts on "Phim mới". The tab follows
+  // the request while rendering, then the request is used up, so the member can change tabs right after.
+  if (homeTabRequest && homeTabRequest !== tab) setTab(homeTabRequest);
+  useEffect(() => {
+    if (homeTabRequest) useUiStore.getState().takeHomeTabRequest();
+  }, [homeTabRequest]);
 
   const loadRanking = () =>
     movieService.ranking().then((res) => {
@@ -106,7 +114,18 @@ export default function HomeScreen() {
             {recommendations.error && pool.length === 0 ? (
               <LoadError message={recommendations.error} onRetry={() => void recommendations.reload()} />
             ) : !recommendations.loading && pool.length === 0 && movies.length > 0 ? (
-              <Text style={[styles.empty, { color: colors.textMuted }]}>Chưa có phim để đề xuất. Xem thử vài phim ở tab Mới nhất nhé.</Text>
+              <View style={styles.emptyBox}>
+                <Text style={[styles.empty, styles.emptyInBox, { color: colors.textMuted }]}>
+                  Chưa có phim để đề xuất. Xem thử vài phim mới, các đề xuất sẽ hiện ở đây.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.emptyAction, { backgroundColor: colors.ruby }]}
+                  onPress={() => setTab('new')}
+                  accessibilityRole="button"
+                >
+                  <Text style={[styles.moreText, { color: colors.white }]}>Xem phim mới</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
               <PosterGrid movies={recommended} onMoviePress={openMovie} />
             )}

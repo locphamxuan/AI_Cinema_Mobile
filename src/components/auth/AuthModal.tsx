@@ -76,7 +76,6 @@ export const AuthModal: React.FC = () => {
     setPassword('');
     setHasSavedEmail(false);
   };
-
   const switchMode = () => {
     setError(null);
     setAgeModalOpen(false);
@@ -84,22 +83,28 @@ export const AuthModal: React.FC = () => {
     openAuthModal(isLogin ? 'register' : 'login');
   };
 
+  // A ref, not state: a second tap in the same frame must not send a second sign-in or sign-up.
+  const busy = useRef(false);
+  const run = async <T,>(task: () => Promise<T>, onDone: (result: T) => Promise<void> | void) => {
+    if (busy.current) return;
+    busy.current = true;
+    setLoading(true);
+    try {
+      await onDone(await task());
+    } finally {
+      busy.current = false;
+      setLoading(false);
+    }
+  };
+
   const handleConfirmAgeAndRegister = async () => {
     const normalizedDob = normalizeDateOfBirth(dateOfBirthInput);
-    if (!normalizedDob) {
-      setAgeModalOpen(false);
-      setError('Ngày sinh chưa hợp lệ (nhập theo dạng ngày/tháng/năm, ví dụ 14/05/2003).');
-      return;
-    }
     setAgeModalOpen(false);
-    setLoading(true);
-    const result = await register(name, email, password, normalizedDob);
-    if (result.success) {
-      showDialog('Đã tạo tài khoản', 'Bạn đã là thành viên và có thể bắt đầu xem phim.');
-    } else {
-      setError(result.error || 'Chưa tạo được tài khoản. Kiểm tra kết nối rồi thử lại.');
-    }
-    setLoading(false);
+    if (!normalizedDob) return setError('Ngày sinh chưa hợp lệ (nhập theo dạng ngày/tháng/năm, ví dụ 14/05/2003).');
+    await run(() => register(name, email, password, normalizedDob), (result) => {
+      if (result.success) showDialog('Đã tạo tài khoản', 'Bạn đã là thành viên và có thể bắt đầu xem phim.');
+      else setError(result.error || 'Chưa tạo được tài khoản. Kiểm tra kết nối rồi thử lại.');
+    });
   };
 
   const handleSubmit = async () => {
@@ -107,22 +112,13 @@ export const AuthModal: React.FC = () => {
     const problem = authFormError(isLogin, { name, email, password, confirmPassword, dateOfBirth: rawDob });
     setError(problem);
     if (problem) return;
-
-    if (!isLogin) {
-      setAgeModalOpen(true);
-      return;
-    }
-
-    setLoading(true);
-    const result = await login(email, password);
-    if (result.success) {
+    if (!isLogin) return setAgeModalOpen(true);
+    await run(() => login(email, password), async (result) => {
+      if (!result.success) return setError(result.error || 'Chưa đăng nhập được. Kiểm tra email, mật khẩu và kết nối mạng.');
       if (rememberMe) await rememberEmail(email);
       else await forgetSaved();
       if (result.redirectUrl) router.replace(result.redirectUrl as Href);
-    } else {
-      setError(result.error || 'Chưa đăng nhập được. Kiểm tra email, mật khẩu và kết nối mạng.');
-    }
-    setLoading(false);
+    });
   };
 
   const inputStyle = [styles.input, { backgroundColor: isDark ? colors.cardAlt : colors.card, color: colors.text }];
@@ -172,8 +168,10 @@ export const AuthModal: React.FC = () => {
                   value={name}
                   onChangeText={setName}
                   placeholder="Nguyễn Văn A"
+                  maxLength={255}
                   placeholderTextColor={colors.textMuted}
                   autoComplete="name"
+                  accessibilityLabel="Họ và tên"
                   style={inputStyle}
                 />,
               )}
@@ -236,7 +234,7 @@ export const AuthModal: React.FC = () => {
 
             {field(
               'Email',
-              <TextInput value={email} onChangeText={setEmail} placeholder="ten@email.com" placeholderTextColor={colors.textMuted} autoCapitalize="none" keyboardType="email-address" autoComplete="email" style={inputStyle} />,
+              <TextInput value={email} onChangeText={setEmail} placeholder="ten@email.com" placeholderTextColor={colors.textMuted} autoCapitalize="none" keyboardType="email-address" autoComplete="email" maxLength={255} accessibilityLabel="Email" style={inputStyle} />,
             )}
             {field(
               'Mật khẩu',
@@ -247,6 +245,7 @@ export const AuthModal: React.FC = () => {
                   placeholderTextColor={colors.textMuted}
                   secureTextEntry={!showPassword}
                   autoComplete={isLogin ? 'password' : 'new-password'}
+                  accessibilityLabel="Mật khẩu"
                   style={[inputStyle, styles.passwordInput]}
                 />
                 <TouchableOpacity onPress={() => setShowPassword((v) => !v)} style={styles.eye} hitSlop={8} accessibilityLabel={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>
@@ -258,7 +257,7 @@ export const AuthModal: React.FC = () => {
             {!isLogin &&
               field(
                 'Nhập lại mật khẩu',
-                <TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!showPassword} placeholderTextColor={colors.textMuted} style={inputStyle} />,
+                <TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!showPassword} placeholderTextColor={colors.textMuted} accessibilityLabel="Nhập lại mật khẩu" style={inputStyle} />,
               )}
 
             <View style={styles.optionsRow}>

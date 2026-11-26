@@ -34,6 +34,8 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
   const { setTopUpModalOpen, setPendingPurchase } = useUiStore();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
+  // The wallet changed since the BE quoted (spent on another device): the sheet turns to topping up.
+  const [shortNow, setShortNow] = useState<string | null>(null);
   // A ref, not state: a second tap in the same frame sees the first one at once, and both share one key, so the
   // purchase is sent and charged once (BR-01). A retry after a failure reuses the key too.
   const inFlight = useRef(false);
@@ -51,7 +53,17 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
 
   const close = () => {
     setErrorMsg(null);
+    setShortNow(null);
     onClose();
+  };
+
+  const opened = async () => {
+    markEpisodeUnlocked(episode.id);
+    // Refresh the owned-episode hint so the lock icon disappears on the episode list right away.
+    const ownedRes = await episodeAccessService.listOwnedEpisodeIds();
+    if (ownedRes.success) setOwnedEpisodeIds(ownedRes.data);
+    onUnlocked(episode);
+    close();
   };
 
   const handleUnlock = async () => {
@@ -63,19 +75,18 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
     const res = await episodeAccessService.purchaseEpisode(episode.id, key.current.value);
     inFlight.current = false;
     setPaying(false);
+    // Already opened (bought on another device, a plan just started): nothing was charged, play it.
+    if (res.reason === 'ACCESS_ALREADY_OWNED') return opened();
+    if (res.reason === 'INSUFFICIENT_COINS') {
+      setShortNow('Ví không còn đủ Coin cho tập này (số dư vừa thay đổi). Nạp thêm Coin để mở khóa, chưa có Coin nào bị trừ.');
+      return;
+    }
     if (!res.success || !res.data) {
       setErrorMsg(res.message || 'Chưa mở được tập này. Bấm lại để thử, Coin sẽ không bị trừ hai lần.');
       return;
     }
     setWalletBalance(res.data.mainBalance, res.data.bonusBalance);
-    markEpisodeUnlocked(episode.id);
-    // Refresh the owned-episode hint so the lock icon disappears on the episode list right away.
-    const ownedRes = await episodeAccessService.listOwnedEpisodeIds();
-    if (ownedRes.success) {
-      setOwnedEpisodeIds(ownedRes.data);
-    }
-    onUnlocked(episode);
-    close();
+    await opened();
   };
 
   const line = (label: string, value: string, tone?: string) => (
@@ -115,9 +126,9 @@ export const UnlockEpisodeModal: React.FC<UnlockEpisodeModalProps> = ({ locked, 
         </View>
         <Text style={[styles.rulesNote, { color: colors.textMuted }]}>Coin chính được trừ trước, Coin thưởng bù phần còn thiếu.</Text>
 
-        {errorMsg && <Text style={[styles.error, { color: colors.danger }]}>{errorMsg}</Text>}
+        {(shortNow ?? errorMsg) && <Text style={[styles.error, { color: colors.danger }]}>{shortNow ?? errorMsg}</Text>}
 
-        {canBuy && enoughCoins ? (
+        {canBuy && enoughCoins && !shortNow ? (
           <Button label={`Mở khóa với ${coinPrice} Coin`} onPress={handleUnlock} loading={paying} />
         ) : (
           <Button

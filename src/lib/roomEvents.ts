@@ -61,6 +61,8 @@ const ROOM_ERROR_NOTICE: Record<string, string> = {
   NOT_IN_ROOM: 'Bạn không còn ở trong phòng này. Mở lại phòng để vào tiếp.',
   UNAUTHENTICATED: 'Hết hạn đăng nhập, đang kết nối lại phòng.',
   ROOM_NOT_FOUND: 'Phòng không còn tồn tại.',
+  ROOM_CLOSED: 'Phòng đã đóng.',
+  INVALID_PAYLOAD: 'Thao tác chưa gửi được tới phòng. Thử lại sau giây lát.',
 };
 
 /** The BE sends `{ reason, details }`: `reason` is its own (English) message or a code; never shown raw. */
@@ -73,4 +75,13 @@ export function roomErrorCode(error: { reason?: string; details?: unknown } | nu
 
 export function roomErrorNotice(error: { reason?: string; details?: unknown } | null | undefined): string {
   return ROOM_ERROR_NOTICE[roomErrorCode(error) ?? ''] ?? 'Không thể đồng bộ phòng xem nhóm. Thử lại sau giây lát.';
+}
+
+/**
+ * Shapes what the member types into the XXX-XXX room code. The BE codes use base32 without the look-alikes
+ * 0/O and 1/I (room-codes.ts), so those letters are dropped here: they could never match a room.
+ */
+export function formatRoomCodeInput(raw: string): string {
+  const clean = raw.toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g, '').slice(0, 6);
+  return clean.length > 3 ? `${clean.slice(0, 3)}-${clean.slice(3)}` : clean;
 }

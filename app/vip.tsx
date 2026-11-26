@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { View, Text, ScrollView, Switch, ActivityIndicator } from 'react-native';
 import { showDialog } from '../src/lib/dialog';
@@ -28,10 +28,16 @@ const formatDateTime = (iso: string | null) =>
 export function cancelWindowText(plan: MySubscription, now = Date.now()): string {
   if (!plan.autoRenew) return `Đã tắt tự gia hạn. Gói dừng khi hết kỳ, lúc ${formatDateTime(plan.currentPeriodEnd)}.`;
   if (!plan.cancelDeadline) return 'Gói tự gia hạn khi hết kỳ.';
-  return new Date(plan.cancelDeadline).getTime() > now
-    ? `Bạn còn tắt được tự gia hạn đến ${formatDateTime(plan.cancelDeadline)}.`
-    : `Đã quá hạn tắt tự gia hạn của kỳ này: lần gia hạn ngày ${formatDate(plan.currentPeriodEnd)} vẫn trừ Coin, gói sẽ dừng khi hết kỳ tiếp theo.`;
+  const hours = Math.round((new Date(plan.currentPeriodEnd).getTime() - new Date(plan.cancelDeadline).getTime()) / 3_600_000);
+  const lead = hours > 0 ? ` (phải tắt trước kỳ gia hạn ít nhất ${hours} giờ)` : '';
+  return cancelWindowOpen(plan, now)
+    ? `Bạn còn tắt được tự gia hạn đến ${formatDateTime(plan.cancelDeadline)}${lead}.`
+    : `Đã quá hạn tắt tự gia hạn của kỳ này${lead}: lần gia hạn ngày ${formatDate(plan.currentPeriodEnd)} vẫn trừ Coin. Sau lần gia hạn đó bạn tắt được, gói sẽ dừng khi hết kỳ tiếp theo.`;
 }
+
+/** Auto-renew can still be stopped for this period (the BE refuses after the deadline: CANCELLATION_WINDOW_CLOSED). */
+export const cancelWindowOpen = (plan: MySubscription, now = Date.now()) =>
+  !plan.cancelDeadline || new Date(plan.cancelDeadline).getTime() > now;
 
 export default function VipScreen() {
   const { colors } = useTheme();
@@ -41,6 +47,7 @@ export default function VipScreen() {
   const [plans, setPlans] = useState<MembershipPlan[] | null>(null);
   const [plansLoadFailed, setPlansLoadFailed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const joining = useRef(false);
 
   const loadPlans = useCallback(() => {
     let active = true;
@@ -74,6 +81,11 @@ export default function VipScreen() {
   const running = planIsRunning(subscription);
   const open = subscription && subscription.status !== 'PENDING' ? subscription : null;
 
+  const topUpFor = (plan: MembershipPlan) => {
+    setPendingPurchase({ kind: 'plan', planId: plan.id, planName: plan.name });
+    setTopUpModalOpen(true);
+  };
+
   const join = (plan: MembershipPlan) => {
     if (!isAuthenticated) {
       openAuthModal('login');
@@ -82,10 +94,16 @@ export default function VipScreen() {
     const price = plan.priceCoins ?? 0;
     const split = splitPrice(price, wallet.mainCoin);
     const short = price - wallet.mainCoin - wallet.bonusCoin;
-    const charge =
-      short > 0
-        ? `Ví còn thiếu ${short} Coin (đang có ${wallet.mainCoin} chính, ${wallet.bonusCoin} thưởng).`
-        : `Trừ ${split.main} Coin chính và ${split.bonus} Coin thưởng (Coin chính trước, Coin thưởng bù phần thiếu).`;
+    if (short > 0) {
+      // Nothing to confirm yet: the plan cannot be paid until the wallet holds the price (BR-10 re-check on return).
+      showDialog(
+        `Chưa đủ Coin cho ${plan.name}`,
+        `Gói giá ${price} Coin, ví còn thiếu ${short} Coin (đang có ${wallet.mainCoin} chính, ${wallet.bonusCoin} thưởng). Nạp thêm rồi quay lại đăng ký.`,
+        [{ text: 'Để sau', style: 'cancel' }, { text: 'Nạp Coin', onPress: () => topUpFor(plan) }],
+      );
+      return;
+    }
+    const charge = `Trừ ${split.main} Coin chính và ${split.bonus} Coin thưởng (Coin chính trước, Coin thưởng bù phần thiếu).`;
     showDialog(
       `Đăng ký ${plan.name}`,
       `${price} Coin cho ${plan.durationDays} ngày. ${charge} Gói tự gia hạn mỗi kỳ, bạn có thể tắt trước hạn chót của từng kỳ.`,
@@ -94,24 +112,18 @@ export default function VipScreen() {
         {
           text: 'Đăng ký',
           onPress: async () => {
+            // One activation at a time, even if the dialog button is tapped twice in one frame.
+            if (joining.current) return;
+            joining.current = true;
             setBusy(plan.id);
             const res = await episodeAccessService.joinPlan(plan.id);
+            joining.current = false;
             setBusy(null);
             if (!res.success || !res.data) {
-              const notEnough = res.statusCode === 422;
+              const notEnough = res.reason === 'INSUFFICIENT_COINS';
               showDialog('Chưa đăng ký được', res.message || 'Kiểm tra kết nối rồi thử lại.', [
                 { text: 'Đóng', style: 'cancel' },
-                ...(notEnough
-                  ? [
-                      {
-                        text: 'Nạp Coin',
-                        onPress: () => {
-                          setPendingPurchase({ kind: 'plan', planId: plan.id, planName: plan.name });
-                          setTopUpModalOpen(true);
-                        },
-                      },
-                    ]
-                  : []),
+                ...(notEnough ? [{ text: 'Nạp Coin', onPress: () => topUpFor(plan) }] : []),
               ]);
               return;
             }
@@ -149,6 +161,7 @@ export default function VipScreen() {
   /** Turning renewal off is confirmed with the 24h-window side spelled out (BR-05); turning it on is not. */
   const askRenew = (on: boolean) => {
     if (on || !open) return void toggleRenew(on);
+    if (!cancelWindowOpen(open)) return showDialog('Chưa tắt được tự gia hạn', cancelWindowText(open));
     showDialog('Tắt tự gia hạn?', `${cancelWindowText(open)} Gói vẫn dùng được đến hết kỳ đã trả.`, [
       { text: 'Giữ gia hạn', style: 'cancel' },
       { text: 'Tắt tự gia hạn', style: 'destructive', onPress: () => void toggleRenew(false) },

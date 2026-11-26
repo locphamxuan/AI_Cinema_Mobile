@@ -65,7 +65,9 @@ describe('profile form (FE-12, BR-54)', () => {
 
   it('turns BE refusals into Vietnamese', () => {
     expect(profileFailureMessage({ statusCode: 403 })).toContain('18 tuổi');
-    expect(profileFailureMessage({ statusCode: 400, message: 'Birthday cannot be in the future' })).toContain('tương lai');
+    expect(profileFailureMessage({ statusCode: 400, message: 'x', reason: 'DATE_OF_BIRTH_INVALID' })).toBe(
+      'Ngày sinh phải từ 01/01/1900 đến hôm nay.',
+    );
   });
 });
 

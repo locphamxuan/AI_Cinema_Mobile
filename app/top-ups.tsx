@@ -1,9 +1,10 @@
 import React from 'react';
 import { ActivityIndicator, FlatList, Linking, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import { ScreenHeader } from '../src/components/common/ScreenHeader';
 import { walletService } from '../src/services/walletService';
-import { canResumePayment, formatVnd, orderTime, TOP_UP_STATUS, type StatusTone } from '../src/lib/topUps';
+import { canResumePayment, formatVnd, orderTime, topUpFailureText, TOP_UP_STATUS, type StatusTone } from '../src/lib/topUps';
 import { useSessionStore } from '../src/store';
 import { useTheme } from '../src/theme';
 import type { CoinTopUp } from '../src/types/episodeAccess';
@@ -39,9 +40,12 @@ export default function TopUpHistoryScreen() {
     [],
   );
 
-  React.useEffect(() => {
-    if (isAuthenticated) void fetchPage(1);
-  }, [isAuthenticated, fetchPage]);
+  // Read again on every visit: "Tiếp tục thanh toán" leaves for VNPay and the order may be paid when the member is back.
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isAuthenticated) void fetchPage(1);
+    }, [isAuthenticated, fetchPage]),
+  );
 
   const load = (next: number) => {
     setLoading(true);
@@ -87,7 +91,7 @@ export default function TopUpHistoryScreen() {
                     <Text style={[styles.coins, { color: colors.text }]}>+{item.coinsGranted} Coin chính</Text>
                     <Text style={[styles.meta, { color: colors.textMuted }]}>
                       {formatVnd(item.amountVnd)}
-                      {item.provider ? ` · ${PROVIDER_NAME[item.provider] ?? item.provider}` : ''}
+                      {item.provider ? ` qua ${PROVIDER_NAME[item.provider] ?? item.provider}` : ''}
                     </Text>
                   </View>
                   <Text style={[styles.status, { color: tint, borderColor: tint }]}>{status.label}</Text>
@@ -95,8 +99,8 @@ export default function TopUpHistoryScreen() {
                 <Text style={[styles.meta, { color: colors.textMuted }]}>
                   {item.paidAt ? `Thanh toán lúc ${orderTime(item.paidAt)}` : `Tạo lúc ${orderTime(item.createdAt)}`}
                 </Text>
-                {item.failureReason && status.tone === 'failed' ? (
-                  <Text style={[styles.meta, { color: colors.textMuted }]}>Lý do: {item.failureReason}</Text>
+                {status.tone === 'failed' && topUpFailureText(item) ? (
+                  <Text style={[styles.meta, { color: colors.textMuted }]}>{topUpFailureText(item)}</Text>
                 ) : null}
                 {canResumePayment(item) ? (
                   <TouchableOpacity

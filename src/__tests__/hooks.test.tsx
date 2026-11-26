@@ -153,7 +153,7 @@ describe('usePlaybackSession', () => {
     sessionId: 's1',
     stream: { masterUrl: 'u', qualities: [], durationSeconds: 600 },
     resumePositionSeconds: 90,
-    adSchedule: [{ breakId: 'b1', positionSeconds: 30, ad: { id: 'a', title: 'Ad', mediaUrl: 'm', clickUrl: null, durationSeconds: 5 } }],
+    adSchedule: [{ breakId: 'b1', positionSeconds: 30, ad: { id: 'a', title: 'Ad', mediaUrl: 'm', durationSeconds: 5 } }],
   } as unknown as StreamingSession;
 
   const spies = () => ({
@@ -174,7 +174,7 @@ describe('usePlaybackSession', () => {
     expect(stop).toHaveBeenCalledWith('s1', 12);
   });
 
-  it('pauses at a mid-roll cue with the current position, then resumes after the ad', () => {
+  it('pauses at a mid-roll cue with the current position, records the end of the ad, then resumes', () => {
     const { adStarted, adFinished } = spies();
     const hook = renderHook(useSession, 10 as number);
     hook.rerender(30.4);
@@ -182,12 +182,27 @@ describe('usePlaybackSession', () => {
     expect(mockPlayer.pause).toHaveBeenCalledTimes(1);
     expect(hook.last().activeAd?.breakId).toBe('b1');
 
-    act(() => {
-      hook.last().finishAd(true);
-    });
+    act(() => hook.last().adEnded());
     expect(adFinished).toHaveBeenCalledWith('s1', 'b1');
+    // The ad is over but the episode waits for "Bỏ qua quảng cáo".
+    expect(mockPlayer.play).not.toHaveBeenCalled();
+    act(() => hook.last().finishAd());
     expect(mockPlayer.play).toHaveBeenCalledTimes(1);
     expect(hook.last().activeAd).toBeNull();
+
+    // Seeking back over the cue never plays it again.
+    hook.rerender(5);
+    hook.rerender(31);
+    expect(adStarted).toHaveBeenCalledTimes(1);
+    hook.unmount();
+  });
+
+  it('resumes without a completed view when the ad could not play', () => {
+    const { adFinished } = spies();
+    const hook = renderHook(useSession, 31 as number);
+    act(() => hook.last().finishAd());
+    expect(adFinished).not.toHaveBeenCalled();
+    expect(mockPlayer.play).toHaveBeenCalledTimes(1);
     hook.unmount();
   });
 
