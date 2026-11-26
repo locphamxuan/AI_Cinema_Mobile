@@ -8,6 +8,7 @@ import { notificationService, type AppNotification } from '../src/services/notif
 import { MEMBER_NOTIFICATION_TABS, notificationIcon } from '../src/lib/notificationTabs';
 import { dayKey } from '../src/lib/date';
 import { useSessionStore } from '../src/store';
+import { useNotificationRevision } from '../src/components/notifications/NotificationRealtimeProvider';
 import { useTheme } from '../src/theme';
 import { styles } from '../src/styles/screens/notifications.styles';
 
@@ -27,6 +28,7 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const isAuthenticated = useSessionStore((s) => s.isAuthenticated);
+  const revision = useNotificationRevision();
   const [tab, setTab] = React.useState(MEMBER_NOTIFICATION_TABS[0]);
   const [items, setItems] = React.useState<AppNotification[]>([]);
   const [page, setPage] = React.useState(1);
@@ -50,7 +52,7 @@ export default function NotificationsScreen() {
 
   React.useEffect(() => {
     if (isAuthenticated) void fetchPage(1);
-  }, [isAuthenticated, fetchPage]);
+  }, [isAuthenticated, fetchPage, revision]);
 
   const loadMore = () => {
     setLoading(true);
@@ -65,8 +67,10 @@ export default function NotificationsScreen() {
 
   const open = async (item: AppNotification) => {
     if (!item.readAt) {
-      await notificationService.markRead(item.id);
-      setItems((list) => list.map((n) => (n.id === item.id ? { ...n, readAt: new Date().toISOString() } : n)));
+      const res = await notificationService.markRead(item.id);
+      if (res.success) {
+        setItems((list) => list.map((n) => (n.id === item.id ? { ...n, readAt: new Date().toISOString() } : n)));
+      }
     }
     // BR-69: a friend's invite opens their watch room (the BE links it as /watch-rooms/:roomId).
     const roomId = item.type === 'ROOM_INVITE' ? item.link?.match(/\/watch-rooms\/([^/?#]+)/)?.[1] : undefined;
@@ -74,8 +78,8 @@ export default function NotificationsScreen() {
   };
 
   const readAll = async () => {
-    await notificationService.markAllRead();
-    setItems((list) => list.map((n) => ({ ...n, readAt: n.readAt ?? new Date().toISOString() })));
+    const res = await notificationService.markAllRead();
+    if (res.success) setItems((list) => list.map((n) => ({ ...n, readAt: n.readAt ?? new Date().toISOString() })));
   };
 
   const hasUnread = items.some((n) => !n.readAt);

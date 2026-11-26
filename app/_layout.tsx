@@ -23,6 +23,7 @@ import { ChatModal } from '../src/components/chat/ChatModal';
 import { FloatingAiButton } from '../src/components/chat/FloatingAiButton';
 import { AppErrorScreen } from '../src/components/common/AppErrorScreen';
 import { installGlobalErrorHandler } from '../src/lib/globalErrorHandler';
+import { NotificationRealtimeProvider } from '../src/components/notifications/NotificationRealtimeProvider';
 
 /** A screen that throws while drawing shows a retry screen instead of closing the whole app. */
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
@@ -44,7 +45,8 @@ function RootLayoutContent() {
   }, []);
 
   return (
-    <>
+    <NotificationRealtimeProvider>
+      <>
       {/* Android draws edge to edge, so the status bar shows the screen behind it instead of its own color. */}
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack
@@ -76,7 +78,8 @@ function RootLayoutContent() {
       <FloatingAiButton />
       {/* Last, so a dialog opened from a sheet shows above it. */}
       <AppDialog />
-    </>
+      </>
+    </NotificationRealtimeProvider>
   );
 }
 
