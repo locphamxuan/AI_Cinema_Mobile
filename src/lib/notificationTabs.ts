@@ -17,7 +17,6 @@ export const MEMBER_NOTIFICATION_TABS: MemberNotificationTab[] = [
       'COIN_RECEIVED',
       'COIN_ADJUSTED',
       'COIN_LOW_BALANCE',
-      'COIN_BONUS_EXPIRING',
     ],
   },
   {
