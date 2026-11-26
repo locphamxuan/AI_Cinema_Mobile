@@ -4,7 +4,9 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { FriendsPanel } from '../components/watchParty/FriendsPanel';
 import { ROOM_EVENT } from '../hooks/useWatchRoomSocket';
 import { playbackService } from '../services/playbackService';
+import { episodeAccessService } from '../services/episodeAccessService';
 import { watchRoomService } from '../services/watchRoomService';
+import { useSessionStore } from '../store';
 import CreateWatchPartyScreen from '../../app/watch-party/create';
 
 // The first render of the auth / player tree loads and transforms many modules; on a slow machine that alone can
@@ -86,6 +88,10 @@ describe('Create watch party screen (lobby)', () => {
     mockHandlers.clear();
     mockEmit.mockClear();
     mockReplace.mockClear();
+    useSessionStore.setState({ isAuthenticated: true } as never);
+    jest.spyOn(episodeAccessService, 'getMySubscription').mockResolvedValue(
+      ok({ status: 'ACTIVE', currentPeriodEnd: '2999-01-01T00:00:00.000Z' } as never),
+    );
     delete mockParams.episodeId;
     delete mockParams.label;
     jest.spyOn(watchRoomService, 'friends').mockResolvedValue(ok(friendships));

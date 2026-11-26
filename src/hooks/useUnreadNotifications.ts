@@ -1,11 +1,13 @@
 import React from 'react';
 import { notificationService } from '../services/notificationService';
+import { useNotificationRevision } from '../components/notifications/NotificationRealtimeProvider';
 
 const UNREAD_POLL_MS = 60_000;
 
-/** Unread notifications of the signed-in Member, read again every minute. */
+/** Unread notifications of the signed-in Member; sockets update immediately, polling repairs missed events. */
 export function useUnreadNotifications(signedIn: boolean): number {
   const [unread, setUnread] = React.useState(0);
+  const revision = useNotificationRevision();
   // Signing out clears the count during render, so the next account never starts from it.
   if (!signedIn && unread !== 0) setUnread(0);
   React.useEffect(() => {
@@ -18,6 +20,6 @@ export function useUnreadNotifications(signedIn: boolean): number {
       active = false;
       clearInterval(timer);
     };
-  }, [signedIn]);
+  }, [signedIn, revision]);
   return unread;
 }

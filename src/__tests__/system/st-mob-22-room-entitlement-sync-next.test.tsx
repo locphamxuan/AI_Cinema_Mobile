@@ -1,15 +1,27 @@
 import { accountRoutes, api, doubleTap, fail, mockRoute, ok, renderApp, settle, signIn } from './support/harness';
 import { fireEvent, screen } from '@testing-library/react-native';
-import { episodeDto } from './support/fixtures';
+import { activePlan, episodeDto } from './support/fixtures';
 import { enterRoom, room, serverSends } from './support/room';
 import { episodePlayer, playTo } from './support/watch';
 import WatchPartyScreen from '../../../app/watch-party/[roomId]';
 import { ROOM_EVENT } from '../../lib/roomEvents';
 
 describe('ST-MOB-22 Room entitlement, sync and next episode', () => {
-  it('ST-MOB-22 refuses a member without the episode before any stream opens', async () => {
+  it('ST-MOB-22 blocks a direct room invite when the member has no active Monthly plan', async () => {
     await signIn();
     accountRoutes();
+    mockRoute.params = { roomId: 'r-1' };
+    await renderApp(<WatchPartyScreen />);
+    await settle();
+
+    expect(screen.getByText('Cần gói Tháng còn hiệu lực')).toBeOnTheScreen();
+    expect(api.called('POST /watch-rooms/r-1/join')).toHaveLength(0);
+    expect(api.called('POST /playback/sessions')).toHaveLength(0);
+  });
+
+  it('ST-MOB-22 refuses a member without the episode before any stream opens', async () => {
+    await signIn();
+    accountRoutes({ subscription: activePlan() });
     api.on(
       'POST /watch-rooms/r-1/join',
       fail(403, 'Entitlement required', 'ENTITLEMENT_REQUIRED'),

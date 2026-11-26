@@ -2,7 +2,7 @@
 import { act } from '@testing-library/react-native';
 import React from 'react';
 import { MEMBER, accountRoutes, api, mockRoute, mockSocket, ok, renderApp, settle, signIn } from './harness';
-import { episodeDto, streamingSession } from './fixtures';
+import { activePlan, episodeDto, streamingSession } from './fixtures';
 import WatchPartyScreen from '../../../../app/watch-party/[roomId]';
 import { ROOM_EVENT } from '../../../lib/roomEvents';
 
@@ -29,7 +29,7 @@ export const serverSends = (event: string, payload?: unknown) => act(() => mockS
 /** Opens room r-1 as the signed-in member (the Host when `asHost`), with the socket connected and joined. */
 export async function enterRoom({ asHost = false, roomOverrides = {} as Record<string, unknown> } = {}) {
   await signIn(asHost ? { ...MEMBER, id: HOST_ID } : MEMBER);
-  accountRoutes();
+  accountRoutes({ subscription: activePlan() });
   const opened = room(roomOverrides);
   api.on('POST /watch-rooms/r-1/join', ok(opened));
   api.on('POST /playback/sessions', (call) => ok(streamingSession((call.body as { episodeId: string }).episodeId), 201));

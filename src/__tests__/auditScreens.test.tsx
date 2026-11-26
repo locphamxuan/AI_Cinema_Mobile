@@ -95,16 +95,28 @@ describe('join a watch room by code (BR-69)', () => {
     await act(async () => {
       tree = create(<JoinWatchPartyScreen />);
     });
-    act(() => tree.root.findByType(TextInput).props.onChangeText('ab2cd9'));
-    expect(tree.root.findByType(TextInput).props.value).toBe('AB2-CD9');
-    const enter = tree.root.findAllByType(TouchableOpacity).find((b) => b.props.disabled === false && !b.props.accessibilityLabel)!;
-    await act(async () => enter.props.onPress());
+    await act(async () => {
+      tree.root.findAllByType(Button).find((button) => button.props.label === 'Đăng nhập')!.props.onPress();
+    });
     expect(openAuthModal).toHaveBeenCalledWith('login');
     expect(join).not.toHaveBeenCalled();
   });
 
   it('sends one join for a double tap (wrong codes count toward the lock)', async () => {
     useSessionStore.setState({ isAuthenticated: true } as never);
+    jest.spyOn(episodeAccessService, 'getMySubscription').mockResolvedValue(
+      ok({
+        id: 's1',
+        status: 'ACTIVE',
+        autoRenew: true,
+        priceCoins: 100,
+        currentPeriodStart: new Date().toISOString(),
+        currentPeriodEnd: new Date(Date.now() + 86_400_000).toISOString(),
+        nextRenewalAt: null,
+        cancelDeadline: null,
+        plan,
+      }),
+    );
     let finish!: (v: ApiResponse<never>) => void;
     const join = jest.spyOn(watchRoomService, 'joinByCode').mockReturnValue(new Promise((r) => (finish = r)));
     await act(async () => {
