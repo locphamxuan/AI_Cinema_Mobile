@@ -27,10 +27,9 @@ const SPIN_MS = 4200;
 const REDUCED_MS = 400;
 const LOAD_ERROR = 'Không tải được vòng quay.';
 
-/** "+20 Coin thưởng (15%)" or "Gói Tháng 30 ngày (2%)"; no percent when the BE sends no chance. */
-export const prizeLabel = (p: Pick<RewardPrize, 'type' | 'bonusCoins' | 'planDays' | 'chancePercent'>) => {
-  const prize = p.type === 'BONUS_COIN' ? `+${p.bonusCoins} Coin thưởng` : `Gói Tháng ${p.planDays} ngày`;
-  return typeof p.chancePercent === 'number' ? `${prize} (${p.chancePercent}%)` : prize;
+/** The Member sees prize names only; probabilities remain server-side and unchanged. */
+export const prizeLabel = (p: Pick<RewardPrize, 'type' | 'bonusCoins' | 'planDays'>) => {
+  return p.type === 'BONUS_COIN' ? `+${p.bonusCoins} Coin thưởng` : `Gói Tháng ${p.planDays} ngày`;
 };
 
 /** Where the result lands: the prize the BE drew, matched by id, else by what it pays. */

@@ -12,10 +12,12 @@ import { LoadError } from '../../src/components/common/LoadError';
 import { showDialog } from '../../src/lib/dialog';
 import { FriendsPanel } from '../../src/components/watchParty/FriendsPanel';
 import { ParticipantsPanel } from '../../src/components/watchParty/ParticipantsPanel';
+import { WatchPartyAccessGate } from '../../src/components/watchParty/WatchPartyAccessGate';
 import { movieService } from '../../src/services';
 import { playbackService } from '../../src/services/playbackService';
 import { watchRoomService } from '../../src/services/watchRoomService';
 import { useSessionStore } from '../../src/store';
+import { useWatchPartyAccess } from '../../src/hooks/useWatchPartyAccess';
 import { useTheme } from '../../src/theme';
 import type { SubtitleTrack } from '../../src/types/movie';
 import type { StreamingSession } from '../../src/types/playback';
@@ -28,6 +30,7 @@ export default function WatchPartyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const access = useWatchPartyAccess();
   const me = useSessionStore((s) => s.user?.id);
   const [room, setRoom] = useState<WatchRoom | null>(null);
   const [session, setSession] = useState<StreamingSession | null>(null);
@@ -37,11 +40,13 @@ export default function WatchPartyScreen() {
   const [isLastEpisode, setIsLastEpisode] = useState(false);
   const after = useAfterWatching(session?.movieId, session?.episodeId);
   const loadAfter = after.load;
-  const { live, sendPlayback, voteHost, leave, invite, sendChat, sendAd, sendQuality } = useWatchRoomSocket(roomId);
+  const { live, sendPlayback, voteHost, invite, sendChat, sendAd, sendQuality } = useWatchRoomSocket(roomId, {
+    enabled: access.status === 'allowed',
+  });
 
   // The BE checks this member's own right to the episode, age and device limit before any stream opens.
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || access.status !== 'allowed') return;
     let active = true;
     void (async () => {
       const joined = await watchRoomService.join(roomId);
@@ -59,7 +64,7 @@ export default function WatchPartyScreen() {
     return () => {
       active = false;
     };
-  }, [roomId]);
+  }, [access.status, roomId]);
 
   // Subtitles of the room's episode, so every member picks their own language.
   useEffect(() => {
@@ -94,21 +99,52 @@ export default function WatchPartyScreen() {
 
   // Leaving once: a double tap would send two leaves and go back twice, closing the screen under the room too.
   const leaving = useRef(false);
+  const selectingSuccessor = useRef(false);
+  const leaveRoom = async (action?: 'TRANSFER' | 'DISBAND', newHostUserId?: string) => {
+    if (!roomId || leaving.current) return;
+    leaving.current = true;
+    const result = await watchRoomService.leave(roomId, action, newHostUserId);
+    if (!result.success) {
+      leaving.current = false;
+      showDialog('Chưa rời được phòng', result.message || 'Vui lòng thử lại.');
+      return;
+    }
+    router.back();
+  };
+  const chooseSuccessor = async () => {
+    if (!roomId || selectingSuccessor.current) return;
+    selectingSuccessor.current = true;
+    const result = await watchRoomService.get(roomId);
+    selectingSuccessor.current = false;
+    if (!result.success || !result.data) {
+      return showDialog('Chưa tải được thành viên', result.message || 'Vui lòng thử lại trước khi chuyển quyền chủ phòng.');
+    }
+    const candidates = (result.data.participants ?? []).filter((participant) => participant.userId !== me);
+    if (!candidates.length) {
+      return showDialog('Chưa có thành viên khác', 'Bạn có thể ở lại phòng hoặc rời để đóng phòng.', [
+        { text: 'Ở lại', style: 'cancel' },
+        { text: 'Rời phòng', style: 'destructive', onPress: () => void leaveRoom() },
+      ]);
+    }
+    showDialog(
+      'Chọn chủ phòng mới',
+      'Chỉ thành viên đang ở trong phòng mới được chọn.',
+      [
+        { text: 'Huỷ', style: 'cancel' },
+        ...candidates.map((participant) => ({
+          text: participant.fullName || 'Thành viên',
+          onPress: () => void leaveRoom('TRANSFER', participant.userId),
+        })),
+      ],
+    );
+  };
   const exit = () => {
     if (!roomId || leaving.current) return;
-    const go = (action?: 'TRANSFER' | 'DISBAND') => {
-      if (leaving.current) return;
-      leaving.current = true;
-      void watchRoomService.leave(roomId, action).finally(() => {
-        leave();
-        router.back();
-      });
-    };
-    if (!isHost || live.closed) return go();
+    if (!isHost || live.closed) return void leaveRoom();
     showDialog('Rời phòng', 'Bạn là chủ phòng. Chuyển quyền cho người khác hay giải tán phòng?', [
       { text: 'Huỷ', style: 'cancel' },
-      { text: 'Chuyển quyền', onPress: () => go('TRANSFER') },
-      { text: 'Giải tán', style: 'destructive', onPress: () => go('DISBAND') },
+      { text: 'Chuyển quyền', onPress: () => void chooseSuccessor() },
+      { text: 'Giải tán', style: 'destructive', onPress: () => void leaveRoom('DISBAND') },
     ]);
   };
 
@@ -179,6 +215,20 @@ export default function WatchPartyScreen() {
         >
           <Text style={styles.buttonText}>Quay lại</Text>
         </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (access.status !== 'allowed') {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+        <View style={styles.topBar}>
+          <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Quay lại" hitSlop={10}>
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.topTitle, { color: colors.text }]}>Phòng xem nhóm</Text>
+        </View>
+        <WatchPartyAccessGate status={access.status} message={access.message} onRetry={access.reload} />
       </View>
     );
   }

@@ -43,7 +43,10 @@ export interface WatchRoomLive {
  * BR-69 live sync. The member stays in the room as long as the room lives: socket.io reconnects on its own and the
  * hook joins the room again after every reconnect, so a network blip never drops a viewer while the Host is there.
  */
-export function useWatchRoomSocket(roomId: string | undefined, { join = true }: { join?: boolean } = {}) {
+export function useWatchRoomSocket(
+  roomId: string | undefined,
+  { join = true, enabled = true }: { join?: boolean; enabled?: boolean } = {},
+) {
   const socketRef = useRef<Socket | null>(null);
   const [live, setLive] = useState<WatchRoomLive>({
     connected: false,
@@ -60,7 +63,7 @@ export function useWatchRoomSocket(roomId: string | undefined, { join = true }: 
   });
 
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || !enabled) return;
     let socket: Socket | null = null;
     let cancelled = false;
     let reauth = false;
@@ -187,7 +190,7 @@ export function useWatchRoomSocket(roomId: string | undefined, { join = true }: 
       socket?.disconnect();
       socketRef.current = null;
     };
-  }, [roomId, join]);
+  }, [roomId, join, enabled]);
 
   /** Host only: the BE refuses anyone else. */
   const sendPlayback = useCallback(

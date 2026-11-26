@@ -4,8 +4,9 @@ import { useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { watchRoomService } from '../../src/services/watchRoomService';
+import { WatchPartyAccessGate } from '../../src/components/watchParty/WatchPartyAccessGate';
+import { useWatchPartyAccess } from '../../src/hooks/useWatchPartyAccess';
 import { formatRoomCodeInput } from '../../src/lib/roomEvents';
-import { useSessionStore, useUiStore } from '../../src/store';
 import { useTheme } from '../../src/theme';
 import { styles } from '../../src/styles/screens/watchParty.styles';
 
@@ -14,17 +15,15 @@ export default function JoinWatchPartyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const access = useWatchPartyAccess();
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isAuthenticated = useSessionStore((s) => s.isAuthenticated);
-  const openAuthModal = useUiStore((s) => s.openAuthModal);
   const sending = useRef(false);
-  const ready = code.replace('-', '').length === 6 && !busy;
+  const ready = access.status === 'allowed' && code.replace('-', '').length === 6 && !busy;
 
   const join = async () => {
-    // A Guest has no account to join with; the BE would only answer 401.
-    if (!isAuthenticated) return openAuthModal('login');
+    if (access.status !== 'allowed') return;
     // Each wrong code counts toward the 15-minute lock, so a double tap must send it once.
     if (sending.current) return;
     sending.current = true;
@@ -45,6 +44,9 @@ export default function JoinWatchPartyScreen() {
         </TouchableOpacity>
         <Text style={[styles.topTitle, { color: colors.text }]}>Xem cùng nhóm</Text>
       </View>
+      {access.status !== 'allowed' ? (
+        <WatchPartyAccessGate status={access.status} message={access.message} onRetry={access.reload} />
+      ) : (
       <View style={styles.body}>
         <View style={styles.hero}>
           <View style={[styles.heroIcon, { backgroundColor: colors.rubySoft }]}>
@@ -52,9 +54,7 @@ export default function JoinWatchPartyScreen() {
           </View>
           <Text style={[styles.title, { color: colors.text }]}>Vào phòng của bạn bè</Text>
           <Text style={[styles.meta, { color: colors.textSecondary, textAlign: 'center' }]}>
-            {isAuthenticated
-              ? 'Nhập mã 6 ký tự bạn bè gửi. Phim phát cùng lúc theo chủ phòng, mỗi người cần quyền xem tập đó.'
-              : 'Đăng nhập để vào phòng xem cùng bạn bè.'}
+            Nhập mã 6 ký tự bạn bè gửi. Phim phát cùng lúc theo chủ phòng, mỗi người cần quyền xem tập đó.
           </Text>
         </View>
         <TextInput
@@ -85,6 +85,7 @@ export default function JoinWatchPartyScreen() {
           Muốn mở phòng riêng? Vào một tập phim, bấm biểu tượng nhóm rồi chọn “Tạo phòng”.
         </Text>
       </View>
+      )}
     </View>
   );
 }

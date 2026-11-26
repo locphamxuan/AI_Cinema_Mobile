@@ -55,7 +55,9 @@ describe('watch room refusals', () => {
     api.on('POST /watch-rooms/r-1/next-episode', fail(409, 'Room is closed', 'ROOM_CLOSED'));
     api.on('POST /watch-rooms/r-1/leave', fail(400, 'The new Host must be a member still in the room', 'NEW_HOST_NOT_IN_ROOM'));
     expect((await watchRoomService.nextEpisode('r-1')).message).toBe('Phòng đã đóng.');
-    expect((await watchRoomService.leave('r-1', 'TRANSFER')).message).toBe('Chủ phòng mới phải là người vẫn còn trong phòng.');
+    expect((await watchRoomService.leave('r-1', 'TRANSFER', 'u2')).message).toBe(
+      'Thành viên được chọn không còn ở trong phòng. Hãy tải lại danh sách rồi thử lại.',
+    );
   });
 
   it.each([

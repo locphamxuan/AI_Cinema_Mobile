@@ -1,9 +1,10 @@
-import { MEMBER, api, doubleTap, mockRouter, mockSocket, ok, renderApp, settle, signIn } from './support/harness';
+import { MEMBER, accountRoutes, api, doubleTap, mockRouter, mockSocket, ok, renderApp, settle, signIn } from './support/harness';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import { Share } from 'react-native';
 import { room } from './support/room';
 import CreateWatchPartyScreen from '../../../app/watch-party/create';
 import { ROOM_EVENT } from '../../lib/roomEvents';
+import { activePlan } from './support/fixtures';
 
 const historyRow = (episodeId: string, n: number, available = true) => ({
   episodeId,
@@ -21,9 +22,22 @@ const historyRow = (episodeId: string, n: number, available = true) => ({
 });
 
 describe('ST-MOB-21 Open a room from the lobby', () => {
+  it('ST-MOB-21 blocks a member without an active Monthly plan before loading room history', async () => {
+    await signIn();
+    accountRoutes();
+    await renderApp(<CreateWatchPartyScreen />);
+    await settle();
+
+    expect(screen.getByText('Cần gói Tháng còn hiệu lực')).toBeOnTheScreen();
+    expect(screen.getByText('Xem gói Tháng')).toBeOnTheScreen();
+    expect(api.called('GET /playback/history')).toHaveLength(0);
+    expect(api.called('POST /watch-rooms')).toHaveLength(0);
+  });
+
   it('ST-MOB-21 picks an episode from the history, opens the room, shares the code and invites a friend without taking the Host seat', async () => {
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' } as never);
     await signIn();
+    accountRoutes({ subscription: activePlan({ status: 'PAST_DUE' }) });
     api.on('GET /playback/history', ok([historyRow('ep-2', 2), historyRow('ep-9', 9, false)]));
     api.on('POST /watch-rooms', ok(room({ episodeId: 'ep-2', hostUserId: MEMBER.id }), 201));
     api.on('GET /friends', ok([{ id: 'f-1', senderId: MEMBER.id, receiverId: 'u-an', status: 'ACCEPTED', createdAt: '', friend: { id: 'u-an', fullName: 'Trần An' } }]));
@@ -57,6 +71,7 @@ describe('ST-MOB-21 Open a room from the lobby', () => {
 
   it('ST-MOB-21 opens one room for a double tap on "Tạo phòng"', async () => {
     await signIn();
+    accountRoutes({ subscription: activePlan() });
     api.on('GET /playback/history', ok([historyRow('ep-2', 2)]));
     api.slow('POST /watch-rooms', ok(room({ hostUserId: MEMBER.id }), 201));
     api.on('GET /friends', ok([]));

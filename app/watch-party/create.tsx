@@ -4,6 +4,8 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FriendsPanel } from '../../src/components/watchParty/FriendsPanel';
+import { WatchPartyAccessGate } from '../../src/components/watchParty/WatchPartyAccessGate';
+import { useWatchPartyAccess } from '../../src/hooks/useWatchPartyAccess';
 import { useWatchRoomSocket } from '../../src/hooks/useWatchRoomSocket';
 import { playbackService } from '../../src/services/playbackService';
 import { watchRoomService } from '../../src/services/watchRoomService';
@@ -70,6 +72,7 @@ export default function CreateWatchPartyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const access = useWatchPartyAccess();
   const params = useLocalSearchParams<{ episodeId?: string; label?: string }>();
   const [episode, setEpisode] = useState<PickedEpisode | null>(
     params.episodeId ? { id: params.episodeId, label: params.label || 'Tập đang xem' } : null,
@@ -80,7 +83,7 @@ export default function CreateWatchPartyScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (params.episodeId) return;
+    if (access.status !== 'allowed' || params.episodeId) return;
     let active = true;
     void playbackService.history().then((res) => {
       if (!active) return;
@@ -96,12 +99,12 @@ export default function CreateWatchPartyScreen() {
     return () => {
       active = false;
     };
-  }, [params.episodeId]);
+  }, [access.status, params.episodeId]);
 
   // A double tap in one frame still sees `busy` false: the ref keeps it to one room.
   const creating = useRef(false);
   const create = async () => {
-    if (!episode || creating.current) return;
+    if (access.status !== 'allowed' || !episode || creating.current) return;
     creating.current = true;
     setBusy(true);
     setError(null);
@@ -120,6 +123,9 @@ export default function CreateWatchPartyScreen() {
         </TouchableOpacity>
         <Text style={[styles.topTitle, { color: colors.text }]}>{room ? 'Phòng đã mở' : 'Tạo phòng xem nhóm'}</Text>
       </View>
+      {access.status !== 'allowed' ? (
+        <WatchPartyAccessGate status={access.status} message={access.message} onRetry={access.reload} />
+      ) : (
       <ScrollView contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 24 }]}>
         {room && episode ? (
           <RoomLobby room={room} episode={episode} />
@@ -195,6 +201,7 @@ export default function CreateWatchPartyScreen() {
           </>
         )}
       </ScrollView>
+      )}
     </View>
   );
 }
