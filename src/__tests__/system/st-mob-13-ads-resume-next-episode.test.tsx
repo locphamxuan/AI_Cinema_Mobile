@@ -7,7 +7,7 @@ import { useAccountStore } from '../../store';
 const midRoll = {
   breakId: 'brk-1',
   positionSeconds: 60,
-  ad: { id: 'ad-1', title: 'Quảng cáo nước cam', mediaUrl: 'https://cdn.test/ad.mp4', clickUrl: null, durationSeconds: 15 },
+  ad: { id: 'ad-1', title: 'Quảng cáo nước cam', mediaUrl: 'https://cdn.test/ad.mp4', durationSeconds: 15 },
 };
 const adPlayer = () => mockVideo.players.find((p) => p.source.uri === midRoll.ad.mediaUrl)!;
 
@@ -21,13 +21,14 @@ describe('ST-MOB-13 Ads, resume and next episode', () => {
 
     expect(screen.getByTestId('ad-break')).toBeOnTheScreen();
     expect(player.pause).toHaveBeenCalled();
-    expect(screen.getByTestId('ad-skip')).toBeDisabled();
-    expect(screen.getByText('Bỏ qua sau 15 giây')).toBeOnTheScreen();
+    // No skip while the ad runs: only the countdown.
+    expect(screen.queryByTestId('ad-skip')).toBeNull();
+    expect(screen.getByText('Quảng cáo · 0:15')).toBeOnTheScreen();
     // The AI label stays on top of the ad too (BR-10).
     expect(screen.getAllByTestId('ai-label-overlay')).toHaveLength(1);
 
     await act(() => adPlayer().emit('playToEnd'));
-    expect(screen.getByTestId('ad-skip')).toBeEnabled();
+    expect(screen.getByTestId('ad-skip')).toBeOnTheScreen();
     await fireEvent.press(screen.getByText('Bỏ qua quảng cáo ›'));
     await settle();
     expect(screen.queryByTestId('ad-break')).toBeNull();
@@ -35,12 +36,12 @@ describe('ST-MOB-13 Ads, resume and next episode', () => {
     expect(api.called('POST /playback/sessions/s-ep-1/ad-breaks/brk-1/completed')).toHaveLength(1);
   });
 
-  it('ST-MOB-13 shows no mid-roll to a Monthly member', async () => {
+  it('ST-MOB-13 shows no mid-roll to a Monthly member: the BE lays no cue for a running plan', async () => {
     await signIn();
     accountRoutes({ subscription: activePlan() });
     api.on('GET /playback/history', ok([]));
     await act(() => useAccountStore.getState().loadAccountData());
-    await playEpisode('ep-1', { adSchedule: [midRoll] });
+    await playEpisode('ep-1', { adSchedule: [] });
     await playTo(episodePlayer(), 61);
     expect(screen.queryByTestId('ad-break')).toBeNull();
     expect(api.called('POST /playback/sessions/s-ep-1/ad-breaks/brk-1/played')).toHaveLength(0);

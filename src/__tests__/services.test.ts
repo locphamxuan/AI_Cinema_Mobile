@@ -113,10 +113,11 @@ describe('authService against a mocked backend', () => {
       email: 'new@example.com',
       password: 'password123',
       dateOfBirth: '2000-01-31',
+      acceptedTerms: true,
     });
     expect(res.success).toBe(true);
     const sent = JSON.parse(String((global.fetch as jest.Mock).mock.calls[0][1].body));
-    expect(sent).toEqual({ email: 'new@example.com', password: 'password123', fullName: 'New', dateOfBirth: '2000-01-31' });
+    expect(sent).toEqual({ email: 'new@example.com', password: 'password123', fullName: 'New', dateOfBirth: '2000-01-31', acceptedTerms: true });
     expect(res.data.user?.role).toBe('MEMBER');
     expect(await storage.getString(STORAGE_KEYS.AUTH_TOKEN, '')).toBe('new-access');
     jest.restoreAllMocks();
@@ -133,6 +134,7 @@ describe('authService against a mocked backend', () => {
       email: 'test_node_check@example.com',
       password: 'password123',
       dateOfBirth: '2000-01-31',
+      acceptedTerms: true,
     });
     expect(res.success).toBe(false);
     expect(res.statusCode).toBe(409);
@@ -153,6 +155,7 @@ describe('authService against a mocked backend', () => {
       email: 'not-an-email',
       password: 'password123',
       dateOfBirth: '2000-01-31',
+      acceptedTerms: true,
     });
     expect(res.success).toBe(false);
     expect(res.statusCode).toBe(400);

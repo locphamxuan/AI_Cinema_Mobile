@@ -133,6 +133,7 @@ describe('sign-up on the store', () => {
       password: 'password123',
       fullName: 'Viewer',
       dateOfBirth: '2000-01-31',
+      acceptedTerms: true,
     });
     expect(appState().isAuthenticated).toBe(true);
     expect(appState().isVIPMode).toBe(false);

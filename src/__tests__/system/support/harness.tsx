@@ -78,7 +78,8 @@ export interface FakePlayer {
   /** What the native player would report: `playToEnd`, `statusChange`… */
   emit: (event: string, payload?: unknown) => void;
 }
-export const mockVideo = { players: [] as FakePlayer[], viewMounts: 0, duration: 1200 };
+/** `notReady`: sources that stay loading, as a video that never arrives. */
+export const mockVideo = { players: [] as FakePlayer[], viewMounts: 0, duration: 1200, notReady: [] as string[] };
 
 function mockMakePlayer(source: { uri: string }): FakePlayer {
   const listeners = new Map<string, Set<(payload?: unknown) => void>>();
@@ -87,7 +88,7 @@ function mockMakePlayer(source: { uri: string }): FakePlayer {
     playing: false,
     currentTime: 0,
     duration: mockVideo.duration,
-    status: 'readyToPlay',
+    status: mockVideo.notReady.includes(source?.uri) ? 'loading' : 'readyToPlay',
     playbackRate: 1,
     timeUpdateEventInterval: 0,
     play: jest.fn(() => {

@@ -19,7 +19,7 @@ describe('ST-MOB-01 Register by email', () => {
     await settle();
 
     const [call] = api.called('POST /auth/register');
-    expect(call.body).toEqual({ fullName: 'Lan Anh', email: 'lan.anh@example.com', password: 'Matkhau123', dateOfBirth: '2000-05-14' });
+    expect(call.body).toEqual({ fullName: 'Lan Anh', email: 'lan.anh@example.com', password: 'Matkhau123', dateOfBirth: '2000-05-14', acceptedTerms: true });
     expect(useSessionStore.getState().isAuthenticated).toBe(true);
     expect(await screen.findByText('Đã tạo tài khoản')).toBeOnTheScreen();
   });

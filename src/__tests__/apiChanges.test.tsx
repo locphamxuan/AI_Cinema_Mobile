@@ -71,7 +71,7 @@ describe('date of birth out of range (DATE_OF_BIRTH_INVALID)', () => {
   it('words the 400 of sign-up and of the profile in Vietnamese', async () => {
     const refusal = fail(400, 'Date of birth must be between 1900-01-01 and today', 'DATE_OF_BIRTH_INVALID');
     api.on('POST /auth/register', refusal);
-    const signUp = await authService.register({ fullName: 'Lan Anh', email: 'a@b.vn', password: 'Matkhau123', dateOfBirth: '2099-01-01' });
+    const signUp = await authService.register({ fullName: 'Lan Anh', email: 'a@b.vn', password: 'Matkhau123', dateOfBirth: '2099-01-01', acceptedTerms: true });
     expect(signUp.message).toBe('Ngày sinh phải từ 01/01/1900 đến hôm nay.');
 
     await signIn();
