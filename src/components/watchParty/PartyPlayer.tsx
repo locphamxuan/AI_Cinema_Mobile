@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { useAppSubtitlesOnly } from '../../hooks/useAppSubtitlesOnly';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
 import { usePlaybackSession } from '../../hooks/usePlaybackSession';
 import { useStreamQuality } from '../../hooks/useStreamQuality';
@@ -79,6 +80,7 @@ export function PartyPlayer(props: PartyPlayerProps) {
   const [settings, setSettings] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [trackId, setTrackId] = useState<string | null>(null);
+  useAppSubtitlesOnly(player, subtitles.length > 0);
   const cues = useSubtitleCues(trackId);
   const line = trackId ? cueAt(cues, currentTime) : null;
 

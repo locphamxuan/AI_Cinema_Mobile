@@ -2,6 +2,7 @@ import React from 'react';
 import { ActivityIndicator, Image, Pressable, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { useAppSubtitlesOnly } from '../../hooks/useAppSubtitlesOnly';
 import { usePlayerClock } from '../../hooks/usePlayerClock';
 import { usePlaybackSession } from '../../hooks/usePlaybackSession';
 import { useSubtitleCues } from '../../hooks/useSubtitleCues';
@@ -61,6 +62,7 @@ function StreamPlayer(props: StreamPlayerProps) {
   const [quality, setQuality] = React.useState('auto');
   const stream = useStreamQuality(player, streamUrl, quality);
   const health = usePlayerHealth(player, stream.url, quality, setQuality);
+  useAppSubtitlesOnly(player, subtitles.length > 0);
   const cues = useSubtitleCues(subtitleTrackId);
   const line = subtitleTrackId ? cueAt(cues, currentTime) : null;
   const [controls, setControls] = React.useState(true);
