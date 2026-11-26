@@ -24,11 +24,11 @@ describe('watchRoomService (BR-69, Member only on the BE)', () => {
 
   it('lets the Host hand over or disband when leaving, and plays the next episode', async () => {
     const post = jest.spyOn(apiClient, 'post').mockResolvedValue(ok({ closed: false, newHostUserId: 'u2' }));
-    await watchRoomService.leave('r1', 'TRANSFER');
+    await watchRoomService.leave('r1', 'TRANSFER', 'u2');
     await watchRoomService.leave('r1');
     await watchRoomService.nextEpisode('r1');
     expect(post.mock.calls).toEqual([
-      ['/watch-rooms/r1/leave', { action: 'TRANSFER' }],
+      ['/watch-rooms/r1/leave', { action: 'TRANSFER', newHostUserId: 'u2' }],
       ['/watch-rooms/r1/leave', {}],
       ['/watch-rooms/r1/next-episode', {}],
     ]);

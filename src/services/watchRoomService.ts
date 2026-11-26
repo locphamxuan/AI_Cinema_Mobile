@@ -11,8 +11,8 @@ const thisDevice = async () => ({ headers: { 'X-Device-Id': await deviceKey() } 
 const F = API_ROUTES.FRIENDS;
 
 /**
- * BR-69 Watch Party over REST (Member only). The live sync runs on the `/watch` socket (useWatchRoomSocket); the BE
- * checks each member's own right to watch the episode, age and device limits before letting them in.
+ * BR-69 Watch Party over REST. A running Monthly plan and episode entitlement are both required; the BE remains
+ * authoritative. The live sync runs on the `/watch` socket (useWatchRoomSocket).
  */
 export const watchRoomService = {
   create: async (episodeId: string): Promise<ApiResponse<WatchRoom>> =>
@@ -26,8 +26,11 @@ export const watchRoomService = {
     apiClient.put<WatchRoom>(R.DETAIL(roomId), { state, positionSeconds }),
   nextEpisode: (roomId: string) => apiClient.post<WatchRoom & { blockedUserIds: string[] }>(R.NEXT_EPISODE(roomId), {}),
   /** The Host leaves by handing the room over (TRANSFER, default) or closing it for everyone (DISBAND). */
-  leave: (roomId: string, action?: 'TRANSFER' | 'DISBAND') =>
-    apiClient.post<{ closed: boolean; newHostUserId: string | null }>(R.LEAVE(roomId), action ? { action } : {}),
+  leave: (roomId: string, action?: 'TRANSFER' | 'DISBAND', newHostUserId?: string) =>
+    apiClient.post<{ closed: boolean; newHostUserId: string | null }>(
+      R.LEAVE(roomId),
+      action ? { action, ...(newHostUserId ? { newHostUserId } : {}) } : {},
+    ),
 
   friends: (): Promise<ApiResponse<Friendship[]>> => apiClient.get<Friendship[]>(F.LIST),
   addFriend: (receiverId: string) => apiClient.post<Friendship>(F.LIST, { receiverId }),

@@ -4,7 +4,7 @@ import { act, fireEvent, screen } from '@testing-library/react-native';
 import { BackHandler } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { granted, movieRoutes } from './system/support/fixtures';
-import { enterRoom } from './system/support/room';
+import { enterRoom, room } from './system/support/room';
 import MovieDetailScreen from '../../app/movie/[id]';
 import SearchScreen from '../../app/search';
 
@@ -39,6 +39,7 @@ describe('leaving a watch room', () => {
       return { remove: jest.fn() };
     });
     await enterRoom({ asHost: true });
+    api.on('GET /watch-rooms/r-1', ok(room()));
     api.on('POST /watch-rooms/r-1/leave', ok({ closed: false, newHostUserId: 'u-member' }));
 
     let handled = false;
@@ -50,7 +51,13 @@ describe('leaving a watch room', () => {
     expect(mockRouter.back).not.toHaveBeenCalled();
     await answerDialog('Chuyển quyền');
     await settle();
-    expect(api.called('POST /watch-rooms/r-1/leave')[0].body).toEqual({ action: 'TRANSFER' });
+    expect(shownDialog()?.title).toBe('Chọn chủ phòng mới');
+    await answerDialog('Lan Anh');
+    await settle();
+    expect(api.called('POST /watch-rooms/r-1/leave')[0].body).toEqual({
+      action: 'TRANSFER',
+      newHostUserId: 'u-member',
+    });
     expect(mockRouter.back).toHaveBeenCalledTimes(1);
   });
 });

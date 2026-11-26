@@ -68,6 +68,10 @@ const REASON_MESSAGES: Record<string, string> = {
   ENTITLEMENT_REQUIRED: 'Bạn chưa có quyền xem tập này. Mở khóa tập hoặc đăng ký gói Tháng để vào phòng.',
   AGE_RESTRICTED: 'Tập này dành cho người từ 18 tuổi trở lên.',
   ROOM_FULL: 'Phòng đã đủ 8 người.',
+  NEW_HOST_REQUIRED: 'Chọn một thành viên đang ở trong phòng để chuyển quyền chủ phòng.',
+  NEW_HOST_NOT_IN_ROOM: 'Thành viên được chọn không còn ở trong phòng. Hãy tải lại danh sách rồi thử lại.',
+  ROOM_CHANGED: 'Phòng vừa thay đổi. Hãy tải lại rồi thử lại.',
+  WATCH_PARTY_PLAN_REQUIRED: 'Gói Tháng còn hiệu lực mới được dùng tính năng Xem cùng nhóm.',
   GUEST_KEY_REQUIRED: 'Lượt xem đã hết hạn. Mở lại tập phim để xem tiếp.',
   GUEST_KEY_INVALID: 'Lượt xem đã hết hạn. Mở lại tập phim để xem tiếp.',
 };
