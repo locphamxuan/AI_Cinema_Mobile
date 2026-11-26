@@ -23,8 +23,11 @@ interface SessionState {
   isAuthenticated: boolean;
   user: UserProfile | null;
   login: (email: string, password: string) => Promise<AuthResult>;
-  /** One tap: a new Google email opens a member account; the BE refuses staff accounts. */
-  loginWithGoogle: (idToken: string) => Promise<{ success: boolean; error?: string }>;
+  /**
+   * A known Google member signs in at once; a new email opens a member account only with `acceptedTerms`,
+   * else `termsRequired` asks for the terms first. The BE refuses staff accounts.
+   */
+  loginWithGoogle: (idToken: string, acceptedTerms?: boolean) => Promise<{ success: boolean; error?: string; termsRequired?: boolean }>;
   register: (name: string, email: string, password: string, dateOfBirth: string) => Promise<AuthResult>;
   /** Sets a new password with the e-mailed code and signs in with the session the backend returns. */
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
@@ -79,14 +82,15 @@ export const useSessionStore = create<SessionState>()(
         }
       },
 
-      loginWithGoogle: async (idToken) => {
+      loginWithGoogle: async (idToken, acceptedTerms) => {
         try {
-          const res = await authService.googleLogin({ idToken });
+          const res = await authService.googleLogin(acceptedTerms ? { idToken, acceptedTerms } : { idToken });
           if (res.success && res.data?.user) {
             // The first Google sign-in opens the account (the BE answers no flag for it, only the creation time).
             await startSession(res.data.user, isNewAccount(res.data.user.createdAt));
             return { success: true };
           }
+          if (res.reason === 'GOOGLE_TERMS_REQUIRED') return { success: false, termsRequired: true };
           return { success: false, error: res.message };
         } catch (e) {
           return { success: false, error: errorMessage(e) };
@@ -104,7 +108,7 @@ export const useSessionStore = create<SessionState>()(
           return { success: false, error: 'Mật khẩu cần 8 đến 72 ký tự, có cả chữ và số.' };
         }
         try {
-          const res = await authService.register({ fullName: trimmedName, email: trimmedEmail, password, dateOfBirth: trimmedDob });
+          const res = await authService.register({ fullName: trimmedName, email: trimmedEmail, password, dateOfBirth: trimmedDob, acceptedTerms: true });
           if (res.success && res.data?.user) {
             await startSession(res.data.user, true);
             return { success: true };

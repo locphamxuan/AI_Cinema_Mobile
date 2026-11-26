@@ -110,7 +110,7 @@ class AuthService {
     const dateOfBirth = dto.dateOfBirth.trim();
     const res = await apiClient.post<AuthResponseDto>(
       API_ROUTES.AUTH.REGISTER,
-      { email: trimmedEmail, password: dto.password, fullName, dateOfBirth },
+      { email: trimmedEmail, password: dto.password, fullName, dateOfBirth, acceptedTerms: dto.acceptedTerms },
       AUTH_CALL
     );
 
