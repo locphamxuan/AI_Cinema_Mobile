@@ -38,8 +38,6 @@ interface PartyPlayerProps {
   roomAd: RoomAdState;
   /** Host only: tell the room an ad started (its breakId) or ended. */
   onAdChange: (active: boolean, breakId?: string) => void;
-  /** Tắt quảng cáo mid-roll khi chủ phòng đã có gói Tháng còn hạn. */
-  ads?: boolean;
   /** The quality the Host picked for the room. */
   quality: string;
   /** Host only: pick the room quality. */
@@ -64,15 +62,14 @@ export function syncTarget(sync: RoomSync, now = Date.now()): number | null {
  */
 export function PartyPlayer(props: PartyPlayerProps) {
   const { session, isHost, sync, subtitles, audioLabel, onHostAction, onEnded } = props;
-  const { roomAd, onAdChange, quality, onQualityChange, ads = true } = props;
+  const { roomAd, onAdChange, quality, onQualityChange } = props;
   const player = useVideoPlayer({ uri: session.stream.masterUrl }, (p) => {
     p.timeUpdateEventInterval = 0.25;
   });
   const { currentTime, duration, playing } = usePlayerClock(player);
-  // Heartbeats keep this viewer's own streaming session alive; it also schedules the Admin's mid-roll ads for a
-  // viewer without the Monthly plan (BR-32), exactly as outside a room. Only the Host is served mid-roll ads, and
-  // never a Host who already has a paid plan.
-  const playback = usePlaybackSession(player, session, currentTime, ads === true && isHost);
+  // Heartbeats keep this viewer's own streaming session alive. The BE lays mid-roll cues only for a viewer without a
+  // running plan (BR-32), exactly as outside a room; inside a room only the Host's cues play, for everyone.
+  const playback = usePlaybackSession(player, session, currentTime, isHost);
   const stream = useStreamQuality(player, session.stream.masterUrl, quality);
   const memberAd = !isHost && roomAd.active;
   const adShown = useRef(false);
@@ -201,7 +198,7 @@ export function PartyPlayer(props: PartyPlayerProps) {
           </View>
         ) : null}
         {playback.activeAd ? (
-          <AdBreakOverlay key={playback.activeAd.breakId} cue={playback.activeAd} onDone={playback.finishAd} />
+          <AdBreakOverlay key={playback.activeAd.breakId} cue={playback.activeAd} onEnded={playback.adEnded} onDone={playback.finishAd} />
         ) : null}
         {memberAd ? <RoomAdOverlay key={roomAd.startedAt ?? 0} ad={roomAd} /> : null}
         {/* Last child: above the video, the controls and both ad overlays (BR-10). */}

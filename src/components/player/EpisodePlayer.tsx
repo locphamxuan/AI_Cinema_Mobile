@@ -36,8 +36,6 @@ interface EpisodePlayerProps {
   /** Null = subtitles off. */
   subtitleTrackId?: string | null;
   onSubtitleChange?: (trackId: string | null) => void;
-  /** Tắt quảng cáo mid-roll khi thành viên đã có gói Tháng còn hạn (quảng cáo chỉ còn đối với chưa đăng ký gói và guest). */
-  ads?: boolean;
   /** Spoken language of the film, shown in the settings. */
   audioLabel?: string;
   /** Called once the stream starts, e.g. to count a play. */
@@ -53,13 +51,13 @@ type StreamPlayerProps = Required<Omit<EpisodePlayerProps, 'posterUrl' | 'checki
 export const FINISHED_RATIO = 0.85;
 
 function StreamPlayer(props: StreamPlayerProps) {
-  const { streamUrl, session, aiLabel, subtitles, subtitleTrackId, onSubtitleChange, audioLabel, ads, onStarted, onFinished } = props;
+  const { streamUrl, session, aiLabel, subtitles, subtitleTrackId, onSubtitleChange, audioLabel, onStarted, onFinished } = props;
   const player = useVideoPlayer({ uri: streamUrl }, (p) => {
     p.timeUpdateEventInterval = 0.25;
     p.play();
   });
   const { currentTime, duration, playing } = usePlayerClock(player);
-  const playback = usePlaybackSession(player, session, currentTime, ads);
+  const playback = usePlaybackSession(player, session, currentTime);
   const [quality, setQuality] = React.useState('auto');
   const stream = useStreamQuality(player, streamUrl, quality);
   const health = usePlayerHealth(player, stream.url, quality, setQuality);
@@ -170,7 +168,9 @@ function StreamPlayer(props: StreamPlayerProps) {
       {playback.resumeAt !== null && !playback.activeAd ? (
         <ResumePrompt at={playback.resumeAt} onAnswer={playback.answerResume} />
       ) : null}
-      {playback.activeAd ? <AdBreakOverlay key={playback.activeAd.breakId} cue={playback.activeAd} onDone={playback.finishAd} /> : null}
+      {playback.activeAd ? (
+        <AdBreakOverlay key={playback.activeAd.breakId} cue={playback.activeAd} onEnded={playback.adEnded} onDone={playback.finishAd} />
+      ) : null}
       <AiLabelOverlay text={aiLabel} />
     </View>
   );
@@ -206,7 +206,6 @@ export function EpisodePlayer({
   subtitles = [],
   subtitleTrackId = null,
   onSubtitleChange = () => undefined,
-  ads = true,
   audioLabel = 'tiếng gốc',
   onStarted,
   onFinished,
@@ -223,7 +222,6 @@ export function EpisodePlayer({
         subtitleTrackId={subtitleTrackId}
         onSubtitleChange={onSubtitleChange}
         audioLabel={audioLabel}
-        ads={ads ?? true}
         onStarted={onStarted}
         onFinished={onFinished}
       />

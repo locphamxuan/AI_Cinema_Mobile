@@ -15,7 +15,7 @@ import { ParticipantsPanel } from '../../src/components/watchParty/ParticipantsP
 import { movieService } from '../../src/services';
 import { playbackService } from '../../src/services/playbackService';
 import { watchRoomService } from '../../src/services/watchRoomService';
-import { useSessionStore, useAccountStore } from '../../src/store';
+import { useSessionStore } from '../../src/store';
 import { useTheme } from '../../src/theme';
 import type { SubtitleTrack } from '../../src/types/movie';
 import type { StreamingSession } from '../../src/types/playback';
@@ -29,7 +29,6 @@ export default function WatchPartyScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const me = useSessionStore((s) => s.user?.id);
-  const { isVIPMode } = useAccountStore();
   const [room, setRoom] = useState<WatchRoom | null>(null);
   const [session, setSession] = useState<StreamingSession | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -213,7 +212,6 @@ export default function WatchPartyScreen() {
             audioLabel="Âm thanh gốc của phim"
             onHostAction={onHostAction}
             onEnded={onEnded}
-            ads={isHost && !isVIPMode}
             roomAd={live.ad}
             onAdChange={sendAd}
             quality={live.quality}
