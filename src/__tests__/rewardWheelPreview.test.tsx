@@ -78,17 +78,18 @@ describe('lucky wheel geometry (BR-09)', () => {
 });
 
 describe('reward wheel preview (BR-09)', () => {
-  it('labels a prize with the chance the BE sends, and without a percent when there is none', () => {
-    expect(prizeLabel(prizes[0])).toBe('+20 Coin thưởng (98%)');
-    expect(prizeLabel(prizes[1])).toBe('Gói Tháng 30 ngày (2%)');
-    expect(prizeLabel({ ...prizes[0], chancePercent: undefined })).toBe('+20 Coin thưởng');
+  it('shows prize names without revealing win probabilities', () => {
+    expect(prizeLabel(prizes[0])).toBe('+20 Coin thưởng');
+    expect(prizeLabel(prizes[1])).toBe('Gói Tháng 30 ngày');
+    expect(prizeLabel(prizes[0])).not.toMatch(/%/);
   });
 
-  it('shows the prizes on the wheel to a member with no spin, but the centre button stays locked', async () => {
+  it('shows the prizes without probabilities to a member with no spin, but keeps the centre button locked', async () => {
     jest.mocked(rewardService.getWheel).mockResolvedValue({ success: true, data: { availableSpins: 0, prizes, history: [] } } as never);
     await open();
 
-    expect(texts()).toEqual(expect.arrayContaining(['+20 Coin thưởng (98%)', 'Gói Tháng 30 ngày (2%)', '20 Coin', '30 ngày', 'Quay']));
+    expect(texts()).toEqual(expect.arrayContaining(['+20 Coin thưởng', 'Gói Tháng 30 ngày', '20 Coin', '30 ngày', 'Quay']));
+    expect(texts().some((text) => text.includes('%'))).toBe(false);
     expect(texts().some((t) => t.includes('Bạn đang xem trước vòng quay'))).toBe(true);
     const button = hub('Chưa có lượt quay');
     expect(button.props.disabled).toBe(true);

@@ -13,13 +13,14 @@ async function openWheel() {
 }
 
 describe('ST-MOB-30 Spin the lucky wheel', () => {
-  it('ST-MOB-30 shows the prizes with their chance and keeps the centre locked without a spin', async () => {
+  it('ST-MOB-30 shows the prizes without their chances and keeps the centre locked without a spin', async () => {
     api.on('GET /rewards/spins', ok(wheel(0)));
     await openWheel();
 
-    expect(screen.getByText('+20 Coin thưởng (70%)')).toBeOnTheScreen();
-    expect(screen.getByText('+50 Coin thưởng (28%)')).toBeOnTheScreen();
-    expect(screen.getByText('Gói Tháng 30 ngày (2%)')).toBeOnTheScreen();
+    expect(screen.getByText('+20 Coin thưởng')).toBeOnTheScreen();
+    expect(screen.getByText('+50 Coin thưởng')).toBeOnTheScreen();
+    expect(screen.getByText('Gói Tháng 30 ngày')).toBeOnTheScreen();
+    expect(screen.queryByText(/%/)).toBeNull();
     const hub = screen.getByRole('button', { name: 'Chưa có lượt quay' });
     expect(hub).toBeDisabled();
     expect(screen.getByText(/^Bạn đang xem trước vòng quay/)).toBeOnTheScreen();
