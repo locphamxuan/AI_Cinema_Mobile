@@ -21,6 +21,8 @@ export interface LoginRequestDto {
 /** Body of POST /auth/google. */
 export interface GoogleLoginRequestDto {
   idToken: string;
+  /** Needed only when this sign-in opens the account; without it the BE answers GOOGLE_TERMS_REQUIRED. */
+  acceptedTerms?: boolean;
 }
 
 /** Body of POST /auth/reset-password: the 6-digit code e-mailed by POST /auth/forgot-password. */
@@ -49,6 +51,8 @@ export interface RegisterRequestDto {
   password?: string;
   /** YYYY-MM-DD; the BE turns away anyone under 18. */
   dateOfBirth: string;
+  /** The member ticked "accept the terms of use"; the BE refuses anything but true. */
+  acceptedTerms: boolean;
 }
 
 export interface BEUserDto {

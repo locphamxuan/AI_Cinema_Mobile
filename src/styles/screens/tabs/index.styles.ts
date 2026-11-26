@@ -18,4 +18,7 @@ export const styles = StyleSheet.create({
   genreOn: { ...textStyle.bodyStrong },
   genreOff: { ...textStyle.body },
   empty: { ...textStyle.label, textAlign: 'center', marginTop: 48, paddingHorizontal: 32 },
+  emptyBox: { alignItems: 'center', marginTop: 48, gap: 16 },
+  emptyInBox: { marginTop: 0 },
+  emptyAction: { height: 44, paddingHorizontal: 22, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
 });

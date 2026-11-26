@@ -1,5 +1,10 @@
+import { looksLikeEmail } from './passwordReset';
+
 export const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 72;
+/** The BE caps e-mail and name at 255 characters and wants a name of at least 2 (RegisterRequestDto). */
+const MAX_TEXT = 255;
+const MIN_NAME = 2;
 /** Shown under every "new password" field (sign-up and password reset). */
 export const PASSWORD_HINT = `Ít nhất ${MIN_PASSWORD} ký tự, có cả chữ và số.`;
 export const PASSWORD_RULE_ERROR = `Mật khẩu cần ${MIN_PASSWORD} đến ${MAX_PASSWORD} ký tự, có cả chữ và số.`;
@@ -12,9 +17,15 @@ export interface AuthForm {
   dateOfBirth: string;
 }
 
-/** The BE rule: 8 to 72 characters with at least one letter and one digit. */
+/** The BE rule: 8 to 72 characters with at least one Latin letter (A-Z, a-z) and one digit; "ạ" alone is not enough. */
 export function passwordOk(password: string): boolean {
-  return password.length >= MIN_PASSWORD && password.length <= MAX_PASSWORD && /\p{L}/u.test(password) && /\d/.test(password);
+  return password.length >= MIN_PASSWORD && password.length <= MAX_PASSWORD && /[A-Za-z]/.test(password) && /\d/.test(password);
+}
+
+/** Why the e-mail would be refused by the BE (format, 255 characters), or null when it is fine. */
+export function emailFormatError(email: string): string | null {
+  if (!looksLikeEmail(email)) return 'Email chưa đúng định dạng, ví dụ ten@gmail.com.';
+  return email.trim().length > MAX_TEXT ? `Email dài tối đa ${MAX_TEXT} ký tự.` : null;
 }
 
 /**
@@ -92,13 +103,19 @@ export function isAtLeast18(dateOfBirth: string, now: Date = new Date()): boolea
 
 /** Why the sign-in / sign-up form cannot be sent yet, or null when it can. */
 export function authFormError(isLogin: boolean, form: AuthForm): string | null {
-  if (isLogin) return form.email.trim() && form.password ? null : 'Nhập email và mật khẩu.';
+  if (isLogin) return form.email.trim() && form.password ? emailFormatError(form.email) : 'Nhập email và mật khẩu.';
   if (!form.name.trim() || !form.email.trim() || !form.dateOfBirth.trim() || !form.password) {
     return 'Điền đủ họ tên, ngày sinh, email và mật khẩu.';
   }
+  const name = form.name.trim();
+  if (name.length < MIN_NAME) return `Họ tên cần ít nhất ${MIN_NAME} ký tự.`;
+  if (name.length > MAX_TEXT) return `Họ tên dài tối đa ${MAX_TEXT} ký tự.`;
+  const emailProblem = emailFormatError(form.email);
+  if (emailProblem) return emailProblem;
   if (!normalizeDateOfBirth(form.dateOfBirth)) {
     return 'Ngày sinh chưa hợp lệ (nhập theo dạng ngày/tháng/năm, ví dụ 14/05/2003).';
   }
+  if (calculateAgeYears(form.dateOfBirth) === null) return 'Ngày sinh không thể ở tương lai.';
   if (!isAtLeast18(form.dateOfBirth)) {
     return 'Bạn cần đủ 18 tuổi trở lên để đăng ký tài khoản xem phim trên AI Cinema.';
   }

@@ -135,7 +135,12 @@ export default function NotificationsScreen() {
           }
           ListFooterComponent={loading ? <ActivityIndicator color={colors.ruby} style={styles.loading} /> : undefined}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.item} onPress={() => void open(item)} accessibilityState={{ selected: !item.readAt }}>
+            <TouchableOpacity
+              style={styles.item}
+              onPress={() => void open(item)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: !item.readAt }}
+            >
               <View style={[styles.icon, { backgroundColor: colors.card }]}>
                 <Ionicons name={notificationIcon(item.type) as never} size={18} color={item.readAt ? colors.textMuted : colors.ruby} />
               </View>

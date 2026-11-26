@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { showDialog } from '../lib/dialog';
 import { episodeAccessService } from '../services/episodeAccessService';
 import { useCatalogStore, useUiStore } from '../store';
@@ -23,6 +23,8 @@ export function useEpisodeGate(onGranted: (episode: Episode) => void) {
   const [locked, setLocked] = useState<LockedEpisode | null>(null);
   const [checkingId, setCheckingId] = useState<string | null>(null);
   const gateId = useId();
+  // A ref, not `checkingId`: a double tap in one frame would otherwise open two streaming sessions.
+  const checking = useRef(false);
 
   const open = useCallback(
     async (episode: Episode) => {
@@ -30,8 +32,11 @@ export function useEpisodeGate(onGranted: (episode: Episode) => void) {
         showDialog('Tập đang được chỉnh sửa', episode.notice || 'Tập phim đang được chỉnh sửa, vui lòng quay lại sau.');
         return;
       }
+      if (checking.current) return;
+      checking.current = true;
       setCheckingId(episode.id);
       const res = await episodeAccessService.checkAccess(episode.id);
+      checking.current = false;
       setCheckingId(null);
       if (!res.success || !res.data) {
         showDialog('Không kiểm tra được quyền xem', res.message || 'Vui lòng thử lại.');

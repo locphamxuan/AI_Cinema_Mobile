@@ -88,12 +88,13 @@ export function passwordChangeErrors(form: PasswordChangeForm): PasswordChangeEr
   return errors;
 }
 
-type Failure = Pick<ApiResponse, 'statusCode' | 'message'>;
+type Failure = Pick<ApiResponse, 'statusCode' | 'message' | 'reason'>;
 const FALLBACK = 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.';
 
 export function profileFailureMessage(res: Failure): string {
   if (res.statusCode === 403) return 'Tài khoản xem phim cần đủ 18 tuổi trở lên.';
-  if (res.statusCode === 400 && /future/i.test(res.message ?? '')) return 'Ngày sinh không thể ở tương lai.';
+  // Before 1900 or after today (the BE checks it before the age rule).
+  if (res.reason === 'DATE_OF_BIRTH_INVALID') return 'Ngày sinh phải từ 01/01/1900 đến hôm nay.';
   if (res.statusCode === 400 && /phone/i.test(res.message ?? '')) return 'Số điện thoại cần 8 đến 15 chữ số.';
   if (res.statusCode === 400) return 'Thông tin chưa hợp lệ, kiểm tra lại các ô rồi lưu lại.';
   return res.message || FALLBACK;

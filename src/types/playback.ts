@@ -6,11 +6,11 @@
 /** How the playback access was granted (MF-2 handoff access_type). */
 export type PlaybackAccessType = 'FREE_STARTER' | 'SUBSCRIPTION' | 'COIN_UNLOCK' | 'ADMIN_GRANT';
 
-/** One mid-roll cue of the session and the ad shown when the playhead gets there. */
+/** One mid-roll cue still to play in the session and the ad shown when the playhead gets there. */
 export interface AdScheduleItem {
   breakId: string;
   positionSeconds: number;
-  ad: { id: string; title: string; mediaUrl: string; clickUrl: string | null; durationSeconds: number };
+  ad: { id: string; title: string; mediaUrl: string; durationSeconds: number };
 }
 
 /** POST /playback/sessions */

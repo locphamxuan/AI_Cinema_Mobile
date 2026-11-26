@@ -11,7 +11,8 @@ const HEARTBEAT_SECONDS = 15;
 /**
  * Main Flow 3 inside the player: beats while the episode plays, pauses it at each mid-roll cue
  * (and at the one a forward seek jumped over), completes the session at the end and stops it when
- * the viewer leaves. `currentTime` is the player clock the controls already read.
+ * the viewer leaves. `currentTime` is the player clock the controls already read. Who sees ads is the
+ * BE's call: a running plan gets an empty `adSchedule`; a cue plays once, so seeking back never repeats it.
  */
 export function usePlaybackSession(
   player: VideoPlayer,
@@ -91,23 +92,24 @@ export function usePlaybackSession(
     startAd(due.play);
   }, [session, currentTime, startAd, ads]);
 
-  /** `watched` is false when the ad could not load: the episode resumes without a completed view. */
-  const finishAd = useCallback(
-    (watched: boolean) => {
-      const cue = activeRef.current;
-      if (!cue) return;
-      activeRef.current = null;
-      setActiveAd(null);
-      if (watched && sessionId) void playbackService.adFinished(sessionId, cue.breakId);
-      onLivePlayer(() => player.play());
-    },
-    [player, sessionId],
-  );
+  /** The ad played to its end: the BE records the completed view (it checks the elapsed time itself). */
+  const adEnded = useCallback(() => {
+    const cue = activeRef.current;
+    if (cue && sessionId) void playbackService.adFinished(sessionId, cue.breakId);
+  }, [sessionId]);
+
+  /** Back to the episode from where it paused: after "Bỏ qua quảng cáo", or at once when the ad could not play. */
+  const finishAd = useCallback(() => {
+    if (!activeRef.current) return;
+    activeRef.current = null;
+    setActiveAd(null);
+    onLivePlayer(() => player.play());
+  }, [player]);
 
   const answerResume = (resume: boolean) => {
     if (resume && resumeAt !== null) player.currentTime = resumeAt;
     setResumeAt(null);
   };
 
-  return { activeAd, finishAd, resumeAt, answerResume };
+  return { activeAd, adEnded, finishAd, resumeAt, answerResume };
 }

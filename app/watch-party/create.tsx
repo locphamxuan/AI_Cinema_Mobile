@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -98,11 +98,15 @@ export default function CreateWatchPartyScreen() {
     };
   }, [params.episodeId]);
 
+  // A double tap in one frame still sees `busy` false: the ref keeps it to one room.
+  const creating = useRef(false);
   const create = async () => {
-    if (!episode) return;
+    if (!episode || creating.current) return;
+    creating.current = true;
     setBusy(true);
     setError(null);
     const res = await watchRoomService.create(episode.id);
+    creating.current = false;
     setBusy(false);
     if (res.success && res.data) setRoom(res.data);
     else setError(res.message || 'Bạn cần có quyền xem tập này trước khi mở phòng.');

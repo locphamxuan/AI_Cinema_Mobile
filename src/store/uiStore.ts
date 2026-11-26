@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { useAccountStore } from './accountStore';
 import type { Episode } from '../types/movie';
+import type { HomeTabKey } from '../lib/homeFeed';
 
 export type AuthModalMode = 'login' | 'register';
 
@@ -31,6 +32,12 @@ interface UiState {
   isChatModalOpen: boolean;
   setChatModalOpen: (open: boolean) => void;
 
+  /** A tab Home should switch to next (a new member starts on "Phim mới": nothing to recommend yet). */
+  homeTabRequest: HomeTabKey | null;
+  requestHomeTab: (tab: HomeTabKey | null) => void;
+  /** Hands the requested tab to Home, once. */
+  takeHomeTabRequest: () => HomeTabKey | null;
+
   /** Set when a purchase sends the member to top up; cleared when they go back to it or give up. */
   pendingPurchase: PurchaseIntent | null;
   setPendingPurchase: (intent: PurchaseIntent | null) => void;
@@ -59,6 +66,14 @@ export const useUiStore = create<UiState>()((set, get) => ({
   setTopUpModalOpen: (open) => set({ isTopUpModalOpen: open }),
   isChatModalOpen: false,
   setChatModalOpen: (open) => set({ isChatModalOpen: open }),
+
+  homeTabRequest: null,
+  requestHomeTab: (tab) => set({ homeTabRequest: tab }),
+  takeHomeTabRequest: () => {
+    const tab = get().homeTabRequest;
+    if (tab) set({ homeTabRequest: null });
+    return tab;
+  },
 
   pendingPurchase: null,
   setPendingPurchase: (intent) => set({ pendingPurchase: intent }),

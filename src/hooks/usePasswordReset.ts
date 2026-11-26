@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { resetFormError } from '../lib/authForm';
 import { showDialog } from '../lib/dialog';
 import {
@@ -28,6 +28,19 @@ export function usePasswordReset(initialEmail: string) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
+  // A second tap in the same frame still sees `loading` false; the ref stops it sending twice.
+  const inFlight = useRef(false);
+  const once = async (task: () => Promise<void>) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setLoading(true);
+    try {
+      await task();
+    } finally {
+      inFlight.current = false;
+      setLoading(false);
+    }
+  };
 
   // "Send again" opens when the backend would send another code (one a minute).
   const counting = secondsLeft > 0;
@@ -44,16 +57,13 @@ export function usePasswordReset(initialEmail: string) {
       return;
     }
     setError(null);
-    setLoading(true);
-    const res = await authService.forgotPassword(email);
-    setLoading(false);
-    if (!res.success) {
-      setError(forgotFailureMessage(res));
-      return;
-    }
-    setNotice(CODE_SENT_MESSAGE);
-    setSecondsLeft(RESEND_COOLDOWN_SECONDS);
-    setStep('reset');
+    await once(async () => {
+      const res = await authService.forgotPassword(email);
+      if (!res.success) return setError(forgotFailureMessage(res));
+      setNotice(CODE_SENT_MESSAGE);
+      setSecondsLeft(RESEND_COOLDOWN_SECONDS);
+      setStep('reset');
+    });
   };
 
   const submitReset = async () => {
@@ -61,11 +71,11 @@ export function usePasswordReset(initialEmail: string) {
     const problem = resetFormError({ otp, password, confirmPassword });
     setError(problem);
     if (problem) return;
-    setLoading(true);
-    const result = await resetPassword(email, otp, password);
-    setLoading(false);
-    if (result.success) showDialog('Đã đổi mật khẩu', 'Bạn đã đăng nhập bằng mật khẩu mới.');
-    else setError(result.error ?? null);
+    await once(async () => {
+      const result = await resetPassword(email, otp, password);
+      if (result.success) showDialog('Đã đổi mật khẩu', 'Bạn đã đăng nhập bằng mật khẩu mới.');
+      else setError(result.error ?? null);
+    });
   };
 
   const changeEmail = () => {

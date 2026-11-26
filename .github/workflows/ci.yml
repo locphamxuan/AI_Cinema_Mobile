@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20.19"
+          node-version: "24"
           cache: npm
       - run: npm ci
       - run: npm run lint
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20.19"
+          node-version: "24"
       # Blocking: no high/critical advisory, except the ones scripts/audit.mjs lists while no fix exists.
       - run: node scripts/audit.mjs --omit=dev
       - run: node scripts/audit.mjs
